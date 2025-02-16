@@ -2,10 +2,7 @@ project "VulkanCraft"
     kind "ConsoleApp"
     language "C++"
     cppdialect "C++20"
-    cdialect "C17"
     staticruntime "On"
-
-    enablemodules "Off"
 
     prebuildcommands "%{RunPreBuild}"
     targetdir "%{TargetDir}"
@@ -23,28 +20,30 @@ project "VulkanCraft"
     includedirs {
         -- Add any project source directories here.
         "Source",
-        --	"%{wks.location}/__EXAMPLE_PROJECT_NAME__/src",
 
         -- Add any dependency includes here.
-        "%{IncludeDirs.__EXAMPLE_PROJECT_NAME__}",
+        "%{IncludeDirs.ctre}",
+        "%{IncludeDirs.gcem}",
+        "%{IncludeDirs.glfw}",
+        "%{IncludeDirs.glm}",
+        "%{IncludeDirs.imgui}",
+        "%{IncludeDirs.spdlog}",
+        "%{IncludeDirs.stb}",
+        "%{IncludeDirs.vulkan}",
     }
     
-    -- Add any dependency libs via their project names here.
     links {
-        --	"__EXAMPLE_PROJECT_NAME__",
+        -- Add any dependency libs via their project names here.
+        "glfw",
+        "imgui",
+        "stb",
+        "%{Libraries.vulkan}",
     }
 
     filter "system:windows"
         systemversion "latest"
         usestdpreproc "On" -- msvc doesn't provide __VA_OPT__ by default; this fixes that.
-        buildoptions "/wd5105" -- Prevents a warning produced at WinBase.h:9528.
         defines "SYSTEM_WINDOWS"
-
-        -- These two are required because visual studio precompiled their module
-        -- ifc's with dynamic runtime and imprecise floating point operations.
-        -- If modules aren't working, uncomment these two lines.
-        --	staticruntime "Off"
-        --	floatingpoint "None"
 
     filter "configurations:Debug"
         runtime "Debug"
@@ -52,11 +51,19 @@ project "VulkanCraft"
         symbols "Full"
         defines "CONFIG_DEBUG"
 
+        links {
+            "%{Libraries.shaderc_debug}",
+        }
+
     filter "configurations:Release"
         runtime "Release"
         optimize "On"
         symbols "On"
         defines "CONFIG_RELEASE"
+
+        links {
+            "%{Libraries.shaderc_release}",
+        }
 
     filter "configurations:Dist"
         kind "WindowedApp"
@@ -64,3 +71,7 @@ project "VulkanCraft"
         optimize "Full"
         symbols "Off"
         defines "CONFIG_DIST"
+
+        links {
+            "%{Libraries.shaderc_release}",
+        }

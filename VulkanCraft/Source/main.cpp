@@ -1,6 +1,15 @@
 #if SYSTEM_WINDOWS
 
-int Main(int argc, char** argv)
+#include <spdlog/spdlog.h> // Includes windows defines; must be included before glfw to not emit warnings.
+
+#include <ctre/ctre.hpp>
+#include <gcem.hpp>
+#include <glfw/glfw3.h>
+#include <glm/glm.hpp>
+#include <imgui.h>
+#include <stb_image.h>
+
+static int Main(int argc, char** argv)
 {
     static_cast<void>(argc, argv);
 
