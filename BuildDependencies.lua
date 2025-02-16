@@ -7,6 +7,7 @@ Libraries = {}
 
 -- Include Directories
 IncludeDirs["ctre"] = "%{DependencyDir}compile-time-regular-expressions-3.9.0/include/"
+IncludeDirs["entt"] = "%{DependencyDir}entt-3.14.0/include/"
 IncludeDirs["gcem"] = "%{DependencyDir}gcem-1.18.0/include/"
 IncludeDirs["glfw"] = "%{DependencyDir}glfw-3.4/include/"
 IncludeDirs["glm"] = "%{DependencyDir}glm-0.9.9.8/include/"

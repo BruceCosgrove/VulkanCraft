@@ -3,6 +3,7 @@
 #include <spdlog/spdlog.h> // Includes windows defines; must be included before glfw to not emit warnings.
 
 #include <ctre/ctre.hpp>
+#include <entt/entt.hpp>
 #include <gcem.hpp>
 #include <glfw/glfw3.h>
 #include <glm/glm.hpp>

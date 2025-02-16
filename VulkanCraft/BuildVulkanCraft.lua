@@ -23,6 +23,7 @@ project "VulkanCraft"
 
         -- Add any dependency includes here.
         "%{IncludeDirs.ctre}",
+        "%{IncludeDirs.entt}",
         "%{IncludeDirs.gcem}",
         "%{IncludeDirs.glfw}",
         "%{IncludeDirs.glm}",
