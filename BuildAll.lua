@@ -1,9 +1,9 @@
 include "BuildExtensions.lua"
 include "BuildDependencies.lua"
 
-workspace "__WORKSPACE_NAME__"
+workspace "VulkanCraft"
 	architecture "x86_64"
-	startproject "__PROJECT_NAME__"
+	startproject "VulkanCraft"
 	configurations { "Debug", "Release", "Dist" }
 	flags { "MultiProcessorCompile" }
 
@@ -30,7 +30,7 @@ workspace "__WORKSPACE_NAME__"
 		"BuildExtensions.lua",
 
 		-- Project Build Scripts
-		"__PROJECT_NAME__/Build__PROJECT_NAME__.lua",
+		"VulkanCraft/BuildVulkanCraft.lua",
 
 		-- Dependency Project Build Scripts
 		--	"__EXAMPLE_PROJECT_NAME__/Dependencies/__EXAMPLE_DEPENDENCY_NAME__/Build__EXAMPLE_DEPENDENCY_NAME__.lua",
@@ -41,4 +41,4 @@ TargetDir = "%{wks.location}/bin/%{cfg.buildcfg}-%{cfg.system}-%{cfg.architectur
 OBJDir = "%{wks.location}/bin-int/%{cfg.buildcfg}-%{cfg.system}-%{cfg.architecture}/%{prj.name}"
 
 -- Add any projects here with 'include "Build__EXAMPLE_PROJECT_NAME__.lua"'
-include "__PROJECT_NAME__/Build__PROJECT_NAME__.lua"
+include "VulkanCraft/BuildVulkanCraft.lua"

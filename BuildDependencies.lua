@@ -1,4 +1,4 @@
-DependencyDir = "%{wks.location}/__PROJECT_NAME__/Dependencies/"
+DependencyDir = "%{wks.location}/VulkanCraft/Dependencies/"
 
 IncludeDirs = {}
 LibraryDirs = {}
