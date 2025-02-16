@@ -1,0 +1,13 @@
+# Visual Studio
+.vs/**
+**.vcxproj.filters
+**.vcxproj.user
+**.cd
+# Live Share requires these two to work.
+# Comment them if you want Live Share.
+**.sln
+**.vcxproj
+
+# Output Binaries
+bin/**
+bin-int/**
