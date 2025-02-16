@@ -1,3 +1,3 @@
 # VulkanCraft
 
-My template for creating visual studio solutions and projects.
+Vulkan Minecraft, in which I'll attempt to not overgeneralize the renderer.
