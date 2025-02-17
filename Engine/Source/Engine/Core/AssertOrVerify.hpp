@@ -6,16 +6,16 @@
     #include <string_view>
 
     #define _ENG_ASSERT_OR_VERIFY(dobreak, which, condition, ...) \
-		do \
-		{ \
-			if (!(condition)) \
-			{ \
-				ENG_LOG_ERROR(#which " (" #condition ") failed at {}:{}", ::std::string_view(__FILE__).substr(::std::string_view(__FILE__).rfind("VulkanCraft")), __LINE__); \
-				__VA_OPT__(ENG_LOG_ERROR(__VA_ARGS__);) \
-				dobreak \
-			} \
-		} \
-		while (false)
+        do \
+        { \
+            if (!(condition)) \
+            { \
+                ENG_LOG_ERROR(#which " (" #condition ") failed at {}:{}", ::std::string_view(__FILE__).substr(::std::string_view(__FILE__).rfind("VulkanCraft")), __LINE__); \
+                __VA_OPT__(ENG_LOG_ERROR(__VA_ARGS__);) \
+                dobreak \
+            } \
+        } \
+        while (false)
 #endif
 
 #if ENG_ENABLE_ASSERTS

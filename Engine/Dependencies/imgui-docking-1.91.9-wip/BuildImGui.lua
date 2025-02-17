@@ -45,9 +45,9 @@ project "imgui"
 
         defines {
             "ENG_CONFIG_DEBUG",
-			"ENG_ENABLE_CONSOLE",
-			"ENG_ENABLE_VERIFYS",
-			"ENG_ENABLE_ASSERTS",
+            "ENG_ENABLE_CONSOLE",
+            "ENG_ENABLE_VERIFYS",
+            "ENG_ENABLE_ASSERTS",
         }
 
     filter "configurations:Release"
@@ -57,8 +57,8 @@ project "imgui"
 
         defines {
             "ENG_CONFIG_RELEASE",
-			"ENG_ENABLE_CONSOLE",
-			"ENG_ENABLE_VERIFYS",
+            "ENG_ENABLE_CONSOLE",
+            "ENG_ENABLE_VERIFYS",
         }
 
     filter "configurations:Dist"

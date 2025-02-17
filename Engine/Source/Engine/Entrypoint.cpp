@@ -1,10 +1,8 @@
 #include "Entrypoint.hpp"
 
-#if ENG_SYSTEM_WINDOWS
-
 namespace eng
 {
-    int Main(int argc, char** argv)
+    static int Main(int argc, char** argv)
     {
         EngineInfo engineInfo = GetEngineInfo(argc, argv);
         Log::Initialize(engineInfo.LogInfo);
@@ -20,22 +18,22 @@ namespace eng
 }
 
 #if ENG_CONFIG_DIST
+    #if ENG_SYSTEM_WINDOWS
+        #include <Windows.h>
 
-#include <Windows.h>
-
-int APIENTRY WinMain(_In_ HINSTANCE hInst, _In_opt_ HINSTANCE hInstPrev, _In_ LPSTR lpCmdLine, _In_ int nCmdShow)
-{
-    static_cast<void>(hInst, hInstPrev, lpCmdLine, nCmdShow);
-    return eng::Main(__argc, __argv);
-}
-
-#else // !ENG_CONFIG_DIST
-
-int main(int argc, char** argv)
-{
-    return eng::Main(argc, argv);
-}
-
-#endif // ENG_CONFIG_DIST
-
-#endif // ENG_SYSTEM_WINDOWS
+        int APIENTRY WinMain(_In_ HINSTANCE hInst, _In_opt_ HINSTANCE hInstPrev, _In_ LPSTR lpCmdLine, _In_ int nCmdShow)
+        {
+            static_cast<void>(hInst, hInstPrev, lpCmdLine, nCmdShow);
+            return eng::Main(__argc, __argv);
+        }
+    #elif ENG_SYSTEM_LINUX
+        // TODO
+    #else
+        #error Unsupported system.
+    #endif
+#else
+    int main(int argc, char** argv)
+    {
+        return eng::Main(argc, argv);
+    }
+#endif

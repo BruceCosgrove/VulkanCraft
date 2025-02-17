@@ -1,7 +1,5 @@
 #pragma once
 
-#include "Engine/Logging/Log.hpp"
-
 namespace eng
 {
     struct ApplicationInfo
