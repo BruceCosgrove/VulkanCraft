@@ -30,12 +30,13 @@ workspace "VulkanCraft"
         "BuildExtensions.lua",
 
         -- Project Build Scripts
+        "Engine/BuildEngine.lua",
         "VulkanCraft/BuildVulkanCraft.lua",
 
         -- Dependency Project Build Scripts
-        "VulkanCraft/Dependencies/glfw-3.4/BuildGLFW.lua",
-        "VulkanCraft/Dependencies/imgui-docking-1.91.9-wip/BuildImGui.lua",
-        "VulkanCraft/Dependencies/stb-2.30/BuildSTB.lua",
+        "Engine/Dependencies/glfw-3.4/BuildGLFW.lua",
+        "Engine/Dependencies/imgui-docking-1.91.9-wip/BuildImGui.lua",
+        "Engine/Dependencies/stb-2.30/BuildSTB.lua",
     }
 
 RunPreBuild = "pushd \"%{wks.location}\" && \"Scripts/PreBuild.bat\" && popd"
@@ -44,8 +45,9 @@ OBJDir = "%{wks.location}/bin-int/%{cfg.buildcfg}-%{cfg.system}-%{cfg.architectu
 
 -- Add any projects here with 'include "Build__EXAMPLE_PROJECT_NAME__.lua"'
 group "Dependencies"
-    include "VulkanCraft/Dependencies/glfw-3.4/BuildGLFW.lua"
-    include "VulkanCraft/Dependencies/imgui-docking-1.91.9-wip/BuildImGui.lua"
-    include "VulkanCraft/Dependencies/stb-2.30/BuildSTB.lua"
+    include "Engine/Dependencies/glfw-3.4/BuildGLFW.lua"
+    include "Engine/Dependencies/imgui-docking-1.91.9-wip/BuildImGui.lua"
+    include "Engine/Dependencies/stb-2.30/BuildSTB.lua"
 group ""
+include "Engine/BuildEngine.lua"
 include "VulkanCraft/BuildVulkanCraft.lua"

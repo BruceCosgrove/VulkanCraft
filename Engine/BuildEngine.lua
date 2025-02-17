@@ -1,4 +1,5 @@
-project "VulkanCraft"
+project "Engine"
+    kind "StaticLib"
     language "C++"
     cppdialect "C++20"
     staticruntime "On"
@@ -6,6 +7,10 @@ project "VulkanCraft"
     prebuildcommands "%{RunPreBuild}"
     targetdir "%{TargetDir}"
     objdir "%{OBJDir}"
+
+    defines {
+        "ENG_ENGINE",
+    }
 
     files {
         "Source/**.h",
@@ -30,8 +35,9 @@ project "VulkanCraft"
     }
 
     links {
-        "Engine",
-        "%{Libraries.vulkan}", -- Link this here to avoid a duplicate symbol warning.
+        "glfw",
+        "imgui",
+        "stb",
     }
 
     filter "system:windows"
@@ -43,7 +49,6 @@ project "VulkanCraft"
         runtime "Debug"
         optimize "Debug"
         symbols "Full"
-        kind "ConsoleApp"
 
         defines {
             "ENG_CONFIG_DEBUG",
@@ -52,11 +57,14 @@ project "VulkanCraft"
             "ENG_ENABLE_ASSERTS",
         }
 
+        links {
+            "%{Libraries.shaderc_debug}",
+        }
+
     filter "configurations:Release"
         runtime "Release"
         optimize "On"
         symbols "On"
-        kind "ConsoleApp"
 
         defines {
             "ENG_CONFIG_RELEASE",
@@ -64,12 +72,19 @@ project "VulkanCraft"
             "ENG_ENABLE_VERIFYS",
         }
 
+        links {
+            "%{Libraries.shaderc_release}",
+        }
+
     filter "configurations:Dist"
         runtime "Release"
         optimize "Full"
         symbols "Off"
-        kind "WindowedApp"
 
         defines {
             "ENG_CONFIG_DIST",
+        }
+
+        links {
+            "%{Libraries.shaderc_release}",
         }

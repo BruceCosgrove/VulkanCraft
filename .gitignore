@@ -11,3 +11,7 @@
 # Output Binaries
 bin/**
 bin-int/**
+
+# Engine Files
+**.log
+**.ini

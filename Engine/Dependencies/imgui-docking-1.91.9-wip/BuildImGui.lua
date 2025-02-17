@@ -15,11 +15,14 @@ project "imgui"
 
     includedirs {
         "include",
+        "%{IncludeDirs.engine}",
+        "%{IncludeDirs.spdlog}",
     }
 
     filter "system:windows"
         systemversion "latest"
         usestdpreproc "On" -- msvc doesn't provide __VA_OPT__ by default; this fixes that.
+        defines "ENG_SYSTEM_WINDOWS"
 
         files {
             "include/backends/imgui_impl_vulkan.cpp",
@@ -40,12 +43,29 @@ project "imgui"
         optimize "Debug"
         symbols "Full"
 
+        defines {
+            "ENG_CONFIG_DEBUG",
+			"ENG_ENABLE_CONSOLE",
+			"ENG_ENABLE_VERIFYS",
+			"ENG_ENABLE_ASSERTS",
+        }
+
     filter "configurations:Release"
         runtime "Release"
         optimize "On"
         symbols "On"
 
+        defines {
+            "ENG_CONFIG_RELEASE",
+			"ENG_ENABLE_CONSOLE",
+			"ENG_ENABLE_VERIFYS",
+        }
+
     filter "configurations:Dist"
         runtime "Release"
         optimize "Full"
         symbols "Off"
+
+        defines {
+            "ENG_CONFIG_DIST",
+        }
