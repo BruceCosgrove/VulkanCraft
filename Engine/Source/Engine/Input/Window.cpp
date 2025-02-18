@@ -4,6 +4,7 @@
 #include "Engine/Input/Event/WindowEvents.hpp"
 #include "Engine/Input/Event/MouseEvents.hpp"
 #include "Engine/Input/Event/KeyEvents.hpp"
+#include "Engine/Logging/Log.hpp"
 #define GLFW_INCLUDE_NONE
 #include <glfw/glfw3.h>
 
