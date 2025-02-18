@@ -1,7 +1,7 @@
 project "Engine"
     kind "StaticLib"
     language "C++"
-    cppdialect "C++20"
+    cppdialect "C++23"
     staticruntime "On"
 
     prebuildcommands "%{RunPreBuild}"
@@ -42,7 +42,7 @@ project "Engine"
 
     filter "system:windows"
         systemversion "latest"
-        usestdpreproc "On" -- msvc doesn't provide __VA_OPT__ by default; this fixes that.
+        usestandardpreprocessor "On"
         defines "ENG_SYSTEM_WINDOWS"
 
     filter "configurations:Debug"
