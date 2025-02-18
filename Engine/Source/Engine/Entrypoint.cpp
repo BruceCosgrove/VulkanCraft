@@ -1,15 +1,31 @@
 #include "Entrypoint.hpp"
+#include "Engine/Core/AssertOrVerify.hpp"
 
 namespace eng
 {
+    static Application* s_Application = nullptr;
+
+    Application& Application::Get()
+    {
+        ENG_ASSERT(s_Application != nullptr, "Tried to get the application before it exists.");
+        return *s_Application;
+    }
+
     static int Main(int argc, char** argv)
     {
-        EngineInfo engineInfo = GetEngineInfo(argc, argv);
+        EngineInfo engineInfo = ProvideEngineInfo(argc, argv);
         Log::Initialize(engineInfo.LogInfo);
 
-        Application* application = new Application(engineInfo.ApplicationInfo);
-        application->Run();
-        delete application;
+        // Create the application.
+        ENG_ASSERT(s_Application == nullptr, "Tried to create another application.");
+        s_Application = new Application(engineInfo.ApplicationInfo);
+
+        s_Application->Run();
+
+        // Destroy the application.
+        ENG_ASSERT(s_Application != nullptr, "Tried to redestroy the application.");
+        delete s_Application;
+        s_Application = nullptr;
 
         Log::Shutdown();
 
@@ -17,6 +33,7 @@ namespace eng
     }
 }
 
+// Handle multiple possible entrypoints and forward them all into eng::Main.
 #if ENG_CONFIG_DIST
     #if ENG_SYSTEM_WINDOWS
         #include <Windows.h>

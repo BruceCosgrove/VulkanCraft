@@ -1,7 +1,6 @@
 #pragma once
 
 #include "Engine/Core/Application.hpp"
-#include "Engine/Logging/Log.hpp"
 
 namespace eng
 {
@@ -13,4 +12,4 @@ namespace eng
 }
 
 // To be defined in Client.
-extern eng::EngineInfo GetEngineInfo(int argc, char** argv);
+extern eng::EngineInfo ProvideEngineInfo(int argc, char** argv);

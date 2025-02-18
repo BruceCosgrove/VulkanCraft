@@ -23,7 +23,7 @@ namespace eng
         inline static std::shared_ptr<spdlog::logger> s_ClientLogger;
     private:
         friend int Main(int argc, char** argv);
-        static void Initialize(const LogInfo& info);
+        static void Initialize(LogInfo const& info);
         static void Shutdown();
     };
 }

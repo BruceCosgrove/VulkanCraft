@@ -17,7 +17,7 @@ namespace eng
         return *s_ClientLogger;
     }
 
-    void Log::Initialize(const LogInfo& info)
+    void Log::Initialize(LogInfo const& info)
     {
         std::vector<spdlog::sink_ptr> sinks;
         sinks.emplace_back(std::make_shared<spdlog::sinks::basic_file_sink_mt>(info.LogFileName, true))->set_pattern("[%T] [%l] %n: %v");
