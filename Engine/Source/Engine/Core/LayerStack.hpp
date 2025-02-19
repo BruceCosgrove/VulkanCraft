@@ -4,6 +4,7 @@
 #include "Engine/Core/AssertOrVerify.hpp"
 #include "Engine/Core/Attributes.hpp"
 #include "Engine/Core/ClassTypes.hpp"
+#include <memory>
 #include <vector>
 
 namespace eng
