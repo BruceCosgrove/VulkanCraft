@@ -4,17 +4,18 @@
 eng::EngineInfo ProvideEngineInfo(int argc, char** argv)
 {
     eng::EngineInfo engineInfo;
-    auto& applicationInfo = engineInfo.ApplicationInfo;
-    auto& logInfo = engineInfo.LogInfo;
-
-    logInfo.LogFileName = "VulkanCraft.log";
-
     engineInfo.OnEngineInitialized = [](eng::Application& application)
     {
         auto& layerStack = application.GetLayerStack();
-
         layerStack.PushLayer(std::make_unique<vc::VulkanCraftLayer>());
     };
+
+    auto& applicationInfo = engineInfo.ApplicationInfo;
+    auto& windowInfo = applicationInfo.WindowInfo;
+    windowInfo.Title = "VulkanCraft";
+
+    auto& logInfo = engineInfo.LogInfo;
+    logInfo.LogFileName = "VulkanCraft.log";
 
     return engineInfo;
 }
