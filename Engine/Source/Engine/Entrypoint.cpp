@@ -20,6 +20,9 @@ namespace eng
         ENG_ASSERT(s_Application == nullptr, "Tried to create another application.");
         s_Application = new Application(engineInfo.ApplicationInfo);
 
+        if (engineInfo.OnEngineInitialized)
+            engineInfo.OnEngineInitialized(*s_Application);
+
         s_Application->Run();
 
         // Destroy the application.

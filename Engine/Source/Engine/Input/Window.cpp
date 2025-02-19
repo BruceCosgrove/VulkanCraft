@@ -1,17 +1,15 @@
 #include "Window.hpp"
 #include "Engine/Core/AssertOrVerify.hpp"
 #include "Engine/Core/Attributes.hpp"
+#include "Engine/Core/Log.hpp"
 #include "Engine/Input/Event/WindowEvents.hpp"
 #include "Engine/Input/Event/MouseEvents.hpp"
 #include "Engine/Input/Event/KeyEvents.hpp"
-#include "Engine/Logging/Log.hpp"
 #define GLFW_INCLUDE_NONE
 #include <glfw/glfw3.h>
 
 namespace eng
 {
-    static std::uint32_t s_WindowCount = 0;
-
     Window::Window(WindowInfo const& info, std::function<void(Event&)>&& eventCallback)
         : m_EventCallback(std::move(eventCallback))
     {

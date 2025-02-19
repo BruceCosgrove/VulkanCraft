@@ -2,7 +2,7 @@
 
 #if ENG_ENABLE_ASSERTS || ENG_ENABLE_VERIFYS
     #include "Engine/Core/DebugBreak.hpp"
-    #include "Engine/Logging/Log.hpp"
+    #include "Engine/Core/Log.hpp"
     #include <string_view>
 
     #define _ENG_ASSERT_OR_VERIFY(dobreak, which, condition, ...) \

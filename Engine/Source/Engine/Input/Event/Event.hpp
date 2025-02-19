@@ -1,11 +1,13 @@
 #pragma once
 
+#include "Engine/Core/Enums.hpp"
 #include <concepts>
 
 namespace eng
 {
-    enum class EventType : std::uint8_t
-    {
+    ENG_DEFINE_BOUNDED_ENUM(
+        EventType, std::uint8_t,
+
         // Window Events
         WindowMove,
         WindowResize,
@@ -29,7 +31,7 @@ namespace eng
         KeyPress,
         KeyRelease,
         KeyCharType,
-    };
+    );
 
     class Event;
 

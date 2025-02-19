@@ -24,5 +24,7 @@ namespace eng
     private:
         std::function<void(Event&)> m_EventCallback;
         GLFWwindow* m_Window = nullptr;
+    private:
+        inline static std::uint32_t s_WindowCount = 0;
     };
 }
