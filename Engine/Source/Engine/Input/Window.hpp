@@ -22,6 +22,7 @@ namespace eng
         Window(WindowInfo const& info, std::function<void(Event&)>&& eventCallback);
         ~Window();
     private:
+        friend class RenderContext;
         std::function<void(Event&)> m_EventCallback;
         GLFWwindow* m_Window = nullptr;
     private:

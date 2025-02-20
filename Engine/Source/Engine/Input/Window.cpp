@@ -16,12 +16,12 @@ namespace eng
         // If this is the first window created, initialize GLFW.
         if (s_WindowCount++ == 0)
         {
-            ENG_VERIFY(glfwInit(), "Failed to initialize GLFW.");
-
             glfwSetErrorCallback([](int error, char const* description)
             {
                 ENG_LOG_ERROR("GLFW Error ({}): {}", error, description);
             });
+
+            ENG_VERIFY(glfwInit(), "Failed to initialize GLFW.");
         }
 
         glfwWindowHint(GLFW_RESIZABLE, info.Resizable);

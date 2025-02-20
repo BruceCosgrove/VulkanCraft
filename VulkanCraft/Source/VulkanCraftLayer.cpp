@@ -1,4 +1,5 @@
 #include "VulkanCraftLayer.hpp"
+#include <imgui.h>
 
 namespace vc
 {
@@ -29,6 +30,9 @@ namespace vc
 
     void VulkanCraftLayer::OnImGuiRender()
     {
-
+        // i honestly cant believe this actually worked first try
+        ImGui::Begin("test window");
+        ImGui::Button("test button");
+        ImGui::End();
     }
 }

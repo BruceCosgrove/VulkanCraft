@@ -7,7 +7,7 @@
     }
 
 #define ENG_BIND_MEMBER_FUNC(member, func) \
-    [&](auto&&... args) -> decltype(auto) \
+    [this](auto&&... args) -> decltype(auto) \
     { \
-        return (member).func(std::forward<decltype(args)>(args)...); \
+        return member.func(std::forward<decltype(args)>(args)...); \
     }

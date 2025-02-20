@@ -16,15 +16,27 @@ namespace eng
         return m_LayerStack;
     }
 
+    RenderContext& Application::GetRenderContext() noexcept
+    {
+        return m_RenderContext;
+    }
+
     Application::Application(ApplicationInfo const& info)
-        : m_Window(info.WindowInfo, ENG_BIND_CLASS_FUNC(OnEvent))
+        : m_Window(
+            info.WindowInfo,
+            ENG_BIND_CLASS_FUNC(Application::OnEvent))
+        , m_RenderContext(
+            m_Window,
+            ENG_BIND_MEMBER_FUNC(m_LayerStack, LayerStack::OnRender),
+            ENG_BIND_MEMBER_FUNC(m_LayerStack, LayerStack::OnImGuiRender))
     {
 
     }
 
     Application::~Application()
     {
-
+        // Must destroy Client first.
+        m_LayerStack.Clear();
     }
 
     void Application::Run()
@@ -41,15 +53,18 @@ namespace eng
             m_LastTime = currentTime;
 
             m_LayerStack.OnUpdate(timestep);
-            m_LayerStack.OnRender();
-            // TODO: begin/end imgui around this.
-            //m_LayerStack.OnImGuiRender();
+
+            m_RenderContext.DoFrame(!m_Minimized and !m_ZeroSize);
         }
     }
 
     void Application::OnEvent(Event& event)
     {
-        m_LayerStack.OnEvent(event);
+        event.Dispatch(this, &Application::OnWindowMinimizeEvent);
+        event.Dispatch(this, &Application::OnWindowFramebufferResizeEvent);
+
+        event.Dispatch(&m_LayerStack, &LayerStack::OnEvent);
+
         // Allow the Client to handle the window close event,
         // thus not terminating the application.
         event.Dispatch(this, &Application::OnWindowCloseEvent);
@@ -57,7 +72,19 @@ namespace eng
 
     void Application::OnWindowCloseEvent(WindowCloseEvent& event)
     {
-        m_Running = false;
+        Terminate();
         event.Handle();
+    }
+
+    void Application::OnWindowMinimizeEvent(WindowMinimizeEvent& event)
+    {
+        m_Minimized = event.IsMinimized();
+    }
+
+    void Application::OnWindowFramebufferResizeEvent(WindowFramebufferResizeEvent& event)
+    {
+        m_ZeroSize = event.GetFramebufferWidth() == 0 or event.GetFramebufferHeight() == 0;
+        if (m_ZeroSize)
+            event.Handle();
     }
 }

@@ -53,10 +53,12 @@ namespace eng
     private:
         friend class Application;
 
-        ~LayerStack()
+        void Clear()
         {
             for (auto& layer : m_Layers)
                 layer->OnDetach();
+            m_Layers.clear();
+            m_OverlayInsertIndex = 0;
         }
 
         void OnEvent(Event& event)
