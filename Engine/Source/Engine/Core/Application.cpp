@@ -83,7 +83,7 @@ namespace eng
 
     void Application::OnWindowFramebufferResizeEvent(WindowFramebufferResizeEvent& event)
     {
-        m_ZeroSize = event.GetFramebufferWidth() == 0 or event.GetFramebufferHeight() == 0;
+        m_ZeroSize = event.GetFramebufferWidth() == 0 || event.GetFramebufferHeight() == 0;
         if (m_ZeroSize)
             event.Handle();
     }

@@ -1,5 +1,6 @@
 #include "RenderContext.hpp"
 #include "Engine/Core/AssertOrVerify.hpp"
+#include "Engine/Core/Log.hpp"
 #include <backends/imgui_impl_glfw.h>
 #include <backends/imgui_impl_vulkan.h>
 #define GLFW_INCLUDE_NONE
@@ -14,7 +15,6 @@ namespace eng
 {
     // TODO: remove
     static ImGui_ImplVulkanH_Window s_MainWindow{};
-    static std::uint32_t s_MinImageCount = 2;
 
 #if ENG_CONFIG_DEBUG
     static VKAPI_ATTR VkBool32 VKAPI_CALL DebugReport(VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT objectType, uint64_t object, size_t location, int32_t messageCode, char const* pLayerPrefix, char const* pMessage, void* pUserData)
@@ -24,6 +24,89 @@ namespace eng
         return VK_FALSE;
     }
 #endif
+
+    VkInstance RenderContext::GetInstance() const
+    {
+        return m_Instance;
+    }
+
+    VkPhysicalDevice RenderContext::GetPhysicalDevice() const
+    {
+        return m_PhysicalDevice;
+    }
+
+    VkDevice RenderContext::GetDevice() const
+    {
+        return m_Device;
+    }
+
+    VkCommandBuffer RenderContext::GetCommandBuffer()
+    {
+        VkResult result = VK_SUCCESS;
+        VkCommandBuffer& commandBuffer = m_AllocatedCommandBuffers[s_MainWindow.FrameIndex].emplace_back();
+
+        // Allocate a command buffer.
+        {
+            VkCommandBufferAllocateInfo info{};
+            info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+            info.commandPool = s_MainWindow.Frames[s_MainWindow.FrameIndex].CommandPool;
+            info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+            info.commandBufferCount = 1;
+
+            result = vkAllocateCommandBuffers(m_Device, &info, &commandBuffer);
+            ENG_ASSERT(result == VK_SUCCESS, "Failed to allocate command buffer.");
+        }
+
+        // Begin the command buffer.
+        {
+            VkCommandBufferBeginInfo info{};
+            info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+            info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+
+            result = vkBeginCommandBuffer(commandBuffer, &info);
+            ENG_ASSERT(result == VK_SUCCESS, "Failed to begin command buffer.");
+        }
+
+        return commandBuffer;
+    }
+
+    void RenderContext::FlushCommandBuffer(VkCommandBuffer commandBuffer)
+    {
+        VkResult result = VK_SUCCESS;
+
+        // End the command buffer.
+        VkSubmitInfo submitInfo{};
+        submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+        submitInfo.commandBufferCount = 1;
+        submitInfo.pCommandBuffers = &commandBuffer;
+
+        result = vkEndCommandBuffer(commandBuffer);
+        ENG_ASSERT(result == VK_SUCCESS, "Failed to end command buffer.");
+
+        // Create a fence to ensure the command buffer has finished executing.
+        // TODO: reuse fences, seriously, creating and destroying them on the fly is so dumb.
+        // ESPECIALLY when they were literally designed to be REUSED.
+        VkFence fence = VK_NULL_HANDLE;
+
+        VkFenceCreateInfo fenceCreateInfo{};
+        fenceCreateInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+
+        result = vkCreateFence(m_Device, &fenceCreateInfo, nullptr, &fence);
+        ENG_ASSERT(result == VK_SUCCESS, "Failed to create fence.");
+
+        result = vkQueueSubmit(m_GraphicsQueue, 1, &submitInfo, fence);
+        ENG_ASSERT(result == VK_SUCCESS, "Failed to submit queue.");
+
+        result = vkWaitForFences(m_Device, 1, &fence, VK_TRUE, std::numeric_limits<std::uint64_t>::max());
+        ENG_ASSERT(result == VK_SUCCESS, "Failed to wait for fence.");
+
+        vkDestroyFence(m_Device, fence, nullptr);
+    }
+
+    void RenderContext::SubmitResourceFree(std::function<void()>&& freeFunc)
+    {
+        m_ResourceFreeQueue[m_CurrentFrameIndex].emplace_back(std::move(freeFunc));
+    }
 
     RenderContext::RenderContext(Window& window, std::function<void()>&& renderCallback, std::function<void()>&& imguiRenderCallback)
         : m_ContextWindow(window.m_Window)
@@ -52,24 +135,20 @@ namespace eng
             char const** glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
             extensions.append_range(std::span<char const*>(glfwExtensions, glfwExtensionCount));
 
-            {
-                VkInstanceCreateInfo info{};
-                info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
-                info.enabledLayerCount = static_cast<std::uint32_t>(layers.size());
-                info.ppEnabledLayerNames = layers.data();
-                info.enabledExtensionCount = static_cast<std::uint32_t>(extensions.size());
-                info.ppEnabledExtensionNames = extensions.data();
+            VkInstanceCreateInfo info{};
+            info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
+            info.enabledLayerCount = static_cast<std::uint32_t>(layers.size());
+            info.ppEnabledLayerNames = layers.data();
+            info.enabledExtensionCount = static_cast<std::uint32_t>(extensions.size());
+            info.ppEnabledExtensionNames = extensions.data();
 
-                result = vkCreateInstance(&info, nullptr, &m_Instance);
-                ENG_ASSERT(result == VK_SUCCESS, "Failed to create Vulkan instance.");
-            }
+            result = vkCreateInstance(&info, nullptr, &m_Instance);
+            ENG_ASSERT(result == VK_SUCCESS, "Failed to create Vulkan instance.");
         }
 
 #if ENG_CONFIG_DEBUG
-        // Create the debug report.
+        // Create the debug report callback.
         {
-            _ENG_GET_FUNC_VK_EXT(vkCreateDebugReportCallbackEXT);
-
             VkDebugReportCallbackCreateInfoEXT info{};
             info.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_EXT;
             info.flags =
@@ -80,8 +159,9 @@ namespace eng
                 VK_DEBUG_REPORT_DEBUG_BIT_EXT;
             info.pfnCallback = &DebugReport;
 
+            _ENG_GET_FUNC_VK_EXT(vkCreateDebugReportCallbackEXT);
             result = vkCreateDebugReportCallbackEXT(m_Instance, &info, nullptr, &m_DebugReportCallback);
-            ENG_ASSERT(result == VK_SUCCESS, "Failed to create debug report.");
+            ENG_ASSERT(result == VK_SUCCESS, "Failed to create debug report callback.");
         }
 #endif
 
@@ -217,6 +297,9 @@ namespace eng
             ENG_ASSERT(result == VK_SUCCESS, "Failed to get surface support.");
             ENG_ASSERT(supported, "No surface support available.");
 
+            // These ImGui helper functions for choosing settings are close to,
+            // if not exactly, what I would've done, so they stay for now.
+
             // TODO: don't use imgui's helper function.
             VkFormat format = VK_FORMAT_R8G8B8A8_UNORM;
             VkColorSpaceKHR colorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR;
@@ -226,8 +309,11 @@ namespace eng
             VkPresentModeKHR presentMode = VK_PRESENT_MODE_MAILBOX_KHR; // TODO: enable/disable vsync related
             s_MainWindow.PresentMode = ImGui_ImplVulkanH_SelectPresentMode(m_PhysicalDevice, m_Surface, &presentMode, 1);
 
+            // Use an extra image if vsync is on to buffer an extra frame when possible.
+            m_MinImageCount = presentMode == VK_PRESENT_MODE_MAILBOX_KHR ? 3u : 2u;
+
             // TODO: this is supposed to use the presentation queue family index
-            ImGui_ImplVulkanH_CreateOrResizeWindow(m_Instance, m_PhysicalDevice, m_Device, &s_MainWindow, m_GraphicsFamilyIndex, nullptr, width, height, s_MinImageCount);
+            ImGui_ImplVulkanH_CreateOrResizeWindow(m_Instance, m_PhysicalDevice, m_Device, &s_MainWindow, m_GraphicsFamilyIndex, nullptr, width, height, m_MinImageCount);
 
             m_AllocatedCommandBuffers.resize(s_MainWindow.ImageCount);
             m_ResourceFreeQueue.resize(s_MainWindow.ImageCount);
@@ -249,11 +335,14 @@ namespace eng
             info.Instance = m_Instance;
             info.PhysicalDevice = m_PhysicalDevice;
             info.Device = m_Device;
+            // TODO: imgui seemingly assumes that the graphics queue and the presentation queue will be the same,
+            // as they have only included one queue and queue family in their init info struct.
+            // I will have to eventually replace the ImGui backend with my own implementation.
             info.QueueFamily = m_GraphicsFamilyIndex;
             info.Queue = m_GraphicsQueue;
             info.DescriptorPool = m_DescriptorPool;
             info.RenderPass = s_MainWindow.RenderPass;
-            info.MinImageCount = s_MinImageCount;
+            info.MinImageCount = m_MinImageCount;
             info.ImageCount = s_MainWindow.ImageCount;
             info.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
 
@@ -291,126 +380,41 @@ namespace eng
         vkDestroyInstance(m_Instance, nullptr);
     }
 
-    VkInstance RenderContext::GetInstance()
-    {
-        return m_Instance;
-    }
-
-    VkPhysicalDevice RenderContext::GetPhysicalDevice()
-    {
-        return m_PhysicalDevice;
-    }
-
-    VkDevice RenderContext::GetDevice()
-    {
-        return m_Device;
-    }
-
-    VkCommandBuffer RenderContext::GetCommandBuffer()
-    {
-        VkResult result = VK_SUCCESS;
-        VkCommandBuffer& commandBuffer = m_AllocatedCommandBuffers[s_MainWindow.FrameIndex].emplace_back();
-
-        // Allocate a command buffer.
-        {
-            VkCommandBufferAllocateInfo info{};
-            info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-            info.commandPool = s_MainWindow.Frames[s_MainWindow.FrameIndex].CommandPool;
-            info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-            info.commandBufferCount = 1;
-
-            result = vkAllocateCommandBuffers(m_Device, &info, &commandBuffer);
-            ENG_ASSERT(result == VK_SUCCESS, "Failed to allocate command buffer.");
-        }
-
-        // Begin the command buffer.
-        {
-            VkCommandBufferBeginInfo info{};
-            info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-            info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-
-            result = vkBeginCommandBuffer(commandBuffer, &info);
-            ENG_ASSERT(result == VK_SUCCESS, "Failed to begin command buffer.");
-        }
-
-        return commandBuffer;
-    }
-
-    void RenderContext::FlushCommandBuffer(VkCommandBuffer commandBuffer)
-    {
-        VkResult result = VK_SUCCESS;
-
-        // End the command buffer.
-        VkSubmitInfo submitInfo{};
-        submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-        submitInfo.commandBufferCount = 1;
-        submitInfo.pCommandBuffers = &commandBuffer;
-
-        result = vkEndCommandBuffer(commandBuffer);
-        ENG_ASSERT(result == VK_SUCCESS, "Failed to end command buffer.");
-
-        // Create a fence to ensure the command buffer has finished executing.
-        // TODO: reuse fences, seriously, creating and destroying them on the fly is so dumb.
-        // ESPECIALLY when they were literally designed to be REUSED.
-        VkFence fence = VK_NULL_HANDLE;
-
-        VkFenceCreateInfo fenceCreateInfo{};
-        fenceCreateInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-
-        result = vkCreateFence(m_Device, &fenceCreateInfo, nullptr, &fence);
-        ENG_ASSERT(result == VK_SUCCESS, "Failed to create fence.");
-
-        result = vkQueueSubmit(m_GraphicsQueue, 1, &submitInfo, fence);
-        ENG_ASSERT(result == VK_SUCCESS, "Failed to submit queue.");
-
-        result = vkWaitForFences(m_Device, 1, &fence, VK_TRUE, std::numeric_limits<std::uint64_t>::max());
-        ENG_ASSERT(result == VK_SUCCESS, "Failed to wait for fence.");
-
-        vkDestroyFence(m_Device, fence, nullptr);
-    }
-
-    void RenderContext::SubmitResourceFree(std::function<void()>&& freeFunc)
-    {
-        m_ResourceFreeQueue[m_CurrentFrameIndex].emplace_back(std::move(freeFunc));
-    }
-
     void RenderContext::DoFrame(bool render)
     {
-        if (m_RebuildSwapChain && render)
+        // Recreate the swapchain if necessary.
+        if (m_RecreateSwapChain && render)
         {
             std::int32_t width, height;
             glfwGetFramebufferSize(m_ContextWindow, &width, &height);
 
-            ImGui_ImplVulkanH_CreateOrResizeWindow(m_Instance, m_PhysicalDevice, m_Device, &s_MainWindow, m_GraphicsFamilyIndex, nullptr, width, height, s_MinImageCount);
+            ImGui_ImplVulkanH_CreateOrResizeWindow(m_Instance, m_PhysicalDevice, m_Device, &s_MainWindow, m_GraphicsFamilyIndex, nullptr, width, height, m_MinImageCount);
             s_MainWindow.FrameIndex = 0;
 
             m_AllocatedCommandBuffers.clear();
             m_AllocatedCommandBuffers.resize(s_MainWindow.ImageCount);
 
-            m_RebuildSwapChain = false;
+            m_RecreateSwapChain = false;
         }
 
-        ImGui_ImplVulkan_NewFrame();
-        ImGui_ImplGlfw_NewFrame();
-        ImGui::NewFrame();
+        // Update ImGui state and get its draw data for this frame.
+        {
+            ImGui_ImplVulkan_NewFrame();
+            ImGui_ImplGlfw_NewFrame();
+            ImGui::NewFrame();
 
-        // TODO: imgui dockspace
-        m_ImGuiRenderCallback();
+            // Do the Client's ImGui rendering.
+            m_ImGuiRenderCallback();
 
-        ImGui::Render();
-        ImDrawData* drawData = ImGui::GetDrawData();
-        if (render)
-            FrameRender(drawData);
+            ImGui::Render();
+            ImGui::UpdatePlatformWindows();
+            ImGui::RenderPlatformWindowsDefault();
+        }
 
-        ImGui::UpdatePlatformWindows();
-        ImGui::RenderPlatformWindowsDefault();
+        // If not rendering, don't.
+        if (!render)
+            return;
 
-        if (render)
-            FramePresent();
-    }
-
-    void RenderContext::FrameRender(ImDrawData* drawData)
-    {
         VkResult result = VK_SUCCESS;
 
         VkSemaphore imageAcquiredSemaphore = s_MainWindow.FrameSemaphores[s_MainWindow.SemaphoreIndex].ImageAcquiredSemaphore;
@@ -420,12 +424,11 @@ namespace eng
         result = vkAcquireNextImageKHR(m_Device, s_MainWindow.Swapchain, std::numeric_limits<std::uint64_t>::max(), imageAcquiredSemaphore, nullptr, &s_MainWindow.FrameIndex);
         if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR)
         {
-            m_RebuildSwapChain = true;
+            m_RecreateSwapChain = true;
             return;
         }
         ENG_ASSERT(result == VK_SUCCESS, "Failed to acquire next swapchain image.");
 
-        m_CurrentFrameIndex = (m_CurrentFrameIndex + 1) % s_MainWindow.ImageCount;
         ImGui_ImplVulkanH_Frame& frame = s_MainWindow.Frames[s_MainWindow.FrameIndex];
 
         // Wait for the image to be available.
@@ -436,6 +439,7 @@ namespace eng
         ENG_ASSERT(result == VK_SUCCESS, "Failed to reset frame fence.");
 
         // Clear resources in the free queue.
+        m_CurrentFrameIndex = (m_CurrentFrameIndex + 1) % s_MainWindow.ImageCount;
         for (auto& freeFunc : m_ResourceFreeQueue[m_CurrentFrameIndex])
             freeFunc();
         m_ResourceFreeQueue[m_CurrentFrameIndex].clear();
@@ -463,6 +467,7 @@ namespace eng
             ENG_ASSERT(result == VK_SUCCESS, "Failed to begin command buffer.");
         }
 
+        // Do the render pass.
         {
             VkRenderPassBeginInfo info{};
             info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
@@ -472,12 +477,18 @@ namespace eng
             info.renderArea.extent.height = static_cast<std::uint32_t>(s_MainWindow.Height);
             info.clearValueCount = 1;
             info.pClearValues = &s_MainWindow.ClearValue;
+
+            // Begin the render pass.
             vkCmdBeginRenderPass(frame.CommandBuffer, &info, VK_SUBPASS_CONTENTS_INLINE);
+            // Do all Client rendering.
+            m_RenderCallback();
+            // Do all ImGui rendering.
+            ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), frame.CommandBuffer);
+            // End the render pass.
+            vkCmdEndRenderPass(frame.CommandBuffer);
         }
 
-        ImGui_ImplVulkan_RenderDrawData(drawData, frame.CommandBuffer);
-        vkCmdEndRenderPass(frame.CommandBuffer);
-
+        // End the frame's command buffer and submit
         {
             VkPipelineStageFlags waitMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
             VkSubmitInfo info{};
@@ -495,32 +506,27 @@ namespace eng
             result = vkQueueSubmit(m_GraphicsQueue, 1, &info, frame.Fence);
             ENG_ASSERT(result == VK_SUCCESS, "Failed to submit render queue.");
         }
-    }
-
-    void RenderContext::FramePresent()
-    {
-        if (m_RebuildSwapChain)
-            return;
-
-        VkSemaphore renderCompleteSemaphore = s_MainWindow.FrameSemaphores[s_MainWindow.SemaphoreIndex].RenderCompleteSemaphore;
-
-        VkPresentInfoKHR info{};
-        info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
-        info.waitSemaphoreCount = 1;
-        info.pWaitSemaphores = &renderCompleteSemaphore;
-        info.swapchainCount = 1;
-        info.pSwapchains = &s_MainWindow.Swapchain;
-        info.pImageIndices = &s_MainWindow.FrameIndex;
         
-        VkResult result = vkQueuePresentKHR(m_GraphicsQueue, &info);
-        if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR)
+        // Present the most recently completed frame to the surface.
         {
-            m_RebuildSwapChain = true;
-            return;
-        }
-        ENG_ASSERT(result == VK_SUCCESS, "Failed to present frame.");
+            VkPresentInfoKHR info{};
+            info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+            info.waitSemaphoreCount = 1;
+            info.pWaitSemaphores = &renderCompleteSemaphore;
+            info.swapchainCount = 1;
+            info.pSwapchains = &s_MainWindow.Swapchain;
+            info.pImageIndices = &s_MainWindow.FrameIndex;
+        
+            VkResult result = vkQueuePresentKHR(m_GraphicsQueue, &info);
+            if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR)
+            {
+                m_RecreateSwapChain = true;
+                return;
+            }
+            ENG_ASSERT(result == VK_SUCCESS, "Failed to present frame.");
 
-        // Use the next semaphore.
-        s_MainWindow.SemaphoreIndex = (s_MainWindow.SemaphoreIndex + 1) % s_MainWindow.ImageCount;
+            // Use the next semaphore.
+            s_MainWindow.SemaphoreIndex = (s_MainWindow.SemaphoreIndex + 1) % s_MainWindow.ImageCount;
+        }
     }
 }

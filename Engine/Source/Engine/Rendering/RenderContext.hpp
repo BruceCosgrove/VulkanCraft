@@ -4,29 +4,23 @@
 #include <vulkan/vulkan.h>
 #include <vector>
 
-struct ImDrawData;
-
 namespace eng
 {
     // TODO: Refactor; this is getting pretty spaghetti.
     class RenderContext
     {
     public:
-        RenderContext(Window& window, std::function<void()>&& renderCallback, std::function<void()>&& imguiRenderCallback);
-        ~RenderContext();
-    public:
-        VkInstance GetInstance();
-        VkPhysicalDevice GetPhysicalDevice();
-        VkDevice GetDevice();
+        VkInstance GetInstance() const;
+        VkPhysicalDevice GetPhysicalDevice() const;
+        VkDevice GetDevice() const;
         VkCommandBuffer GetCommandBuffer();
         void FlushCommandBuffer(VkCommandBuffer commandBuffer);
         void SubmitResourceFree(std::function<void()>&& freeFunc);
     private:
         friend class Application;
+        RenderContext(Window& window, std::function<void()>&& renderCallback, std::function<void()>&& imguiRenderCallback);
+        ~RenderContext();
         void DoFrame(bool render);
-    private:
-        void FrameRender(ImDrawData* drawData);
-        void FramePresent();
     private:
         GLFWwindow* m_ContextWindow = nullptr;
         std::function<void()> m_RenderCallback;
@@ -46,7 +40,8 @@ namespace eng
 
         std::vector<std::vector<VkCommandBuffer>> m_AllocatedCommandBuffers;
         std::vector<std::vector<std::function<void()>>> m_ResourceFreeQueue;
+        std::uint32_t m_MinImageCount = 0;
         std::uint32_t m_CurrentFrameIndex = 0;
-        bool m_RebuildSwapChain = false;
+        bool m_RecreateSwapChain = false;
     };
 }

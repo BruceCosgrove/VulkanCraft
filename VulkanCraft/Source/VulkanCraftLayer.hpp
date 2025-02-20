@@ -14,6 +14,6 @@ namespace vc
         virtual void OnRender() override;
         virtual void OnImGuiRender() override;
     private:
-
+        void UI_Dockspace();
     };
 }
