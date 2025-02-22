@@ -14,6 +14,10 @@ namespace vc
         virtual void OnRender() override;
         virtual void OnImGuiRender() override;
     private:
-        void UI_Dockspace();
+        void CreateRenderPass();
+        void CreateFramebuffer();
+    private:
+        VkRenderPass m_RenderPass = VK_NULL_HANDLE;
+        VkFramebuffer m_Framebuffer = VK_NULL_HANDLE;
     };
 }

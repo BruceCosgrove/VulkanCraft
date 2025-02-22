@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Engine/Input/Event/Event.hpp"
+#include "Engine/Rendering/RenderContext.hpp"
 #include <functional>
 #include <string>
 
@@ -19,12 +20,16 @@ namespace eng
     class Window
     {
     public:
-        Window(WindowInfo const& info, std::function<void(Event&)>&& eventCallback);
+        GLFWwindow* GetNativeWindow();
+        RenderContext& GetRenderContext();
+    private:
+        friend class Application;
+        Window(WindowInfo const& info, std::function<void(Event&)>&& eventCallback, std::function<void()>&& renderCallback);
         ~Window();
     private:
-        friend class RenderContext;
-        std::function<void(Event&)> m_EventCallback;
         GLFWwindow* m_Window = nullptr;
+        std::function<void(Event&)> m_EventCallback;
+        std::unique_ptr<RenderContext> m_RenderContext;
     private:
         inline static std::uint32_t s_WindowCount = 0;
     };

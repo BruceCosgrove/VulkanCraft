@@ -4,7 +4,6 @@
 #include "Engine/Core/Log.hpp"
 #include "Engine/Input/Window.hpp"
 #include "Engine/Input/Event/WindowEvents.hpp"
-#include "Engine/Rendering/RenderContext.hpp"
 
 namespace eng
 {
@@ -23,10 +22,10 @@ namespace eng
         static Application& Get(); // Defined in Entrypoint.cpp
 
         // Shuts down the application gracefully.
-        void Terminate() noexcept;
+        void Terminate();
 
-        LayerStack& GetLayerStack() noexcept;
-        RenderContext& GetRenderContext() noexcept;
+        LayerStack& GetLayerStack();
+        Window& GetWindow();
     private:
         void OnEvent(Event& event);
         void OnWindowCloseEvent(WindowCloseEvent& event);
@@ -37,7 +36,6 @@ namespace eng
 
         LayerStack m_LayerStack;
         Window m_Window;
-        RenderContext m_RenderContext;
     private:
         double m_LastTime = 0.0;
         bool m_Running = true;

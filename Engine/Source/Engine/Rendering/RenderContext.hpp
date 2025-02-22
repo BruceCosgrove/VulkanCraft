@@ -1,8 +1,10 @@
 #pragma once
 
-#include "Engine/Input/Window.hpp"
 #include <vulkan/vulkan.h>
-#include <vector>
+#include <functional>
+#include <memory>
+
+struct GLFWwindow;
 
 namespace eng
 {
@@ -10,38 +12,87 @@ namespace eng
     class RenderContext
     {
     public:
-        VkInstance GetInstance() const;
-        VkPhysicalDevice GetPhysicalDevice() const;
+        static VkInstance GetInstance();
+        static VkPhysicalDevice GetPhysicalDevice();
+
+        VkSurfaceKHR GetSurface() const;
         VkDevice GetDevice() const;
-        VkCommandBuffer GetCommandBuffer();
-        void FlushCommandBuffer(VkCommandBuffer commandBuffer);
-        void SubmitResourceFree(std::function<void()>&& freeFunc);
+        std::uint32_t GetGraphicsFamily() const;
+        std::uint32_t GetPresentFamily() const;
+        VkQueue GetGraphicsQueue() const;
+        VkQueue GetPresentQueue() const;
+        VkImageView GetActiveSwapchainImageView() const;
+        VkExtent2D GetSwapchainExtent() const;
+        VkFormat GetSwapchainFormat() const;
+        VkCommandBuffer GetActiveCommandBuffer() const;
+
+    private:
+        friend class Window;
+        RenderContext(GLFWwindow* handle, std::function<void()>&& renderCallback);
+        friend struct ::std::default_delete<RenderContext>;
+        ~RenderContext();
     private:
         friend class Application;
-        RenderContext(Window& window, std::function<void()>&& renderCallback, std::function<void()>&& imguiRenderCallback);
-        ~RenderContext();
-        void DoFrame(bool render);
+        void OnRender();
     private:
-        GLFWwindow* m_ContextWindow = nullptr;
-        std::function<void()> m_RenderCallback;
-        std::function<void()> m_ImGuiRenderCallback;
-
-        VkInstance m_Instance = VK_NULL_HANDLE;
+        static void CreateInstance();
 #if ENG_CONFIG_DEBUG
-        VkDebugReportCallbackEXT m_DebugReportCallback = VK_NULL_HANDLE;
+        static void CreateDebugReportCallback();
 #endif
-        VkPhysicalDevice m_PhysicalDevice = VK_NULL_HANDLE;
-        std::uint32_t m_GraphicsFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-        VkDevice m_Device = VK_NULL_HANDLE;
-        VkQueue m_GraphicsQueue = VK_NULL_HANDLE;
-        VkPipelineCache m_PipelineCache = VK_NULL_HANDLE;
-        VkDescriptorPool m_DescriptorPool = VK_NULL_HANDLE;
-        VkSurfaceKHR m_Surface = VK_NULL_HANDLE;
+        static void SelectPhysicalDevice();
 
-        std::vector<std::vector<VkCommandBuffer>> m_AllocatedCommandBuffers;
-        std::vector<std::vector<std::function<void()>>> m_ResourceFreeQueue;
-        std::uint32_t m_MinImageCount = 0;
-        std::uint32_t m_CurrentFrameIndex = 0;
-        bool m_RecreateSwapChain = false;
+        void CreateSurface();
+        void SelectQueueFamilies();
+        void CreateLogicalDevice();
+        void CreateSwapchain();
+        void CreateSwapchainImageViews();
+        void CreateCommandPool();
+        void CreateCommandBuffers();
+        void CreateFencesAndSemaphores();
+
+        VkExtent2D SelectExtent(VkSurfaceCapabilitiesKHR const& surfaceCapabilities) const;
+        std::uint32_t SelectImageCount(VkSurfaceCapabilitiesKHR const& surfaceCapabilities) const;
+        VkSurfaceFormatKHR SelectSurfaceFormat() const;
+        VkPresentModeKHR SelectPresentMode() const;
+    private:
+        // Per-application context.
+
+        inline static std::uint32_t s_RenderContextCount = 0;
+        inline static VkInstance s_Instance = VK_NULL_HANDLE;
+#if ENG_CONFIG_DEBUG
+        inline static VkDebugReportCallbackEXT s_DebugReportCallback = VK_NULL_HANDLE;
+#endif
+        inline static VkPhysicalDevice s_PhysicalDevice = VK_NULL_HANDLE;
+
+    private:
+        // TODO: Per-window context
+
+        GLFWwindow* m_Window = nullptr; // Non-owning
+        std::function<void()> m_RenderCallback;
+
+        VkSurfaceKHR m_Surface = VK_NULL_HANDLE;
+        VkDevice m_Device = VK_NULL_HANDLE;
+        std::uint32_t m_GraphicsFamily = VK_QUEUE_FAMILY_IGNORED;
+        std::uint32_t m_PresentFamily = VK_QUEUE_FAMILY_IGNORED;
+        VkQueue m_GraphicsQueue = VK_NULL_HANDLE;
+        VkQueue m_PresentQueue = VK_NULL_HANDLE;
+
+        // Swapchain
+
+        VkSwapchainKHR m_Swapchain = VK_NULL_HANDLE;
+        std::unique_ptr<VkImage[]> m_SwapchainImages;
+        std::unique_ptr<VkImageView[]> m_SwapchainImageViews;
+        std::uint32_t m_SwapchainImageCount = 0;
+        VkExtent2D m_SwapchainExtent{0, 0};
+        VkFormat m_SwapchainFormat = VK_FORMAT_UNDEFINED;
+        bool m_RecreateSwapchain = false;
+
+        VkCommandPool m_CommandPool = VK_NULL_HANDLE;
+        std::uint32_t m_FrameIndex = 0;
+        std::uint32_t m_SemaphoreIndex = 0;
+        std::unique_ptr<VkCommandBuffer[]> m_FrameCommandBuffers;
+        std::unique_ptr<VkFence[]> m_FrameInFlightFences;
+        std::unique_ptr<VkSemaphore[]> m_ImageAcquiredSemaphores;
+        std::unique_ptr<VkSemaphore[]> m_RenderCompleteSemaphores;
     };
 }

@@ -10,7 +10,17 @@
 
 namespace eng
 {
-    Window::Window(WindowInfo const& info, std::function<void(Event&)>&& eventCallback)
+    GLFWwindow* Window::GetNativeWindow()
+    {
+        return m_Window;
+    }
+
+    RenderContext& Window::GetRenderContext()
+    {
+        return *m_RenderContext;
+    }
+
+    Window::Window(WindowInfo const& info, std::function<void(Event&)>&& eventCallback, std::function<void()>&& renderCallback)
         : m_EventCallback(std::move(eventCallback))
     {
         // If this is the first window created, initialize GLFW.
@@ -194,12 +204,16 @@ namespace eng
             window.m_EventCallback(event);
         });
 
+        m_RenderContext.reset(new RenderContext(m_Window, std::move(renderCallback)));
+
         // Now that the window is fully initialized, show it.
         glfwShowWindow(m_Window);
     }
 
     Window::~Window()
     {
+        m_RenderContext.release();
+
         glfwDestroyWindow(m_Window);
 
         // If this is the last window destroyed, terminate GLFW.
