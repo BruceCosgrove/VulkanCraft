@@ -78,6 +78,11 @@ namespace eng
         return m_FrameCommandBuffers[m_FrameIndex];
     }
 
+    void RenderContext::AddSwapchainRecreationCallback(std::function<void(RenderContext&)>&& swapchainRecreationCallback)
+    {
+        m_SwapchainRecreationCallbacks.push_back(std::move(swapchainRecreationCallback));
+    }
+
     VkSurfaceKHR RenderContext::GetSurface() const
     {
         return m_Surface;
@@ -101,8 +106,7 @@ namespace eng
         CreateSurface();
         SelectQueueFamilies();
         CreateLogicalDevice();
-        CreateSwapchain();
-        CreateSwapchainImageViews();
+        CreateOrRecreateSwapchain();
         CreateCommandPool();
         CreateCommandBuffers();
         CreateFencesAndSemaphores();
@@ -139,14 +143,16 @@ namespace eng
         // Recreate the swapchain if necessary.
         if (m_RecreateSwapchain)
         {
-            std::int32_t width, height;
-            glfwGetFramebufferSize(m_Window, &width, &height);
-
-            // TODO: recreate swapchain
-            ENG_ASSERT(false);
-            m_FrameIndex = 0;
-
             m_RecreateSwapchain = false;
+
+            VkResult result = vkQueueWaitIdle(m_GraphicsQueue);
+            ENG_ASSERT(result == VK_SUCCESS, "Failed to wait for queue to finish.");
+
+            CreateOrRecreateSwapchain();
+
+            // TODO: ehhhhhhhhhh
+            for (auto& callback : m_SwapchainRecreationCallbacks)
+                callback(*this);
         }
 
         VkSemaphore imageAcquiredSemaphore = m_ImageAcquiredSemaphores[m_SemaphoreIndex];
@@ -408,14 +414,17 @@ namespace eng
         vkGetDeviceQueue(m_Device, m_PresentFamily, 0, &m_PresentQueue);
     }
 
-    void RenderContext::CreateSwapchain()
+    void RenderContext::CreateOrRecreateSwapchain()
     {
         VkSurfaceCapabilitiesKHR surfaceCapabilities;
         VkResult result = vkGetPhysicalDeviceSurfaceCapabilitiesKHR(s_PhysicalDevice, m_Surface, &surfaceCapabilities);
         ENG_ASSERT(result == VK_SUCCESS, "Failed to get surface capabilities.");
 
-        // Create swapchain.
         {
+            std::uint32_t oldSwapchainImageCount = m_SwapchainImageCount;
+            std::unique_ptr<VkImageView[]> oldSwapchainImageViews = std::move(m_SwapchainImageViews);
+            VkSwapchainKHR oldSwapchain = m_Swapchain;
+
             // Choose swapchain properties.
             std::uint32_t imageCount = SelectImageCount(surfaceCapabilities);
             VkExtent2D extent = SelectExtent(surfaceCapabilities);
@@ -444,7 +453,7 @@ namespace eng
             info.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
             info.presentMode = presentMode;
             info.clipped = VK_TRUE;
-            info.oldSwapchain = VK_NULL_HANDLE; // TODO: recreate when resized.
+            info.oldSwapchain = oldSwapchain;
 
             // Create swapchain.
             result = vkCreateSwapchainKHR(m_Device, &info, nullptr, &m_Swapchain);
@@ -459,36 +468,43 @@ namespace eng
             result = vkGetSwapchainImagesKHR(m_Device, m_Swapchain, &imageCount, m_SwapchainImages.get());
             ENG_ASSERT(result == VK_SUCCESS, "Failed to get swapchain images.");
 
+            if (oldSwapchain)
+            {
+                for (std::uint32_t i = 0; i < oldSwapchainImageCount; i++)
+                    vkDestroyImageView(m_Device, oldSwapchainImageViews[i], nullptr);
+                vkDestroySwapchainKHR(m_Device, oldSwapchain, nullptr);
+            }
+
             // Save these for later.
             m_SwapchainImageCount = imageCount;
             m_SwapchainExtent = extent;
             m_SwapchainFormat = surfaceFormat.format;
         }
-    }
 
-    void RenderContext::CreateSwapchainImageViews()
-    {
-        m_SwapchainImageViews.reset(new VkImageView[m_SwapchainImageCount]);
-
-        VkImageViewCreateInfo info{};
-        info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-        info.viewType = VK_IMAGE_VIEW_TYPE_2D;
-        info.format = m_SwapchainFormat;
-        info.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
-        info.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
-        info.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
-        info.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
-        info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-        info.subresourceRange.baseMipLevel = 0;
-        info.subresourceRange.levelCount = 1;
-        info.subresourceRange.baseArrayLayer = 0;
-        info.subresourceRange.layerCount = 1;
-
-        for (std::uint32_t i = 0; i < m_SwapchainImageCount; i++)
+        // Create swapchain image views.
         {
-            info.image = m_SwapchainImages[i];
-            VkResult result = vkCreateImageView(m_Device, &info, nullptr, &m_SwapchainImageViews[i]);
-            ENG_ASSERT(result == VK_SUCCESS, "Failed to create swapchain image view {}/{}.", i + 1, m_SwapchainImageCount);
+            m_SwapchainImageViews.reset(new VkImageView[m_SwapchainImageCount]);
+
+            VkImageViewCreateInfo info{};
+            info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+            info.viewType = VK_IMAGE_VIEW_TYPE_2D;
+            info.format = m_SwapchainFormat;
+            info.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
+            info.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
+            info.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
+            info.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
+            info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+            info.subresourceRange.baseMipLevel = 0;
+            info.subresourceRange.levelCount = 1;
+            info.subresourceRange.baseArrayLayer = 0;
+            info.subresourceRange.layerCount = 1;
+
+            for (std::uint32_t i = 0; i < m_SwapchainImageCount; i++)
+            {
+                info.image = m_SwapchainImages[i];
+                VkResult result = vkCreateImageView(m_Device, &info, nullptr, &m_SwapchainImageViews[i]);
+                ENG_ASSERT(result == VK_SUCCESS, "Failed to create swapchain image view {}/{}.", i + 1, m_SwapchainImageCount);
+            }
         }
     }
 

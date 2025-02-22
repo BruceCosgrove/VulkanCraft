@@ -5,8 +5,17 @@ namespace vc
 {
     void VulkanCraftLayer::OnAttach()
     {
+        auto& context = eng::Application::Get().GetWindow().GetRenderContext();
+
         CreateRenderPass();
         CreateFramebuffer();
+
+        context.AddSwapchainRecreationCallback([this](eng::RenderContext& context)
+        {
+            VkDevice device = context.GetDevice();
+            vkDestroyFramebuffer(device, m_Framebuffer, nullptr);
+            CreateFramebuffer();
+        });
     }
 
     void VulkanCraftLayer::OnDetach()

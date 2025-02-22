@@ -3,6 +3,7 @@
 #include <vulkan/vulkan.h>
 #include <functional>
 #include <memory>
+#include <vector>
 
 struct GLFWwindow;
 
@@ -26,12 +27,15 @@ namespace eng
         VkFormat GetSwapchainFormat() const;
         VkCommandBuffer GetActiveCommandBuffer() const;
 
+        void AddSwapchainRecreationCallback(std::function<void(RenderContext&)>&& swapchainRecreationCallback);
+
     private:
         friend class Window;
         RenderContext(GLFWwindow* handle, std::function<void()>&& renderCallback);
+
         friend struct ::std::default_delete<RenderContext>;
         ~RenderContext();
-    private:
+
         friend class Application;
         void OnRender();
     private:
@@ -44,8 +48,7 @@ namespace eng
         void CreateSurface();
         void SelectQueueFamilies();
         void CreateLogicalDevice();
-        void CreateSwapchain();
-        void CreateSwapchainImageViews();
+        void CreateOrRecreateSwapchain();
         void CreateCommandPool();
         void CreateCommandBuffers();
         void CreateFencesAndSemaphores();
@@ -69,6 +72,7 @@ namespace eng
 
         GLFWwindow* m_Window = nullptr; // Non-owning
         std::function<void()> m_RenderCallback;
+        std::vector<std::function<void(RenderContext&)>> m_SwapchainRecreationCallbacks;
 
         VkSurfaceKHR m_Surface = VK_NULL_HANDLE;
         VkDevice m_Device = VK_NULL_HANDLE;
