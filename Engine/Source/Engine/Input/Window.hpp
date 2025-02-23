@@ -2,7 +2,6 @@
 
 #include "Engine/Core/LayerStack.hpp"
 #include "Engine/Rendering/RenderContext.hpp"
-#include <functional>
 #include <string>
 
 struct GLFWwindow;

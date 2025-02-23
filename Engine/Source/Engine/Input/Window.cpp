@@ -1,7 +1,5 @@
 #include "Window.hpp"
 #include "Engine/Core/AssertOrVerify.hpp"
-#include "Engine/Core/Attributes.hpp"
-#include "Engine/Core/FunctionBindings.hpp"
 #include "Engine/Core/Log.hpp"
 #include "Engine/Input/Event/WindowEvents.hpp"
 #include "Engine/Input/Event/MouseEvents.hpp"
@@ -39,6 +37,7 @@ namespace eng
         // Calculate the time since the last update/frame combo.
         // TODO: separate update/render threads, and only pass the time to the update thread.
         // TODO: think about implementing FixedUpdate.
+
         double currentTime = glfwGetTime();
         Timestep timestep = static_cast<float>(currentTime - m_LastTime);
         m_LastTime = currentTime;
@@ -93,6 +92,8 @@ namespace eng
 
         Handle = glfwCreateWindow((int)info.Width, (int)info.Height, info.Title.c_str(), nullptr, nullptr);
         ENG_ASSERT(Handle != nullptr, "Failed to create window.");
+
+        // Set the user pointer to this window to use in event callbacks.
         glfwSetWindowUserPointer(Handle, window);
 
         // Add all event callbacks.

@@ -21,7 +21,7 @@ namespace vc
     void VulkanCraftLayer::OnEvent(eng::Event& event)
     {
         // TODO: remove
-        ENG_LOG_INFO("VulkanCraftLayer::OnEvent(TODO: event logging)");
+        ENG_LOG_DEBUG("VulkanCraftLayer::OnEvent(TODO: event logging)");
         event.Dispatch(this, &VulkanCraftLayer::OnWindowCloseEvent);
     }
 

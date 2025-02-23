@@ -1,6 +1,5 @@
 #pragma once
 
-#include "Engine/Core/Log.hpp"
 #include "Engine/Input/Window.hpp"
 
 namespace eng

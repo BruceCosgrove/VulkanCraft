@@ -1,10 +1,8 @@
 #include "Application.hpp"
 #include "Engine/Core/AssertOrVerify.hpp"
-#include "Engine/Core/FunctionBindings.hpp"
-#include <backends/imgui_impl_glfw.h>
-#include <backends/imgui_impl_vulkan.h>
 #define GLFW_INCLUDE_NONE
 #include <glfw/glfw3.h>
+#include <vulkan/vulkan.h>
 
 namespace eng
 {

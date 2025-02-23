@@ -9,7 +9,6 @@ struct GLFWwindow;
 
 namespace eng
 {
-    // TODO: Refactor; this is getting pretty spaghetti.
     class RenderContext
     {
     public:
@@ -39,7 +38,7 @@ namespace eng
     private:
         static void CreateInstance();
 #if ENG_CONFIG_DEBUG
-        static void CreateDebugReportCallback();
+        static void CreateDebugUtilsMessenger();
 #endif
         static void SelectPhysicalDevice();
 
@@ -61,7 +60,7 @@ namespace eng
         inline static std::uint32_t s_RenderContextCount = 0;
         inline static VkInstance s_Instance = VK_NULL_HANDLE;
 #if ENG_CONFIG_DEBUG
-        inline static VkDebugReportCallbackEXT s_DebugReportCallback = VK_NULL_HANDLE;
+        inline static VkDebugUtilsMessengerEXT s_DebugUtilsMessenger = VK_NULL_HANDLE;
 #endif
         inline static VkPhysicalDevice s_PhysicalDevice = VK_NULL_HANDLE;
 
@@ -69,7 +68,6 @@ namespace eng
         // TODO: Per-window context
 
         GLFWwindow* m_Window = nullptr; // Non-owning
-        std::vector<std::function<void(RenderContext&)>> m_SwapchainRecreationCallbacks;
 
         VkSurfaceKHR m_Surface = VK_NULL_HANDLE;
         VkDevice m_Device = VK_NULL_HANDLE;
@@ -85,7 +83,7 @@ namespace eng
         std::unique_ptr<VkImageView[]> m_SwapchainImageViews;
         std::uint32_t m_SwapchainImageCount = 0;
         VkExtent2D m_SwapchainExtent{0, 0};
-        VkFormat m_SwapchainFormat = VK_FORMAT_UNDEFINED;
+        VkSurfaceFormatKHR m_SwapchainSurfaceFormat{};
         bool m_RecreateSwapchain = false;
         bool m_WasSwapchainRecreated = false;
 

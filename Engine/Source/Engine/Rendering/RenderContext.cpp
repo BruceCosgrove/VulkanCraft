@@ -1,5 +1,6 @@
 #include "RenderContext.hpp"
 #include "Engine/Core/AssertOrVerify.hpp"
+#include "Engine/Core/Attributes.hpp"
 #include "Engine/Core/Log.hpp"
 #define GLFW_INCLUDE_NONE
 #include <glfw/glfw3.h>
@@ -15,10 +16,28 @@
 namespace eng
 {
 #if ENG_CONFIG_DEBUG
-    static VKAPI_ATTR VkBool32 VKAPI_CALL DebugReport(VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT objectType, uint64_t object, size_t location, int32_t messageCode, char const* pLayerPrefix, char const* pMessage, void* pUserData)
+    static VkBool32 VKAPI_CALL DebugUtilsMessengerCallback(
+        VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
+        VkDebugUtilsMessageTypeFlagsEXT messageTypes,
+        const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
+        void* pUserData)
     {
-        static_cast<void>(flags, objectType, object, location, messageCode, pLayerPrefix, pUserData);
-        ENG_LOG_DEBUG("Vulkan debug report: {}", pMessage);
+        static_cast<void>(messageTypes, pUserData);
+        switch (messageSeverity)
+        {
+            case VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT:
+                ENG_LOG_TRACE("Vulkan {}: {}", pCallbackData->pMessageIdName, pCallbackData->pMessage);
+                break;
+            case VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT:
+                ENG_LOG_INFO("Vulkan {}: {}", pCallbackData->pMessageIdName, pCallbackData->pMessage);
+                break;
+            case VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT:
+                ENG_LOG_WARN("Vulkan {}: {}", pCallbackData->pMessageIdName, pCallbackData->pMessage);
+                break;
+            case VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT:
+                ENG_LOG_ERROR("Vulkan {}: {}", pCallbackData->pMessageIdName, pCallbackData->pMessage);
+                break;
+        }
         return VK_FALSE;
     }
 #endif
@@ -70,7 +89,7 @@ namespace eng
 
     VkFormat RenderContext::GetSwapchainFormat() const
     {
-        return m_SwapchainFormat;
+        return m_SwapchainSurfaceFormat.format;
     }
 
     bool RenderContext::WasSwapchainRecreated() const
@@ -96,7 +115,7 @@ namespace eng
         {
             CreateInstance();
 #if ENG_CONFIG_DEBUG
-            CreateDebugReportCallback();
+            CreateDebugUtilsMessenger();
 #endif
             SelectPhysicalDevice();
         }
@@ -130,8 +149,8 @@ namespace eng
         if (--s_RenderContextCount == 0)
         {
 #if ENG_CONFIG_DEBUG
-            _ENG_GET_FUNC_VK_EXT(vkDestroyDebugReportCallbackEXT);
-            vkDestroyDebugReportCallbackEXT(s_Instance, s_DebugReportCallback, nullptr);
+            _ENG_GET_FUNC_VK_EXT(vkDestroyDebugUtilsMessengerEXT);
+            vkDestroyDebugUtilsMessengerEXT(s_Instance, s_DebugUtilsMessenger, nullptr);
 #endif
             vkDestroyInstance(s_Instance, nullptr);
         }
@@ -144,19 +163,10 @@ namespace eng
         if (m_RecreateSwapchain)
         {
             m_RecreateSwapchain = false;
-
-            VkResult result = vkQueueWaitIdle(m_GraphicsQueue);
-            ENG_ASSERT(result == VK_SUCCESS, "Failed to wait for queue to finish.");
-
             CreateOrRecreateSwapchain();
-
-            // TODO: ehhhhhhhhhh
-            for (auto& callback : m_SwapchainRecreationCallbacks)
-                callback(*this);
         }
 
         VkSemaphore imageAcquiredSemaphore = m_ImageAcquiredSemaphores[m_SemaphoreIndex];
-        VkSemaphore renderCompleteSemaphore = m_RenderCompleteSemaphores[m_SemaphoreIndex];
 
         // Get the next image to render the frame to.
         VkResult result = vkAcquireNextImageKHR(m_Device, m_Swapchain, std::numeric_limits<std::uint64_t>::max(), imageAcquiredSemaphore, nullptr, &m_FrameIndex);
@@ -254,14 +264,14 @@ namespace eng
         std::vector<char const*> layers
         {
 #if ENG_CONFIG_DEBUG
-                "VK_LAYER_KHRONOS_validation",
+            "VK_LAYER_KHRONOS_validation",
 #endif
         };
 
         std::vector<char const*> extensions
         {
 #if ENG_CONFIG_DEBUG
-                "VK_EXT_debug_report",
+            "VK_EXT_debug_utils",
 #endif
         };
 
@@ -286,21 +296,25 @@ namespace eng
     }
 
 #if ENG_CONFIG_DEBUG
-    void RenderContext::CreateDebugReportCallback()
+    void RenderContext::CreateDebugUtilsMessenger()
     {
-        VkDebugReportCallbackCreateInfoEXT info{};
-        info.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_EXT;
-        info.flags =
-            VK_DEBUG_REPORT_INFORMATION_BIT_EXT |
-            VK_DEBUG_REPORT_WARNING_BIT_EXT |
-            VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT |
-            VK_DEBUG_REPORT_ERROR_BIT_EXT |
-            VK_DEBUG_REPORT_DEBUG_BIT_EXT;
-        info.pfnCallback = &DebugReport;
+        VkDebugUtilsMessengerCreateInfoEXT info{};
+        info.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
+        info.messageSeverity =
+            VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT |
+            VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT |
+            VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT |
+            VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
+        info.messageType =
+            VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT |
+            VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT |
+            VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT |
+            VK_DEBUG_UTILS_MESSAGE_TYPE_DEVICE_ADDRESS_BINDING_BIT_EXT;
+        info.pfnUserCallback = &DebugUtilsMessengerCallback;
 
-        _ENG_GET_FUNC_VK_EXT(vkCreateDebugReportCallbackEXT);
-        VkResult result = vkCreateDebugReportCallbackEXT(s_Instance, &info, nullptr, &s_DebugReportCallback);
-        ENG_ASSERT(result == VK_SUCCESS, "Failed to create debug report callback.");
+        _ENG_GET_FUNC_VK_EXT(vkCreateDebugUtilsMessengerEXT);
+        VkResult result = vkCreateDebugUtilsMessengerEXT(s_Instance, &info, nullptr, &s_DebugUtilsMessenger);
+        ENG_ASSERT(result == VK_SUCCESS, "Failed to create debug utils messenger.");
     }
 #endif
 
@@ -430,8 +444,8 @@ namespace eng
         VkResult result = vkGetPhysicalDeviceSurfaceCapabilitiesKHR(s_PhysicalDevice, m_Surface, &surfaceCapabilities);
         ENG_ASSERT(result == VK_SUCCESS, "Failed to get surface capabilities.");
 
+        // Create or recreate the swapchain.
         {
-            std::uint32_t oldSwapchainImageCount = m_SwapchainImageCount;
             std::unique_ptr<VkImageView[]> oldSwapchainImageViews = std::move(m_SwapchainImageViews);
             VkSwapchainKHR oldSwapchain = m_Swapchain;
 
@@ -480,7 +494,12 @@ namespace eng
 
             if (oldSwapchain)
             {
-                for (std::uint32_t i = 0; i < oldSwapchainImageCount; i++)
+                // Wait for the old swapchain to be done being used before deleting it.
+                // TODO: not a great solution. Would be ideal to wait for a fence.
+                result = vkQueueWaitIdle(m_GraphicsQueue);
+                ENG_ASSERT(result == VK_SUCCESS, "Failed to wait for queue to finish.");
+
+                for (std::uint32_t i = 0; i < m_SwapchainImageCount; i++)
                     vkDestroyImageView(m_Device, oldSwapchainImageViews[i], nullptr);
                 vkDestroySwapchainKHR(m_Device, oldSwapchain, nullptr);
             }
@@ -488,7 +507,7 @@ namespace eng
             // Save these for later.
             m_SwapchainImageCount = imageCount;
             m_SwapchainExtent = extent;
-            m_SwapchainFormat = surfaceFormat.format;
+            m_SwapchainSurfaceFormat = surfaceFormat;
         }
 
         // Create swapchain image views.
@@ -498,7 +517,7 @@ namespace eng
             VkImageViewCreateInfo info{};
             info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
             info.viewType = VK_IMAGE_VIEW_TYPE_2D;
-            info.format = m_SwapchainFormat;
+            info.format = m_SwapchainSurfaceFormat.format;
             info.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
             info.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
             info.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
