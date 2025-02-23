@@ -1,6 +1,6 @@
 #pragma once
 
-#if ENG_ENABLE_ASSERTS || ENG_ENABLE_VERIFYS
+#if ENG_ENABLE_ASSERTS or ENG_ENABLE_VERIFYS
     #include "Engine/Core/DebugBreak.hpp"
     #include "Engine/Core/Log.hpp"
     #include <string_view>

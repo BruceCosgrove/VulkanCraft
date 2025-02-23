@@ -73,14 +73,14 @@ namespace eng
         return m_SwapchainFormat;
     }
 
+    bool RenderContext::WasSwapchainRecreated() const
+    {
+        return m_WasSwapchainRecreated;
+    }
+
     VkCommandBuffer RenderContext::GetActiveCommandBuffer() const
     {
         return m_FrameCommandBuffers[m_FrameIndex];
-    }
-
-    void RenderContext::AddSwapchainRecreationCallback(std::function<void(RenderContext&)>&& swapchainRecreationCallback)
-    {
-        m_SwapchainRecreationCallbacks.push_back(std::move(swapchainRecreationCallback));
     }
 
     VkSurfaceKHR RenderContext::GetSurface() const
@@ -88,9 +88,8 @@ namespace eng
         return m_Surface;
     }
 
-    RenderContext::RenderContext(GLFWwindow* window, std::function<void()>&& renderCallback)
+    RenderContext::RenderContext(GLFWwindow* window)
         : m_Window(window)
-        , m_RenderCallback(std::move(renderCallback))
     {
         // If there aren't any render contexts yet, initialize their shared context.
         if (s_RenderContextCount++ == 0)
@@ -138,9 +137,10 @@ namespace eng
         }
     }
 
-    void RenderContext::OnRender()
+    void RenderContext::BeginFrame()
     {
         // Recreate the swapchain if necessary.
+        m_WasSwapchainRecreated = m_RecreateSwapchain;
         if (m_RecreateSwapchain)
         {
             m_RecreateSwapchain = false;
@@ -160,7 +160,7 @@ namespace eng
 
         // Get the next image to render the frame to.
         VkResult result = vkAcquireNextImageKHR(m_Device, m_Swapchain, std::numeric_limits<std::uint64_t>::max(), imageAcquiredSemaphore, nullptr, &m_FrameIndex);
-        if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR)
+        if (result == VK_ERROR_OUT_OF_DATE_KHR or result == VK_SUBOPTIMAL_KHR)
         {
             m_RecreateSwapchain = true;
             return;
@@ -190,8 +190,18 @@ namespace eng
             result = vkBeginCommandBuffer(frameCommandBuffer, &info);
             ENG_ASSERT(result == VK_SUCCESS, "Failed to begin command buffer.");
         }
+    }
 
-        m_RenderCallback();
+    void RenderContext::EndFrame()
+    {
+        if (m_RecreateSwapchain)
+            return;
+
+        VkResult result = VK_SUCCESS;
+        VkSemaphore imageAcquiredSemaphore = m_ImageAcquiredSemaphores[m_SemaphoreIndex];
+        VkSemaphore renderCompleteSemaphore = m_RenderCompleteSemaphores[m_SemaphoreIndex];
+        VkFence frameInFlightFence = m_FrameInFlightFences[m_FrameIndex];
+        VkCommandBuffer frameCommandBuffer = m_FrameCommandBuffers[m_FrameIndex];
 
         // End the frame's command buffer and submit
         {
@@ -211,7 +221,7 @@ namespace eng
             result = vkQueueSubmit(m_GraphicsQueue, 1, &info, frameInFlightFence);
             ENG_ASSERT(result == VK_SUCCESS, "Failed to submit render queue.");
         }
-        
+
         // Present the most recently completed frame to the surface.
         {
             // TODO: in a scenario with multiple windows, it would be favorable
@@ -225,9 +235,9 @@ namespace eng
             info.swapchainCount = 1;
             info.pSwapchains = &m_Swapchain;
             info.pImageIndices = &m_FrameIndex;
-        
+
             result = vkQueuePresentKHR(m_PresentQueue, &info);
-            if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR)
+            if (result == VK_ERROR_OUT_OF_DATE_KHR or result == VK_SUBOPTIMAL_KHR)
             {
                 m_RecreateSwapchain = true;
                 return;
@@ -345,9 +355,9 @@ namespace eng
         vkGetPhysicalDeviceQueueFamilyProperties(s_PhysicalDevice, &count, queueFamilyProperties.data());
 
         std::optional<std::uint32_t> graphicsFamily, presentFamily;
-        for (std::uint32_t i = 0; i < count && !(graphicsFamily && presentFamily); i++)
+        for (std::uint32_t i = 0; i < count and !(graphicsFamily and presentFamily); i++)
         {
-            if (!graphicsFamily && queueFamilyProperties[i].queueFlags & VK_QUEUE_GRAPHICS_BIT)
+            if (!graphicsFamily and queueFamilyProperties[i].queueFlags & VK_QUEUE_GRAPHICS_BIT)
                 graphicsFamily = i;
 
             if (!presentFamily)
@@ -360,7 +370,7 @@ namespace eng
             }
         }
 
-        ENG_ASSERT(graphicsFamily.has_value() && presentFamily.has_value(), "Failed to find appropriate queue families.");
+        ENG_ASSERT(graphicsFamily.has_value() and presentFamily.has_value(), "Failed to find appropriate queue families.");
         m_GraphicsFamily = graphicsFamily.value();
         m_PresentFamily = presentFamily.value();
     }
@@ -617,7 +627,7 @@ namespace eng
         // TODO: this is okay for now, but it should choose the
         // "best" format, not one hard coded RGBA sRGB format.
         for (auto& surfaceFormat : surfaceFormats)
-            if (surfaceFormat.format == VK_FORMAT_R8G8B8A8_SRGB && surfaceFormat.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR)
+            if (surfaceFormat.format == VK_FORMAT_R8G8B8A8_SRGB and surfaceFormat.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR)
                 return surfaceFormat;
 
         // If no formats were our pick, just pick any and move on.

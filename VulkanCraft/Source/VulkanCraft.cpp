@@ -6,7 +6,7 @@ eng::EngineInfo ProvideEngineInfo(int argc, char** argv)
     eng::EngineInfo engineInfo;
     engineInfo.OnEngineInitialized = [](eng::Application& application)
     {
-        auto& layerStack = application.GetLayerStack();
+        auto& layerStack = application.GetWindow().GetLayerStack();
         layerStack.PushLayer(std::make_unique<vc::VulkanCraftLayer>());
     };
 

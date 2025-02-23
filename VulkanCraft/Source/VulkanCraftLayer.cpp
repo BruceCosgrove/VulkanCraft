@@ -5,17 +5,8 @@ namespace vc
 {
     void VulkanCraftLayer::OnAttach()
     {
-        auto& context = eng::Application::Get().GetWindow().GetRenderContext();
-
         CreateRenderPass();
         CreateFramebuffer();
-
-        context.AddSwapchainRecreationCallback([this](eng::RenderContext& context)
-        {
-            VkDevice device = context.GetDevice();
-            vkDestroyFramebuffer(device, m_Framebuffer, nullptr);
-            CreateFramebuffer();
-        });
     }
 
     void VulkanCraftLayer::OnDetach()
@@ -29,7 +20,9 @@ namespace vc
 
     void VulkanCraftLayer::OnEvent(eng::Event& event)
     {
+        // TODO: remove
         ENG_LOG_INFO("VulkanCraftLayer::OnEvent(TODO: event logging)");
+        event.Dispatch(this, &VulkanCraftLayer::OnWindowCloseEvent);
     }
 
     static float angle = 0.0f;
@@ -49,9 +42,17 @@ namespace vc
 
         // TODO: Each window should own its own layer stack.
         auto& context = eng::Application::Get().GetWindow().GetRenderContext();
+        VkDevice device = context.GetDevice();
         VkExtent2D extent = context.GetSwapchainExtent();
         VkImageView imageView = context.GetActiveSwapchainImageView();
         VkCommandBuffer commandBuffer = context.GetActiveCommandBuffer();
+
+        // Recreate the framebuffer.
+        if (context.WasSwapchainRecreated())
+        {
+            vkDestroyFramebuffer(device, m_Framebuffer, nullptr);
+            CreateFramebuffer();
+        };
 
         VkRenderPassAttachmentBeginInfo attachmentInfo{};
         attachmentInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_ATTACHMENT_BEGIN_INFO;
@@ -86,6 +87,11 @@ namespace vc
         ImGui::Begin("test window");
         ImGui::Button("test button");
         ImGui::End();
+    }
+
+    void VulkanCraftLayer::OnWindowCloseEvent(eng::WindowCloseEvent& event)
+    {
+        eng::Application::Get().Terminate();
     }
 
     void VulkanCraftLayer::CreateRenderPass()

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Engine/Input/Event/Event.hpp"
+#include "Engine/Core/LayerStack.hpp"
 #include "Engine/Rendering/RenderContext.hpp"
 #include <functional>
 #include <string>
@@ -9,6 +9,9 @@ struct GLFWwindow;
 
 namespace eng
 {
+    class WindowMinimizeEvent;
+    class WindowFramebufferResizeEvent;
+
     struct WindowInfo
     {
         std::string Title = "TODO: Window Title";
@@ -22,15 +25,35 @@ namespace eng
     public:
         GLFWwindow* GetNativeWindow();
         RenderContext& GetRenderContext();
+        LayerStack& GetLayerStack();
     private:
         friend class Application;
-        Window(WindowInfo const& info, std::function<void(Event&)>&& eventCallback, std::function<void()>&& renderCallback);
-        ~Window();
+        Window(WindowInfo const& info);
+        void OnUpdate();
+        void OnRender();
     private:
-        GLFWwindow* m_Window = nullptr;
-        std::function<void(Event&)> m_EventCallback;
-        std::unique_ptr<RenderContext> m_RenderContext;
+        void OnWindowMinimizeEvent(WindowMinimizeEvent& event);
+        void OnWindowFramebufferResizeEvent(WindowFramebufferResizeEvent& event);
     private:
-        inline static std::uint32_t s_WindowCount = 0;
+        // Helper to streamline window destruction.
+        struct NativeWindow
+        {
+            NativeWindow(WindowInfo const& info, Window* window);
+            ~NativeWindow();
+
+            GLFWwindow* Handle;
+        private:
+            inline static std::uint32_t s_WindowCount = 0;
+        };
+    private:
+        // IMPORTANT: The order of these members is critical for initialization and shutdown.
+
+        NativeWindow m_NativeWindow;
+        RenderContext m_RenderContext;
+        LayerStack m_LayerStack;
+
+        double m_LastTime = 0.0;
+        bool m_Minimized = false;
+        bool m_ZeroSize = false;
     };
 }

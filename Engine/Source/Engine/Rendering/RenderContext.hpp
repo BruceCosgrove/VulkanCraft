@@ -25,19 +25,17 @@ namespace eng
         VkImageView GetActiveSwapchainImageView() const;
         VkExtent2D GetSwapchainExtent() const;
         VkFormat GetSwapchainFormat() const;
+        bool WasSwapchainRecreated() const;
         VkCommandBuffer GetActiveCommandBuffer() const;
-
-        void AddSwapchainRecreationCallback(std::function<void(RenderContext&)>&& swapchainRecreationCallback);
 
     private:
         friend class Window;
-        RenderContext(GLFWwindow* handle, std::function<void()>&& renderCallback);
 
-        friend struct ::std::default_delete<RenderContext>;
+        RenderContext(GLFWwindow* window);
         ~RenderContext();
 
-        friend class Application;
-        void OnRender();
+        void BeginFrame();
+        void EndFrame();
     private:
         static void CreateInstance();
 #if ENG_CONFIG_DEBUG
@@ -71,7 +69,6 @@ namespace eng
         // TODO: Per-window context
 
         GLFWwindow* m_Window = nullptr; // Non-owning
-        std::function<void()> m_RenderCallback;
         std::vector<std::function<void(RenderContext&)>> m_SwapchainRecreationCallbacks;
 
         VkSurfaceKHR m_Surface = VK_NULL_HANDLE;
@@ -90,6 +87,7 @@ namespace eng
         VkExtent2D m_SwapchainExtent{0, 0};
         VkFormat m_SwapchainFormat = VK_FORMAT_UNDEFINED;
         bool m_RecreateSwapchain = false;
+        bool m_WasSwapchainRecreated = false;
 
         VkCommandPool m_CommandPool = VK_NULL_HANDLE;
         std::uint32_t m_FrameIndex = 0;

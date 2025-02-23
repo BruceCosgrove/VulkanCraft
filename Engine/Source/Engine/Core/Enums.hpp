@@ -71,7 +71,7 @@ namespace eng
     template <BoundedEnumI BoundedEnumT>
     constexpr bool IsBoundedEnumValid(BoundedEnumT e) noexcept
     {
-        return BoundedEnumT::_Begin <= e && e < BoundedEnumT::_End;
+        return BoundedEnumT::_Begin <= e and e < BoundedEnumT::_End;
     }
 
     template <MaskedEnumI MaskedEnumT>
@@ -83,7 +83,7 @@ namespace eng
     template <class ClassT, BoundedClassEnumI<ClassT> BoundedClassEnumT>
     constexpr bool IsBoundedClassEnumValid(BoundedClassEnumT e) noexcept
     {
-        return ClassT::_Begin <= e && e < ClassT::_End;
+        return ClassT::_Begin <= e and e < ClassT::_End;
     }
 
     template <class ClassT, MaskedClassEnumI<ClassT> MaskedClassEnumT>
@@ -93,7 +93,7 @@ namespace eng
     }
     
     template <auto BitIn, auto BitOut>
-    requires(eng::IsMaskedEnumValid(BitIn) && std::is_unsigned_v<decltype(BitOut)>)
+    requires(eng::IsMaskedEnumValid(BitIn) and std::is_unsigned_v<decltype(BitOut)>)
     constexpr decltype(BitOut) TranslateMaskedEnum(decltype(BitIn) value) noexcept
     {
         using CT = std::common_type_t<decltype(+BitIn), decltype(BitOut)>;

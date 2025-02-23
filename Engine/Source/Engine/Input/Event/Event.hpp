@@ -65,7 +65,7 @@ namespace eng
         void Dispatch(void(*callback)(EventT&, Args...), Args&&... args)
         noexcept(noexcept(callback(static_cast<EventT&>(*this), std::forward<Args>(args)...)))
         {
-            if (!m_Handled && m_Type == EventT::GetStaticType())
+            if (!m_Handled and m_Type == EventT::GetStaticType())
                 callback(static_cast<EventT&>(*this), std::forward<Args>(args)...);
         }
 
@@ -81,7 +81,7 @@ namespace eng
         void Dispatch(Class* object, void(Class::*callback)(EventT&, Args...), Args&&... args)
         noexcept(noexcept((object->*callback)(static_cast<EventT&>(*this), std::forward<Args>(args)...)))
         {
-            if (!m_Handled && m_Type == EventT::GetStaticType())
+            if (!m_Handled and m_Type == EventT::GetStaticType())
                 (object->*callback)(static_cast<EventT&>(*this), std::forward<Args>(args)...);
         }
     private:

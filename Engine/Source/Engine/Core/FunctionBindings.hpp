@@ -1,13 +1,7 @@
 #pragma once
 
-#define ENG_BIND_CLASS_FUNC(func) \
-    [this](auto&&... args) -> decltype(auto) \
+#define ENG_BIND_FUNC(object, func) \
+    [&](auto&&... args) -> decltype(auto) \
     { \
-        return this->func(std::forward<decltype(args)>(args)...); \
-    }
-
-#define ENG_BIND_MEMBER_FUNC(member, func) \
-    [this](auto&&... args) -> decltype(auto) \
-    { \
-        return member.func(std::forward<decltype(args)>(args)...); \
+        return (object).func(std::forward<decltype(args)>(args)...); \
     }

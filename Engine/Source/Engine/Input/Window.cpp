@@ -1,6 +1,7 @@
 #include "Window.hpp"
 #include "Engine/Core/AssertOrVerify.hpp"
 #include "Engine/Core/Attributes.hpp"
+#include "Engine/Core/FunctionBindings.hpp"
 #include "Engine/Core/Log.hpp"
 #include "Engine/Input/Event/WindowEvents.hpp"
 #include "Engine/Input/Event/MouseEvents.hpp"
@@ -12,16 +13,64 @@ namespace eng
 {
     GLFWwindow* Window::GetNativeWindow()
     {
-        return m_Window;
+        return m_NativeWindow.Handle;
     }
 
     RenderContext& Window::GetRenderContext()
     {
-        return *m_RenderContext;
+        return m_RenderContext;
     }
 
-    Window::Window(WindowInfo const& info, std::function<void(Event&)>&& eventCallback, std::function<void()>&& renderCallback)
-        : m_EventCallback(std::move(eventCallback))
+    LayerStack& Window::GetLayerStack()
+    {
+        return m_LayerStack;
+    }
+
+    Window::Window(WindowInfo const& info)
+        : m_NativeWindow(info, this)
+        , m_RenderContext(m_NativeWindow.Handle)
+    {
+        // Now that the window is fully initialized, show it.
+        glfwShowWindow(m_NativeWindow.Handle);
+    }
+
+    void Window::OnUpdate()
+    {
+        // Calculate the time since the last update/frame combo.
+        // TODO: separate update/render threads, and only pass the time to the update thread.
+        // TODO: think about implementing FixedUpdate.
+        double currentTime = glfwGetTime();
+        Timestep timestep = static_cast<float>(currentTime - m_LastTime);
+        m_LastTime = currentTime;
+
+        m_LayerStack.OnUpdate(timestep);
+    }
+
+    void Window::OnRender()
+    {
+        if (m_Minimized or m_ZeroSize)
+            return;
+
+        m_RenderContext.BeginFrame();
+        m_LayerStack.OnRender();
+        m_RenderContext.EndFrame();
+    }
+
+    void Window::OnWindowMinimizeEvent(WindowMinimizeEvent& event)
+    {
+        m_Minimized = event.IsMinimized();
+    }
+
+    void Window::OnWindowFramebufferResizeEvent(WindowFramebufferResizeEvent& event)
+    {
+        m_ZeroSize = event.GetFramebufferWidth() == 0 or event.GetFramebufferHeight() == 0;
+
+        // Block zero-size events from propagating to the Client.
+        if (m_ZeroSize)
+            event.Handle();
+    }
+
+    Window::NativeWindow::NativeWindow(WindowInfo const& info, Window* window)
     {
         // If this is the first window created, initialize GLFW.
         if (s_WindowCount++ == 0)
@@ -42,93 +91,95 @@ namespace eng
         glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API); // Vulkan
         glfwWindowHint(GLFW_VISIBLE, false); // Make the window invisible while still initializing it.
 
-        m_Window = glfwCreateWindow((int)info.Width, (int)info.Height, info.Title.c_str(), nullptr, nullptr);
-        ENG_ASSERT(m_Window != nullptr, "Failed to create window.");
-        glfwSetWindowUserPointer(m_Window, this);
+        Handle = glfwCreateWindow((int)info.Width, (int)info.Height, info.Title.c_str(), nullptr, nullptr);
+        ENG_ASSERT(Handle != nullptr, "Failed to create window.");
+        glfwSetWindowUserPointer(Handle, window);
 
         // Add all event callbacks.
 
-        glfwSetWindowPosCallback(m_Window, [](GLFWwindow* handle, int xpos, int ypos)
+        glfwSetWindowPosCallback(Handle, [](GLFWwindow* handle, int xpos, int ypos)
         {
             Window& window = *static_cast<Window*>(glfwGetWindowUserPointer(handle));
 
             WindowMoveEvent event(static_cast<std::int32_t>(xpos), static_cast<std::int32_t>(ypos));
-            window.m_EventCallback(event);
+            window.m_LayerStack.OnEvent(event);
         });
 
-        glfwSetWindowSizeCallback(m_Window, [](GLFWwindow* handle, int width, int height)
+        glfwSetWindowSizeCallback(Handle, [](GLFWwindow* handle, int width, int height)
         {
             Window& window = *static_cast<Window*>(glfwGetWindowUserPointer(handle));
 
             WindowResizeEvent event(static_cast<std::uint32_t>(width), static_cast<std::uint32_t>(height));
-            window.m_EventCallback(event);
+            window.m_LayerStack.OnEvent(event);
         });
 
-        glfwSetWindowCloseCallback(m_Window, [](GLFWwindow* handle)
+        glfwSetWindowCloseCallback(Handle, [](GLFWwindow* handle)
         {
             Window& window = *static_cast<Window*>(glfwGetWindowUserPointer(handle));
 
             WindowCloseEvent event;
-            window.m_EventCallback(event);
+            window.m_LayerStack.OnEvent(event);
         });
 
-        glfwSetWindowRefreshCallback(m_Window, [](GLFWwindow* handle)
+        glfwSetWindowRefreshCallback(Handle, [](GLFWwindow* handle)
         {
             Window& window = *static_cast<Window*>(glfwGetWindowUserPointer(handle));
 
             WindowRefreshEvent event;
-            window.m_EventCallback(event);
+            window.m_LayerStack.OnEvent(event);
         });
 
-        glfwSetWindowFocusCallback(m_Window, [](GLFWwindow* handle, int focused)
+        glfwSetWindowFocusCallback(Handle, [](GLFWwindow* handle, int focused)
         {
             Window& window = *static_cast<Window*>(glfwGetWindowUserPointer(handle));
 
             WindowFocusEvent event(static_cast<bool>(focused));
-            window.m_EventCallback(event);
+            window.m_LayerStack.OnEvent(event);
         });
 
-        glfwSetWindowIconifyCallback(m_Window, [](GLFWwindow* handle, int iconified)
+        glfwSetWindowIconifyCallback(Handle, [](GLFWwindow* handle, int iconified)
         {
             Window& window = *static_cast<Window*>(glfwGetWindowUserPointer(handle));
 
             WindowMinimizeEvent event(static_cast<bool>(iconified));
-            window.m_EventCallback(event);
+            window.OnWindowMinimizeEvent(event);
+            window.m_LayerStack.OnEvent(event);
         });
 
-        glfwSetWindowMaximizeCallback(m_Window, [](GLFWwindow* handle, int maximized)
+        glfwSetWindowMaximizeCallback(Handle, [](GLFWwindow* handle, int maximized)
         {
             Window& window = *static_cast<Window*>(glfwGetWindowUserPointer(handle));
 
             WindowMaximizeEvent event(static_cast<bool>(maximized));
-            window.m_EventCallback(event);
+            window.m_LayerStack.OnEvent(event);
         });
 
-        glfwSetFramebufferSizeCallback(m_Window, [](GLFWwindow* handle, int width, int height)
+        glfwSetFramebufferSizeCallback(Handle, [](GLFWwindow* handle, int width, int height)
         {
             Window& window = *static_cast<Window*>(glfwGetWindowUserPointer(handle));
 
             WindowFramebufferResizeEvent event(static_cast<std::uint32_t>(width), static_cast<std::uint32_t>(height));
-            window.m_EventCallback(event);
+            window.OnWindowFramebufferResizeEvent(event);
+            window.m_LayerStack.OnEvent(event);
         });
 
-        glfwSetWindowContentScaleCallback(m_Window, [](GLFWwindow* handle, float xscale, float yscale)
+        glfwSetWindowContentScaleCallback(Handle, [](GLFWwindow* handle, float xscale, float yscale)
         {
             Window& window = *static_cast<Window*>(glfwGetWindowUserPointer(handle));
 
             WindowContentScaleEvent event(xscale, yscale);
-            window.m_EventCallback(event);
+            window.m_LayerStack.OnEvent(event);
         });
 
-        glfwSetDropCallback(m_Window, [](GLFWwindow* handle, int path_count, char const* paths[])
+        glfwSetDropCallback(Handle, [](GLFWwindow* handle, int path_count, char const* paths[])
         {
             Window& window = *static_cast<Window*>(glfwGetWindowUserPointer(handle));
 
             WindowPathDropEvent event({paths, static_cast<std::size_t>(path_count)});
-            window.m_EventCallback(event);
+            window.m_LayerStack.OnEvent(event);
         });
 
-        glfwSetMouseButtonCallback(m_Window, [](GLFWwindow* handle, int button, int action, int mods)
+        glfwSetMouseButtonCallback(Handle, [](GLFWwindow* handle, int button, int action, int mods)
         {
             Window& window = *static_cast<Window*>(glfwGetWindowUserPointer(handle));
 
@@ -137,43 +188,43 @@ namespace eng
                 case GLFW_PRESS:
                 {
                     MouseButtonPressEvent event(static_cast<MouseButton>(button), static_cast<Modifiers>(mods));
-                    window.m_EventCallback(event);
+                    window.m_LayerStack.OnEvent(event);
                     break;
                 }
                 case GLFW_RELEASE:
                 {
                     MouseButtonReleaseEvent event(static_cast<MouseButton>(button), static_cast<Modifiers>(mods));
-                    window.m_EventCallback(event);
+                    window.m_LayerStack.OnEvent(event);
                     break;
                 }
             }
         });
 
-        glfwSetCursorPosCallback(m_Window, [](GLFWwindow* handle, double xpos, double ypos)
+        glfwSetCursorPosCallback(Handle, [](GLFWwindow* handle, double xpos, double ypos)
         {
             Window& window = *static_cast<Window*>(glfwGetWindowUserPointer(handle));
 
             MouseMoveEvent event(static_cast<float>(xpos), static_cast<float>(ypos));
-            window.m_EventCallback(event);
+            window.m_LayerStack.OnEvent(event);
         });
 
-        glfwSetCursorEnterCallback(m_Window, [](GLFWwindow* handle, int entered)
+        glfwSetCursorEnterCallback(Handle, [](GLFWwindow* handle, int entered)
         {
             Window& window = *static_cast<Window*>(glfwGetWindowUserPointer(handle));
 
             MouseEnterEvent event(static_cast<bool>(entered));
-            window.m_EventCallback(event);
+            window.m_LayerStack.OnEvent(event);
         });
 
-        glfwSetScrollCallback(m_Window, [](GLFWwindow* handle, double xoffset, double yoffset)
+        glfwSetScrollCallback(Handle, [](GLFWwindow* handle, double xoffset, double yoffset)
         {
             Window& window = *static_cast<Window*>(glfwGetWindowUserPointer(handle));
 
             MouseScrollEvent event(static_cast<float>(xoffset), static_cast<float>(yoffset));
-            window.m_EventCallback(event);
+            window.m_LayerStack.OnEvent(event);
         });
 
-        glfwSetKeyCallback(m_Window, [](GLFWwindow* handle, int key, int scancode, int action, int mods)
+        glfwSetKeyCallback(Handle, [](GLFWwindow* handle, int key, int scancode, int action, int mods)
         {
             Window& window = *static_cast<Window*>(glfwGetWindowUserPointer(handle));
 
@@ -182,13 +233,13 @@ namespace eng
                 case GLFW_PRESS:
                 {
                     KeyPressEvent event(static_cast<Keycode>(key), static_cast<Modifiers>(mods));
-                    window.m_EventCallback(event);
+                    window.m_LayerStack.OnEvent(event);
                     break;
                 }
                 case GLFW_RELEASE:
                 {
                     KeyReleaseEvent event(static_cast<Keycode>(key), static_cast<Modifiers>(mods));
-                    window.m_EventCallback(event);
+                    window.m_LayerStack.OnEvent(event);
                     break;
                 }
                 // Not using repeat events.
@@ -196,27 +247,20 @@ namespace eng
             }
         });
 
-        glfwSetCharCallback(m_Window, [](GLFWwindow* handle, unsigned int codepoint)
+        glfwSetCharCallback(Handle, [](GLFWwindow* handle, unsigned int codepoint)
         {
             Window& window = *static_cast<Window*>(glfwGetWindowUserPointer(handle));
 
             KeyCharTypeEvent event(static_cast<std::uint32_t>(codepoint));
-            window.m_EventCallback(event);
+            window.m_LayerStack.OnEvent(event);
         });
-
-        m_RenderContext.reset(new RenderContext(m_Window, std::move(renderCallback)));
-
-        // Now that the window is fully initialized, show it.
-        glfwShowWindow(m_Window);
     }
 
-    Window::~Window()
+    Window::NativeWindow::~NativeWindow()
     {
-        m_RenderContext.release();
-
-        glfwDestroyWindow(m_Window);
-
-        // If this is the last window destroyed, terminate GLFW.
+        // Shutdown the window.
+        glfwDestroyWindow(Handle);
+        // If this is the last window destroyed, also shutdown GLFW.
         if (--s_WindowCount == 0)
             glfwTerminate();
     }

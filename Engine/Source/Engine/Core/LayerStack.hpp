@@ -51,9 +51,9 @@ namespace eng
             return overlay;
         }
     private:
-        friend class Application;
+        friend class Window;
 
-        void Clear()
+        ~LayerStack()
         {
             for (auto& layer : m_Layers)
                 layer->OnDetach();
@@ -63,7 +63,7 @@ namespace eng
 
         void OnEvent(Event& event)
         {
-            for (auto it = m_Layers.rbegin(); it != m_Layers.rend() && !event.IsHandled(); ++it)
+            for (auto it = m_Layers.rbegin(); it != m_Layers.rend() and !event.IsHandled(); ++it)
                 (*it)->OnEvent(event);
         }
 

@@ -14,6 +14,8 @@ namespace vc
         virtual void OnRender() override;
         virtual void OnImGuiRender() override;
     private:
+        void OnWindowCloseEvent(eng::WindowCloseEvent& event);
+    private:
         void CreateRenderPass();
         void CreateFramebuffer();
     private:
