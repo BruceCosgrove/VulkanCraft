@@ -4,12 +4,12 @@
 
 namespace eng
 {
-    bool ReadFile(std::string_view filepath, std::string& contents) noexcept
+    bool ReadFile(std::filesystem::path const& filepath, std::string& contents) noexcept
     {
         try
         {
             // Open the file.
-            std::ifstream file(filepath.data(), std::ios::ate);
+            std::ifstream file(filepath, std::ios::ate);
             if (!file.is_open())
                 return false;
             // Get the file size.
@@ -33,16 +33,16 @@ namespace eng
         }
     }
 
-    bool WriteFile(std::string_view filepath, std::string const& contents) noexcept
+    bool WriteFile(std::filesystem::path const& filepath, std::string const& contents) noexcept
     {
         try
         {
             // Open the file.
-            std::ofstream file(filepath.data());
+            std::ofstream file(filepath);
             if (!file.is_open())
                 return false;
             // Write the contents to the file.
-            return static_cast<bool>(file.write((const char*)contents.data(), std::ssize(contents)));
+            return static_cast<bool>(file.write((char const*)contents.data(), std::ssize(contents)));
         }
         catch (...)
         {
@@ -50,12 +50,12 @@ namespace eng
         }
     }
 
-    bool ReadBinaryFile(std::string_view filepath, std::vector<std::uint8_t>& contents) noexcept
+    bool ReadBinaryFile(std::filesystem::path const& filepath, std::vector<std::uint8_t>& contents) noexcept
     {
         try
         {
             // Open the file.
-            std::ifstream file(filepath.data(), std::ios::ate | std::ios::binary);
+            std::ifstream file(filepath, std::ios::ate | std::ios::binary);
             if (!file.is_open())
                 return false;
             // Get the file size.
@@ -76,16 +76,16 @@ namespace eng
         }
     }
 
-    bool WriteBinaryFile(std::string_view filepath, std::vector<std::uint8_t> const& contents) noexcept
+    bool WriteBinaryFile(std::filesystem::path const& filepath, std::vector<std::uint8_t> const& contents) noexcept
     {
         try
         {
             // Open the file.
-            std::ofstream file(filepath.data(), std::ios::binary);
+            std::ofstream file(filepath, std::ios::binary);
             if (!file.is_open())
                 return false;
             // Read the entire file into the stream.
-            return static_cast<bool>(file.write((const char*)contents.data(), std::ssize(contents)));
+            return static_cast<bool>(file.write((char const*)contents.data(), std::ssize(contents)));
         }
         catch (...)
         {

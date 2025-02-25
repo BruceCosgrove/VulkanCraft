@@ -1,12 +1,21 @@
 #include "VulkanCraftLayer.hpp"
 #include <imgui.h>
+#include <array>
 
 namespace vc
 {
     void VulkanCraftLayer::OnAttach()
     {
+        auto& context = eng::Application::Get().GetWindow().GetRenderContext();
+
         CreateRenderPass();
         CreateFramebuffer();
+
+        eng::ShaderInfo shaderInfo;
+        shaderInfo.RenderContext = &context;
+        shaderInfo.Filepath = "Assets/Shaders/Basic";
+        shaderInfo.RenderPass = m_RenderPass;
+        m_Shader = std::make_unique<eng::Shader>(shaderInfo);
     }
 
     void VulkanCraftLayer::OnDetach()
@@ -14,6 +23,7 @@ namespace vc
         auto& context = eng::Application::Get().GetWindow().GetRenderContext();
         VkDevice device = context.GetDevice();
 
+        m_Shader.reset();
         vkDestroyFramebuffer(device, m_Framebuffer, nullptr);
         vkDestroyRenderPass(device, m_RenderPass, nullptr);
     }
@@ -74,7 +84,28 @@ namespace vc
         // Begin the render pass.
         vkCmdBeginRenderPass(commandBuffer, &info, VK_SUBPASS_CONTENTS_INLINE);
 
-        // DO THE BIG RENDER
+        // Bind the pipeline.
+        m_Shader->Bind(commandBuffer);
+
+        // TODO: bind vertex buffers and index buffer
+
+        // Vulkan's +y direction is down, this fixes that.
+        // https://stackoverflow.com/questions/45570326/flipping-the-viewport-in-vulkan
+        VkViewport viewport{};
+        viewport.x = 0.0f;
+        viewport.y = static_cast<float>(extent.height);
+        viewport.width = static_cast<float>(extent.width);
+        viewport.height = -static_cast<float>(extent.height);
+        viewport.minDepth = 0.0f;
+        viewport.maxDepth = 1.0f;
+        vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
+
+        VkRect2D scissor{};
+        scissor.offset = {0, 0};
+        scissor.extent = extent;
+        vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
+
+        vkCmdDraw(commandBuffer, 6, 1, 0, 0);
 
         // End the render pass.
         vkCmdEndRenderPass(commandBuffer);
@@ -119,12 +150,22 @@ namespace vc
         subpass.colorAttachmentCount = 1;
         subpass.pColorAttachments = &colorAttachmentReference;
 
+        VkSubpassDependency dependency{};
+        dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
+        dependency.dstSubpass = 0;
+        dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+        dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+        dependency.srcAccessMask = 0;
+        dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+
         VkRenderPassCreateInfo info{};
         info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
         info.attachmentCount = 1;
         info.pAttachments = &colorAttachment;
         info.subpassCount = 1;
         info.pSubpasses = &subpass;
+        info.dependencyCount = 1;
+        info.pDependencies = &dependency;
 
         VkResult result = vkCreateRenderPass(device, &info, nullptr, &m_RenderPass);
         ENG_ASSERT(result == VK_SUCCESS, "Failed to create render pass.");

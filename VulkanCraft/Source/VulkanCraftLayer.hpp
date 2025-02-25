@@ -1,6 +1,7 @@
 #pragma once
 
 #include <Engine.hpp>
+#include <memory>
 
 namespace vc
 {
@@ -21,5 +22,6 @@ namespace vc
     private:
         VkRenderPass m_RenderPass = VK_NULL_HANDLE;
         VkFramebuffer m_Framebuffer = VK_NULL_HANDLE;
+        std::unique_ptr<eng::Shader> m_Shader;
     };
 }

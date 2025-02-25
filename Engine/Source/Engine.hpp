@@ -21,3 +21,6 @@
 #include "Engine/Input/Event/KeyEvents.hpp"
 #include "Engine/Input/Event/MouseEvents.hpp"
 #include "Engine/Input/Event/WindowEvents.hpp"
+#include "Engine/IO/FileIO.hpp"
+#include "Engine/Rendering/RenderContext.hpp"
+#include "Engine/Rendering/Shader.hpp"
