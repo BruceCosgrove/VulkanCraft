@@ -24,3 +24,4 @@
 #include "Engine/IO/FileIO.hpp"
 #include "Engine/Rendering/RenderContext.hpp"
 #include "Engine/Rendering/Shader.hpp"
+#include "Engine/Rendering/VertexBuffer.hpp"

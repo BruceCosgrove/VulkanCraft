@@ -3,14 +3,51 @@
 #include "Engine/IO/FileIO.hpp"
 #include "Engine/Rendering/RenderContext.hpp"
 #include <shaderc/shaderc.hpp>
+#include <spirv_cross/spirv_reflect.hpp>
 #include <array>
 #include <ranges>
 #include <vector>
+#include <unordered_map>
 
 namespace fs = std::filesystem;
 
 namespace eng
 {
+    static VkFormat GetVulkanFormat(spirv_cross::SPIRType::BaseType baseType, std::uint32_t count)
+    {
+        using BaseType = spirv_cross::SPIRType::BaseType;
+
+        ENG_ASSERT(
+            baseType == BaseType::Int or
+            baseType == BaseType::UInt or
+            baseType == BaseType::Float or
+            baseType == BaseType::Double
+        );
+        ENG_ASSERT(0 < count and count <= 4);
+
+        static const std::unordered_map<std::uint64_t, VkFormat> s_Conversions
+        {
+            {static_cast<std::uint64_t>(BaseType::Int)    << 32 | 1, VK_FORMAT_R32_SINT           },
+            {static_cast<std::uint64_t>(BaseType::UInt)   << 32 | 1, VK_FORMAT_R32_UINT           },
+            {static_cast<std::uint64_t>(BaseType::Float)  << 32 | 1, VK_FORMAT_R32_SFLOAT         },
+            {static_cast<std::uint64_t>(BaseType::Double) << 32 | 1, VK_FORMAT_R64_SFLOAT         },
+            {static_cast<std::uint64_t>(BaseType::Int)    << 32 | 2, VK_FORMAT_R32G32_SINT        },
+            {static_cast<std::uint64_t>(BaseType::UInt)   << 32 | 2, VK_FORMAT_R32G32_UINT        },
+            {static_cast<std::uint64_t>(BaseType::Float)  << 32 | 2, VK_FORMAT_R32G32_SFLOAT      },
+            {static_cast<std::uint64_t>(BaseType::Double) << 32 | 2, VK_FORMAT_R64G64_SFLOAT      },
+            {static_cast<std::uint64_t>(BaseType::Int)    << 32 | 3, VK_FORMAT_R32G32B32_SINT     },
+            {static_cast<std::uint64_t>(BaseType::UInt)   << 32 | 3, VK_FORMAT_R32G32B32_UINT     },
+            {static_cast<std::uint64_t>(BaseType::Float)  << 32 | 3, VK_FORMAT_R32G32B32_SFLOAT   },
+            {static_cast<std::uint64_t>(BaseType::Double) << 32 | 3, VK_FORMAT_R64G64B64_SFLOAT   },
+            {static_cast<std::uint64_t>(BaseType::Int)    << 32 | 4, VK_FORMAT_R32G32B32A32_SINT  },
+            {static_cast<std::uint64_t>(BaseType::UInt)   << 32 | 4, VK_FORMAT_R32G32B32A32_UINT  },
+            {static_cast<std::uint64_t>(BaseType::Float)  << 32 | 4, VK_FORMAT_R32G32B32A32_SFLOAT},
+            {static_cast<std::uint64_t>(BaseType::Double) << 32 | 4, VK_FORMAT_R64G64B64A64_SFLOAT},
+        };
+
+        return s_Conversions.at(static_cast<std::uint64_t>(baseType) << 32 | count);
+    }
+
     Shader::Shader(ShaderInfo const& info)
         : m_Context(*info.RenderContext)
     {
@@ -21,7 +58,7 @@ namespace eng
 
         VkDevice device = m_Context.GetDevice();
 
-        auto pipelineShaderStageInfos =
+        auto stages =
             // For all the supported shader stages...
             std::to_array<std::tuple<std::string_view, shaderc_shader_kind, VkShaderStageFlagBits>>
             ({
@@ -61,8 +98,8 @@ namespace eng
                 ENG_VERIFY(ReadFile(stageFilepath, contents), "Failed to read shader source file.");
 
                 // Compile the stage.
-                shaderc::SpvCompilationResult result = compiler.CompileGlslToSpv(contents, kind, info.Filepath.string().c_str(), options);
-                ENG_ASSERT(result.GetCompilationStatus() == shaderc_compilation_status_success, "Failed to compile shader: {}", result.GetErrorMessage());
+                shaderc::SpvCompilationResult result = compiler.CompileGlslToSpv(contents, kind, stageFilepath.string().c_str(), options);
+                ENG_ASSERT(result.GetCompilationStatus() == shaderc_compilation_status_success, "Failed to compile shader:\n{}", result.GetErrorMessage());
 
                 // Return the spir-v bytecode and the vulkan stage flags.
                 return std::make_tuple(
@@ -71,6 +108,10 @@ namespace eng
                 );
             }) |
 
+            // Collate the existing shader stages.
+            std::ranges::to<std::vector>();
+
+        auto pipelineShaderStageInfos = stages |
             // Create shader modules.
             std::views::transform([&](auto&& stage)
             {
@@ -102,6 +143,82 @@ namespace eng
             // Collate the create infos into a vector.
             std::ranges::to<std::vector>();
 
+        // Get vertex input attribute descriptions.
+        std::vector<VkVertexInputAttributeDescription> vertexInputAttributeDescriptions;
+        std::uint32_t stride = 0;
+
+        {
+            std::vector<std::uint8_t> const& code = std::get<0>(stages[0]);
+            auto reflection = std::make_unique<spirv_cross::CompilerReflection>((std::uint32_t const*)code.data(), code.size() / sizeof(std::uint32_t));
+            auto resources = std::make_unique<spirv_cross::ShaderResources>(reflection->get_shader_resources());
+
+            ENG_ASSERT(std::get<1>(stages[0]) != VK_SHADER_STAGE_COMPUTE_BIT, "TODO: how to support compute shaders.");
+            //reflection->get_work_group_size_specialization_constants(); // related to compute shaders
+
+            // Do extra processing for the vertex shader.
+            // TODO: this assumes all attributes are per vertex, and not per instance.
+            vertexInputAttributeDescriptions.reserve(resources->stage_inputs.size());
+            for (std::uint32_t& offset = stride; auto& resource : resources->stage_inputs)
+            {
+                auto& type = reflection->get_type_from_variable(resource.id);
+
+                std::uint32_t size = type.width / 8;
+                std::uint32_t count = type.vecsize;
+                offset += (size - offset) % size; // Alignment
+
+                auto& description = vertexInputAttributeDescriptions.emplace_back();
+                description.location = reflection->get_decoration(resource.id, spv::DecorationLocation);
+                description.binding = 0; // TODO: technically doesn't have to change since i've decided to always interleave data into one vertex buffer.
+                description.format = GetVulkanFormat(type.basetype, count);
+                description.offset = offset;
+
+                offset += size * count; // Advancement
+            }
+
+            auto processStage = [](
+                std::unique_ptr<spirv_cross::CompilerReflection>& reflection,
+                std::unique_ptr<spirv_cross::ShaderResources>& resources)
+            {
+                for (auto& resource : resources->uniform_buffers)
+                {
+                    auto& type = reflection->get_type_from_variable(resource.id);
+                    std::uint32_t binding = reflection->get_decoration(resource.id, spv::DecorationBinding);
+                    uint32_t b = type.self;
+                }
+
+                for (auto& resource : resources->storage_buffers)
+                {
+                    auto& type = reflection->get_type_from_variable(resource.id);
+                    std::uint32_t binding = reflection->get_decoration(resource.id, spv::DecorationBinding);
+                    uint32_t b = type.self;
+                }
+
+                for (auto& resource : resources->sampled_images)
+                {
+                    auto& type = reflection->get_type_from_variable(resource.id);
+                    std::uint32_t binding = reflection->get_decoration(resource.id, spv::DecorationBinding);
+                    uint32_t b = type.self;
+                }
+
+                // TODO: there's quite a few more resource types to handle.
+            };
+
+            processStage(reflection, resources);
+
+            for (std::size_t i = 1; i < stages.size(); i++)
+            {
+                std::vector<std::uint8_t> const& code = std::get<0>(stages[i]);
+
+                // Recreate them with the next stage, but using the existing memory.
+                resources->~ShaderResources();
+                reflection->~CompilerReflection();
+                new (reflection.get()) spirv_cross::CompilerReflection((std::uint32_t const*)code.data(), code.size() / sizeof(std::uint32_t));
+                new (resources.get()) spirv_cross::ShaderResources(reflection->get_shader_resources());
+
+                processStage(reflection, resources);
+            }
+        }
+
         auto dynamicStates = std::to_array({
             VK_DYNAMIC_STATE_VIEWPORT,
             VK_DYNAMIC_STATE_SCISSOR,
@@ -112,15 +229,20 @@ namespace eng
         dynamicStateInfo.dynamicStateCount = static_cast<std::uint32_t>(dynamicStates.size());
         dynamicStateInfo.pDynamicStates = dynamicStates.data();
 
+        // TODO: read from shader reflection
+        // TODO: this assumes all attributes are per vertex, and not per instance.
+        VkVertexInputBindingDescription vertexInputBindingDescription{};
+        vertexInputBindingDescription.binding = 0;
+        vertexInputBindingDescription.stride = stride;
+        vertexInputBindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+
         VkPipelineVertexInputStateCreateInfo vertexInputStateInfo{};
         vertexInputStateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
         // TODO: these are per vertex buffer bound to the pipeline.
-        vertexInputStateInfo.vertexBindingDescriptionCount = 0;
-        vertexInputStateInfo.pVertexBindingDescriptions = nullptr;
-        // TODO: these are per input attribute, e.g. "layout(location=0) in vec3 i_Position;".
-        // their bindings reference into the vertexInputStateInfo.pVertexBindingDescriptions array.
-        vertexInputStateInfo.vertexAttributeDescriptionCount = 0;
-        vertexInputStateInfo.pVertexAttributeDescriptions = nullptr;
+        vertexInputStateInfo.vertexBindingDescriptionCount = 1;
+        vertexInputStateInfo.pVertexBindingDescriptions = &vertexInputBindingDescription;
+        vertexInputStateInfo.vertexAttributeDescriptionCount = static_cast<std::uint32_t>(vertexInputAttributeDescriptions.size());
+        vertexInputStateInfo.pVertexAttributeDescriptions = vertexInputAttributeDescriptions.data();
 
         VkPipelineInputAssemblyStateCreateInfo inputAssemblyStateInfo{};
         inputAssemblyStateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;

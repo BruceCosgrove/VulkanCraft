@@ -9,9 +9,9 @@ namespace eng
 
     struct ShaderInfo
     {
-        RenderContext* RenderContext;
+        RenderContext* RenderContext = nullptr;
         std::filesystem::path Filepath;
-        VkRenderPass RenderPass;
+        VkRenderPass RenderPass = VK_NULL_HANDLE;
     };
 
     class Shader

@@ -23,5 +23,6 @@ namespace vc
         VkRenderPass m_RenderPass = VK_NULL_HANDLE;
         VkFramebuffer m_Framebuffer = VK_NULL_HANDLE;
         std::unique_ptr<eng::Shader> m_Shader;
+        std::unique_ptr<eng::VertexBuffer> m_VertexBuffer;
     };
 }

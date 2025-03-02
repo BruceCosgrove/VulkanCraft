@@ -1,7 +1,7 @@
 project "VulkanCraft"
     language "C++"
     cppdialect "C++23"
-    staticruntime "On"
+    staticruntime "Off"
 
     prebuildcommands "%{RunPreBuild}"
     targetdir "%{TargetDir}"
@@ -33,6 +33,9 @@ project "VulkanCraft"
         "Engine",
         "%{Libraries.vulkan}", -- Link this here to avoid a duplicate symbol warning.
     }
+
+    filter { "system:windows", "configurations:Debug" }
+        linkoptions "/ignore:4099" -- The Vulkan SDK contains no .pdb files for its .lib's.
 
     filter "system:windows"
         systemversion "latest"

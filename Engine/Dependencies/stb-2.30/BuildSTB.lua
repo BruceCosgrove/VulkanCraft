@@ -2,8 +2,8 @@ project "stb"
     kind "StaticLib"
     language "C++"
     cppdialect "C++23"
-    staticruntime "On"
-    
+    staticruntime "Off"
+
     prebuildcommands "%{RunPreBuild}"
     targetdir "%{TargetDir}"
     objdir "%{OBJDir}"

@@ -2,7 +2,7 @@ project "Engine"
     kind "StaticLib"
     language "C++"
     cppdialect "C++23"
-    staticruntime "On"
+    staticruntime "Off"
 
     prebuildcommands "%{RunPreBuild}"
     targetdir "%{TargetDir}"
@@ -59,6 +59,9 @@ project "Engine"
 
         links {
             "%{Libraries.shaderc_debug}",
+            "%{Libraries.spirv_cross_debug}",
+            "%{Libraries.spirv_cross_glsl_debug}",
+            "%{Libraries.spirv_cross_reflect_debug}",
         }
 
     filter "configurations:Release"
@@ -74,6 +77,9 @@ project "Engine"
 
         links {
             "%{Libraries.shaderc_release}",
+            "%{Libraries.spirv_cross_release}",
+            "%{Libraries.spirv_cross_glsl_release}",
+            "%{Libraries.spirv_cross_reflect_release}",
         }
 
     filter "configurations:Dist"
@@ -87,4 +93,7 @@ project "Engine"
 
         links {
             "%{Libraries.shaderc_release}",
+            "%{Libraries.spirv_cross_release}",
+            "%{Libraries.spirv_cross_glsl_release}",
+            "%{Libraries.spirv_cross_reflect_release}",
         }

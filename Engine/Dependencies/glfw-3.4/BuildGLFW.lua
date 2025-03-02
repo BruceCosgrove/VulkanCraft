@@ -2,8 +2,8 @@ project "glfw"
     kind "StaticLib"
     language "C"
     cdialect "C17"
-    staticruntime "On"
-    
+    staticruntime "Off"
+
     prebuildcommands "%{RunPreBuild}"
     targetdir "%{TargetDir}"
     objdir "%{OBJDir}"

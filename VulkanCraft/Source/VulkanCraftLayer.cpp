@@ -6,16 +6,34 @@ namespace vc
 {
     void VulkanCraftLayer::OnAttach()
     {
+        // TODO: context retrieval needs to be reworked with multiple windows.
         auto& context = eng::Application::Get().GetWindow().GetRenderContext();
 
         CreateRenderPass();
         CreateFramebuffer();
 
-        eng::ShaderInfo shaderInfo;
-        shaderInfo.RenderContext = &context;
-        shaderInfo.Filepath = "Assets/Shaders/Basic";
-        shaderInfo.RenderPass = m_RenderPass;
-        m_Shader = std::make_unique<eng::Shader>(shaderInfo);
+        {
+            eng::ShaderInfo info;
+            info.RenderContext = &context;
+            info.Filepath = "Assets/Shaders/Basic";
+            info.RenderPass = m_RenderPass;
+            m_Shader = std::make_unique<eng::Shader>(info);
+        }
+
+        {
+            eng::VertexBufferInfo info;
+            info.RenderContext = &context;
+            info.Size = 1024; // 1 KiB for now, nothing fancy
+            m_VertexBuffer = std::make_unique<eng::VertexBuffer>(info);
+
+            constexpr auto data = std::to_array
+            ({
+                -0.5f, -0.5f, 0.0f,
+                +1.0f, -1.0f, 0.0f,
+                 0.0f, +1.0f, 0.0f,
+            });
+            m_VertexBuffer->SetData(data);
+        }
     }
 
     void VulkanCraftLayer::OnDetach()
@@ -24,6 +42,7 @@ namespace vc
         VkDevice device = context.GetDevice();
 
         m_Shader.reset();
+        m_VertexBuffer.reset();
         vkDestroyFramebuffer(device, m_Framebuffer, nullptr);
         vkDestroyRenderPass(device, m_RenderPass, nullptr);
     }
@@ -84,10 +103,8 @@ namespace vc
         // Begin the render pass.
         vkCmdBeginRenderPass(commandBuffer, &info, VK_SUBPASS_CONTENTS_INLINE);
 
-        // Bind the pipeline.
         m_Shader->Bind(commandBuffer);
-
-        // TODO: bind vertex buffers and index buffer
+        m_VertexBuffer->Bind(commandBuffer);
 
         // Vulkan's +y direction is down, this fixes that.
         // https://stackoverflow.com/questions/45570326/flipping-the-viewport-in-vulkan
@@ -105,7 +122,7 @@ namespace vc
         scissor.extent = extent;
         vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 
-        vkCmdDraw(commandBuffer, 6, 1, 0, 0);
+        vkCmdDraw(commandBuffer, 3, 1, 0, 0);
 
         // End the render pass.
         vkCmdEndRenderPass(commandBuffer);
