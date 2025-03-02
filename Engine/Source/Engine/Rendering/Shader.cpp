@@ -2,12 +2,13 @@
 #include "Engine/Core/AssertOrVerify.hpp"
 #include "Engine/IO/FileIO.hpp"
 #include "Engine/Rendering/RenderContext.hpp"
+#include "Engine/Rendering/UniformBuffer.hpp"
 #include <shaderc/shaderc.hpp>
 #include <spirv_cross/spirv_reflect.hpp>
 #include <array>
 #include <ranges>
-#include <vector>
 #include <unordered_map>
+#include <vector>
 
 namespace fs = std::filesystem;
 
@@ -57,6 +58,7 @@ namespace eng
         options.SetOptimizationLevel(shaderc_optimization_level_performance);
 
         VkDevice device = m_Context.GetDevice();
+        std::uint32_t swapchainImageCount = m_Context.GetSwapchainImageCount();
 
         auto stages =
             // For all the supported shader stages...
@@ -143,12 +145,14 @@ namespace eng
             // Collate the create infos into a vector.
             std::ranges::to<std::vector>();
 
-        // Get vertex input attribute descriptions.
-        std::vector<VkVertexInputAttributeDescription> vertexInputAttributeDescriptions;
+        // Get vertex stride, vertex input attribute descriptions, and descriptor set layout bindings.
         std::uint32_t stride = 0;
-
+        std::vector<VkVertexInputAttributeDescription> vertexInputAttributeDescriptions;
+        std::vector<VkDescriptorSetLayoutBinding> descriptorSetLayoutBindings;
+        std::vector<VkDescriptorPoolSize> descriptorPoolSizes;
         {
             std::vector<std::uint8_t> const& code = std::get<0>(stages[0]);
+            // NOTE: These two are so large that they have to be stored on the heap (~18KB combined).
             auto reflection = std::make_unique<spirv_cross::CompilerReflection>((std::uint32_t const*)code.data(), code.size() / sizeof(std::uint32_t));
             auto resources = std::make_unique<spirv_cross::ShaderResources>(reflection->get_shader_resources());
 
@@ -175,49 +179,107 @@ namespace eng
                 offset += size * count; // Advancement
             }
 
-            auto processStage = [](
-                std::unique_ptr<spirv_cross::CompilerReflection>& reflection,
-                std::unique_ptr<spirv_cross::ShaderResources>& resources)
+            // The rare nested lambdas, ~oooOOOo~ooOOO~ooOo~OOO~!
+            auto processStage = [&](VkShaderStageFlagBits stage)
             {
-                for (auto& resource : resources->uniform_buffers)
+                auto processResources = [&](
+                    spirv_cross::SmallVector<spirv_cross::Resource>& resources,
+                    VkDescriptorType descriptorType,
+                    auto&& specializationFunc)
                 {
-                    auto& type = reflection->get_type_from_variable(resource.id);
-                    std::uint32_t binding = reflection->get_decoration(resource.id, spv::DecorationBinding);
-                    uint32_t b = type.self;
-                }
+                    for (auto& resource : resources)
+                    {
+                        auto& type = reflection->get_type_from_variable(resource.id);
+                        std::uint32_t binding = reflection->get_decoration(resource.id, spv::DecorationBinding);
+                        std::uint32_t count = type.array.size() == 0 ? 1 : type.array[0];
 
-                for (auto& resource : resources->storage_buffers)
+                        // Get the descriptor set layout binding if it exists.
+                        auto itBindings = std::find_if(
+                            descriptorSetLayoutBindings.begin(),
+                            descriptorSetLayoutBindings.end(),
+                            [stage](VkDescriptorSetLayoutBinding& binding)
+                            {
+                                return (binding.stageFlags & stage) == stage;
+                            });
+                        // If doesn't already exist, create it.
+                        if (itBindings == descriptorSetLayoutBindings.end())
+                        {
+                            specializationFunc(type, binding);
+
+                            auto& descriptorSetLayoutBinding = descriptorSetLayoutBindings.emplace_back();
+                            descriptorSetLayoutBinding.binding = binding;
+                            descriptorSetLayoutBinding.descriptorType = descriptorType;
+                            descriptorSetLayoutBinding.descriptorCount = count;
+
+                            itBindings = descriptorSetLayoutBindings.end() - 1;
+                        }
+                        // Add the current stage to the binding.
+                        itBindings->stageFlags |= stage;
+
+                        // Get the descriptor pool size if it exists.
+                        auto itSizes = std::find_if(
+                            descriptorPoolSizes.begin(),
+                            descriptorPoolSizes.end(),
+                            [descriptorType](VkDescriptorPoolSize& size)
+                            {
+                                return size.type == descriptorType;
+                            });
+                        // If doesn't already exist, create it.
+                        if (itSizes == descriptorPoolSizes.end())
+                        {
+                            auto& descriptorPoolSize = descriptorPoolSizes.emplace_back();
+                            descriptorPoolSize.type = descriptorType;
+
+                            itSizes = descriptorPoolSizes.end() - 1;
+                        }
+                        // Add the count to the descriptor pool size.
+                        itSizes->descriptorCount += count;
+                    }
+                };
+
+                processResources(resources->uniform_buffers, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+                [&](spirv_cross::SPIRType const& type, std::uint32_t binding)
                 {
-                    auto& type = reflection->get_type_from_variable(resource.id);
-                    std::uint32_t binding = reflection->get_decoration(resource.id, spv::DecorationBinding);
-                    uint32_t b = type.self;
-                }
-
-                for (auto& resource : resources->sampled_images)
+                    UniformBufferInfo info;
+                    info.RenderContext = &m_Context;
+                    info.Size = reflection->get_declared_struct_size(type);
+                    for (std::uint32_t i = 0; i < swapchainImageCount; i++)
+                        m_UniformBuffers[binding].push_back(std::make_unique<UniformBuffer>(info));
+                });
+                processResources(resources->storage_buffers, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+                [&](spirv_cross::SPIRType const& type, std::uint32_t binding)
                 {
-                    auto& type = reflection->get_type_from_variable(resource.id);
-                    std::uint32_t binding = reflection->get_decoration(resource.id, spv::DecorationBinding);
-                    uint32_t b = type.self;
-                }
 
+                });
+                processResources(resources->sampled_images, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
+                [&](spirv_cross::SPIRType const& type, std::uint32_t binding)
+                {
+
+                });
                 // TODO: there's quite a few more resource types to handle.
             };
 
-            processStage(reflection, resources);
+            processStage(std::get<1>(stages[0]));
 
             for (std::size_t i = 1; i < stages.size(); i++)
             {
                 std::vector<std::uint8_t> const& code = std::get<0>(stages[i]);
 
-                // Recreate them with the next stage, but using the existing memory.
+                // Recreate the reflection resources with the next stage, but using the existing memory.
                 resources->~ShaderResources();
                 reflection->~CompilerReflection();
                 new (reflection.get()) spirv_cross::CompilerReflection((std::uint32_t const*)code.data(), code.size() / sizeof(std::uint32_t));
                 new (resources.get()) spirv_cross::ShaderResources(reflection->get_shader_resources());
 
-                processStage(reflection, resources);
+                processStage(std::get<1>(stages[i]));
             }
         }
+
+        // Create descriptor pool.
+
+        CreateDescriptorSetLayout(descriptorSetLayoutBindings);
+        CreateDescriptorPool(descriptorPoolSizes);
+        CreateDescriptorSets();
 
         auto dynamicStates = std::to_array({
             VK_DYNAMIC_STATE_VIEWPORT,
@@ -299,9 +361,9 @@ namespace eng
 
         VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
         pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-        // TODO: descriptor pool
-        pipelineLayoutInfo.setLayoutCount = 0;
-        pipelineLayoutInfo.pSetLayouts = nullptr;
+        pipelineLayoutInfo.setLayoutCount = 1; // TODO: descriptor pool
+        pipelineLayoutInfo.pSetLayouts = &m_DescriptorSetLayout; // TODO: descriptor pool
+        // NOTE: this is where push constants would go.
 
         VkResult result = vkCreatePipelineLayout(device, &pipelineLayoutInfo, nullptr, &m_PipelineLayout);
         ENG_ASSERT(result == VK_SUCCESS, "Failed to create pipeline layout.");
@@ -337,12 +399,111 @@ namespace eng
 
         vkDestroyPipeline(device, m_Pipeline, nullptr);
         vkDestroyPipelineLayout(device, m_PipelineLayout, nullptr);
+        vkDestroyDescriptorPool(device, m_DescriptorPool, nullptr);
+        vkDestroyDescriptorSetLayout(device, m_DescriptorSetLayout, nullptr);
     }
 
     void Shader::Bind(VkCommandBuffer commandBuffer)
     {
+        std::uint32_t swapchainImageIndex = m_Context.GetSwapchainImageIndex();
+
         vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_Pipeline);
 
-        // TODO: vkCmdBindDescriptorSets
+        // TODO: this has lots of hard coded numbers.
+        vkCmdBindDescriptorSets(
+            commandBuffer,
+            VK_PIPELINE_BIND_POINT_GRAPHICS,
+            m_PipelineLayout,
+            0,
+            1,
+            &m_DescriptorSets[swapchainImageIndex],
+            // TODO: dynamic offsets
+            0,
+            nullptr
+        );
+    }
+
+    void Shader::UpdateDescriptorSets()
+    {
+        // TODO: only update the ones that changed.
+        // ESPECIALLY IMPORTANT for textures, or large buffers in general.
+
+        VkDevice device = m_Context.GetDevice();
+        std::uint32_t swapchainImageCount = m_Context.GetSwapchainImageCount();
+        std::uint32_t swapchainImageIndex = m_Context.GetSwapchainImageIndex();
+
+        for (auto& [binding, uniformBuffers] : m_UniformBuffers)
+        {
+            auto& uniformBuffer = uniformBuffers[swapchainImageIndex];
+
+            VkDescriptorBufferInfo bufferInfo{};
+            bufferInfo.buffer = uniformBuffer->GetBuffer();
+            bufferInfo.offset = 0;
+            bufferInfo.range = VK_WHOLE_SIZE;
+
+            VkWriteDescriptorSet write{};
+            write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            write.dstSet = m_DescriptorSets[swapchainImageIndex]; // TODO
+            write.dstBinding = binding;
+            write.dstArrayElement = 0; // TODO: arrays
+            write.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER; // TODO: other types
+            write.descriptorCount = 1; // TODO: arrays
+            //write.pImageInfo = // TODO: samplers
+            write.pBufferInfo = &bufferInfo;
+            //write.pTexelBufferView = // TODO: idk what these are
+
+            vkUpdateDescriptorSets(device, 1, &write, 0, nullptr);
+        }
+    }
+
+    UniformBuffer& Shader::GetUniformBuffer(std::uint32_t binding)
+    {
+        return *m_UniformBuffers.at(binding)[m_Context.GetSwapchainImageIndex()];
+    }
+
+    void Shader::CreateDescriptorSetLayout(std::span<VkDescriptorSetLayoutBinding> descriptorSetLayoutBindings)
+    {
+        VkDevice device = m_Context.GetDevice();
+
+        VkDescriptorSetLayoutCreateInfo info{};
+        info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+        info.bindingCount = static_cast<std::uint32_t>(descriptorSetLayoutBindings.size());
+        info.pBindings = descriptorSetLayoutBindings.data();
+
+        VkResult result = vkCreateDescriptorSetLayout(device, &info, nullptr, &m_DescriptorSetLayout);
+        ENG_ASSERT(result == VK_SUCCESS, "Failed to create descriptor set layout.");
+    }
+
+    void Shader::CreateDescriptorPool(std::span<VkDescriptorPoolSize> descriptorPoolSizes)
+    {
+        VkDevice device = m_Context.GetDevice();
+        std::uint32_t swapchainImageCount = m_Context.GetSwapchainImageCount();
+
+        VkDescriptorPoolCreateInfo info{};
+        info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+        info.maxSets = static_cast<std::uint32_t>(descriptorPoolSizes.size() * swapchainImageCount);
+        info.poolSizeCount = static_cast<std::uint32_t>(descriptorPoolSizes.size());
+        info.pPoolSizes = descriptorPoolSizes.data();
+
+        VkResult result = vkCreateDescriptorPool(device, &info, nullptr, &m_DescriptorPool);
+        ENG_ASSERT(result == VK_SUCCESS, "Failed to create descriptor pool.");
+    }
+
+    void Shader::CreateDescriptorSets()
+    {
+        VkDevice device = m_Context.GetDevice();
+        std::uint32_t swapchainImageCount = m_Context.GetSwapchainImageCount();
+
+        std::vector<VkDescriptorSetLayout> layouts(swapchainImageCount, m_DescriptorSetLayout);
+
+        VkDescriptorSetAllocateInfo info{};
+        info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+        info.descriptorPool = m_DescriptorPool;
+        info.descriptorSetCount = static_cast<std::uint32_t>(layouts.size());
+        info.pSetLayouts = layouts.data();
+
+        m_DescriptorSets.resize(layouts.size());
+        VkResult result = vkAllocateDescriptorSets(device, &info, m_DescriptorSets.data());
+        ENG_ASSERT(result == VK_SUCCESS, "Failed to allocate descriptor sets.");
     }
 }

@@ -82,6 +82,16 @@ namespace eng
         return m_SwapchainImageViews[m_FrameIndex];
     }
 
+    std::uint32_t RenderContext::GetSwapchainImageCount() const
+    {
+        return m_SwapchainImageCount;
+    }
+
+    std::uint32_t RenderContext::GetSwapchainImageIndex() const
+    {
+        return m_FrameIndex;
+    }
+
     VkExtent2D RenderContext::GetSwapchainExtent() const
     {
         return m_SwapchainExtent;
@@ -503,6 +513,9 @@ namespace eng
                     vkDestroyImageView(m_Device, oldSwapchainImageViews[i], nullptr);
                 vkDestroySwapchainKHR(m_Device, oldSwapchain, nullptr);
             }
+
+            // TODO: This should always be the case, right?
+            ENG_ASSERT(m_SwapchainImageCount == 0 or m_SwapchainImageCount == imageCount);
 
             // Save these for later.
             m_SwapchainImageCount = imageCount;

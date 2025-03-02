@@ -13,6 +13,7 @@ namespace vc
         virtual void OnEvent(eng::Event& event) override;
         virtual void OnUpdate(eng::Timestep timestep) override;
         virtual void OnRender() override;
+        // TODO: remove this from eng::Layer and make imgui a client decision.
         virtual void OnImGuiRender() override;
     private:
         void OnWindowCloseEvent(eng::WindowCloseEvent& event);
@@ -24,5 +25,8 @@ namespace vc
         VkFramebuffer m_Framebuffer = VK_NULL_HANDLE;
         std::unique_ptr<eng::Shader> m_Shader;
         std::unique_ptr<eng::VertexBuffer> m_VertexBuffer;
+
+        // TODO: move
+        glm::mat4 m_ViewProjection{1.0f};
     };
 }

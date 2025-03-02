@@ -8,6 +8,7 @@ namespace vc
     {
         // TODO: context retrieval needs to be reworked with multiple windows.
         auto& context = eng::Application::Get().GetWindow().GetRenderContext();
+        std::uint32_t swapchainImageCount = context.GetSwapchainImageCount();
 
         CreateRenderPass();
         CreateFramebuffer();
@@ -41,8 +42,8 @@ namespace vc
         auto& context = eng::Application::Get().GetWindow().GetRenderContext();
         VkDevice device = context.GetDevice();
 
-        m_Shader.reset();
         m_VertexBuffer.reset();
+        m_Shader.reset();
         vkDestroyFramebuffer(device, m_Framebuffer, nullptr);
         vkDestroyRenderPass(device, m_RenderPass, nullptr);
     }
@@ -58,18 +59,38 @@ namespace vc
     void VulkanCraftLayer::OnUpdate(eng::Timestep timestep)
     {
         angle += timestep;
+
+        m_ViewProjection[0][0] = sinf(angle) * sinf(angle) * 0.5f + 0.5f;
+        //m_ViewProjection = glm::perspective(glm::radians(90.0f), 1.0f, 0.001f, 1000.0f);
     }
 
     void VulkanCraftLayer::OnRender()
     {
         // TODO: my plan
-        // 1) render client stuff to framebuffer
-        // 2) clear depth buffer
-        // 3) keep framebuffer unchanged between render passes
-        // 4) render imgui on top of that same framebuffer
-        // 5) present that framebuffer to the swapchain
+        // RenderContext will have its own pipeline, renderpass, and framebuffers.
+        // It will simply render a client framebuffer to a fullscreen quad. Since
+        // it's using a shader, client framebuffer resizes can be called from OnEvent,
+        // since it will be stretched, via a sampler2D, to fit the swapchain extent.
+        // This will also allow for a modular Framebuffer.hpp/cpp in Engine/Rendering/
+        // that the client can use one of, without having to rely on it being imageless.
+        // Same thing for RenderPass.hpp/cpp.
+        // 
+        // Rendering order:
+        //  1) RenderContext::BeginFrame
+        //  2) begin first client renderpass
+        //  3) render client stuff to client framebuffer
+        //  4) end last client renderpass (likely same as first)
+        //  5) OnImGuiRender
+        //  6) execute imgui draw list (imgui's own renderpass, pipeline, vertex/index buffers)
+        //  7) RenderContext::EndFrame
+        // 
+        // NOTE: ImGui "rendering" code (OnImGuiRender) doesn't actually execute
+        // any graphics commands, it just collates all its textured quads into a
+        // draw list. This draw list will then be used to actually render it.
 
         // TODO: Each window should own its own layer stack.
+        // Store a window's render context as a pointer in each
+        // layer with a "RenderContext& Layer::GetRenderContext()"?
         auto& context = eng::Application::Get().GetWindow().GetRenderContext();
         VkDevice device = context.GetDevice();
         VkExtent2D extent = context.GetSwapchainExtent();
@@ -104,6 +125,9 @@ namespace vc
         vkCmdBeginRenderPass(commandBuffer, &info, VK_SUBPASS_CONTENTS_INLINE);
 
         m_Shader->Bind(commandBuffer);
+        m_Shader->GetUniformBuffer(0).SetData(m_ViewProjection);
+        m_Shader->UpdateDescriptorSets();
+
         m_VertexBuffer->Bind(commandBuffer);
 
         // Vulkan's +y direction is down, this fixes that.

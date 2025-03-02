@@ -22,6 +22,8 @@ namespace eng
         VkQueue GetGraphicsQueue() const;
         VkQueue GetPresentQueue() const;
         VkImageView GetActiveSwapchainImageView() const;
+        std::uint32_t GetSwapchainImageCount() const;
+        std::uint32_t GetSwapchainImageIndex() const;
         VkExtent2D GetSwapchainExtent() const;
         VkFormat GetSwapchainFormat() const;
         bool WasSwapchainRecreated() const;
