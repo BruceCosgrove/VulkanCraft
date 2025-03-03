@@ -3,7 +3,6 @@
 #include <vulkan/vulkan.h>
 #include <filesystem>
 #include <span>
-#include <unordered_map>
 #include <vector>
 
 namespace eng
@@ -11,10 +10,19 @@ namespace eng
     class RenderContext;
     class UniformBuffer;
 
+    struct VertexBinding
+    {
+        std::uint32_t Binding = 0;
+        VkVertexInputRate InputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+        std::initializer_list<std::uint32_t> Locations;
+    };
+
     struct ShaderInfo
     {
         RenderContext* RenderContext = nullptr;
         std::filesystem::path Filepath;
+        std::initializer_list<VertexBinding> VertexBindings;
+        VkPrimitiveTopology Topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
         VkRenderPass RenderPass = VK_NULL_HANDLE;
     };
 
@@ -31,11 +39,18 @@ namespace eng
 
         UniformBuffer* GetUniformBuffer(std::uint32_t binding);
     private:
-        std::vector<std::tuple<std::vector<std::uint8_t>, VkShaderStageFlagBits>> CompileExistingSources(std::filesystem::path const& filepath);
-        std::vector<VkPipelineShaderStageCreateInfo> GetPipelineShaderStageInfos(std::span<std::tuple<std::vector<std::uint8_t>, VkShaderStageFlagBits>> stages);
+        std::vector<std::tuple<std::vector<std::uint8_t>, VkShaderStageFlagBits>> CompileExistingSources(
+            std::filesystem::path const& filepath
+        );
+
+        std::vector<VkPipelineShaderStageCreateInfo> GetPipelineShaderStageInfos(
+            std::span<std::tuple<std::vector<std::uint8_t>, VkShaderStageFlagBits>> stages
+        );
+
         void Reflect(
+            ShaderInfo const& info,
             std::span<std::tuple<std::vector<std::uint8_t>, VkShaderStageFlagBits>> stages,
-            std::uint32_t& stride,
+            std::vector<std::uint32_t>& strides,
             std::vector<VkVertexInputAttributeDescription>& vertexInputAttributeDescriptions,
             std::vector<VkDescriptorSetLayoutBinding>& descriptorSetLayoutBindings,
             std::vector<VkDescriptorPoolSize>& descriptorPoolSizes
@@ -44,6 +59,14 @@ namespace eng
         void CreateDescriptorSetLayout(std::span<VkDescriptorSetLayoutBinding> descriptorSetLayoutBindings);
         void CreateDescriptorPool(std::span<VkDescriptorPoolSize> descriptorPoolSizes);
         void CreateDescriptorSets();
+        void CreatePipelineLayout();
+
+        void CreatePipeline(
+            ShaderInfo const& info,
+            std::span<std::uint32_t> strides,
+            std::span<VkVertexInputAttributeDescription> vertexInputAttributeDescriptions,
+            std::span<VkPipelineShaderStageCreateInfo> pipelineShaderStageInfos
+        );
     private:
         RenderContext& m_Context; // non-owning
         VkDescriptorSetLayout m_DescriptorSetLayout = VK_NULL_HANDLE;

@@ -17,6 +17,11 @@ namespace vc
             eng::ShaderInfo info;
             info.RenderContext = &context;
             info.Filepath = "Assets/Shaders/Basic";
+            info.VertexBindings =
+            {
+                {0, VK_VERTEX_INPUT_RATE_VERTEX, {0, 1}},
+            };
+            info.Topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
             info.RenderPass = m_RenderPass;
             m_Shader = std::make_unique<eng::Shader>(info);
         }
@@ -29,9 +34,9 @@ namespace vc
 
             constexpr auto data = std::to_array
             ({
-                -0.5f, -0.5f, 0.0f,
-                +1.0f, -1.0f, 0.0f,
-                 0.0f, +1.0f, 0.0f,
+                -0.5f, -0.5f, 0.0f, 1.0f, 0.5f, 0.5f,
+                +1.0f, -1.0f, 0.0f, 0.5f, 1.0f, 0.5f,
+                 0.0f, +1.0f, 0.0f, 0.5f, 0.5f, 1.0f,
             });
             m_VertexBuffer->SetData(data);
         }
@@ -60,8 +65,8 @@ namespace vc
     {
         angle += timestep;
 
-        m_ViewProjection[0][0] = sinf(angle) * sinf(angle) * 0.5f + 0.5f;
-        //m_ViewProjection = glm::perspective(glm::radians(90.0f), 1.0f, 0.001f, 1000.0f);
+        m_ViewProjection = glm::perspective(glm::radians(90.0f), 1.0f, 0.001f, 1000.0f)
+            * glm::inverse(glm::translate(glm::mat4(1.0f), glm::vec3(cosf(angle) * 0.5f, sinf(angle) * 0.5f, 1.0f)));
     }
 
     void VulkanCraftLayer::OnRender()
@@ -128,7 +133,7 @@ namespace vc
         m_Shader->GetUniformBuffer(0)->SetData(m_ViewProjection);
         m_Shader->UpdateDescriptorSet();
 
-        m_VertexBuffer->Bind(commandBuffer);
+        m_VertexBuffer->Bind(commandBuffer, 0);
 
         // Vulkan's +y direction is down, this fixes that.
         // https://stackoverflow.com/questions/45570326/flipping-the-viewport-in-vulkan
