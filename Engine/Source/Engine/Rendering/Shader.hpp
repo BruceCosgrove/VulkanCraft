@@ -4,6 +4,7 @@
 #include <filesystem>
 #include <span>
 #include <unordered_map>
+#include <vector>
 
 namespace eng
 {
@@ -26,10 +27,20 @@ namespace eng
         ~Shader();
     public:
         void Bind(VkCommandBuffer commandBuffer);
-        void UpdateDescriptorSets();
+        void UpdateDescriptorSet();
 
-        UniformBuffer& GetUniformBuffer(std::uint32_t binding);
+        UniformBuffer* GetUniformBuffer(std::uint32_t binding);
     private:
+        std::vector<std::tuple<std::vector<std::uint8_t>, VkShaderStageFlagBits>> CompileExistingSources(std::filesystem::path const& filepath);
+        std::vector<VkPipelineShaderStageCreateInfo> GetPipelineShaderStageInfos(std::span<std::tuple<std::vector<std::uint8_t>, VkShaderStageFlagBits>> stages);
+        void Reflect(
+            std::span<std::tuple<std::vector<std::uint8_t>, VkShaderStageFlagBits>> stages,
+            std::uint32_t& stride,
+            std::vector<VkVertexInputAttributeDescription>& vertexInputAttributeDescriptions,
+            std::vector<VkDescriptorSetLayoutBinding>& descriptorSetLayoutBindings,
+            std::vector<VkDescriptorPoolSize>& descriptorPoolSizes
+        );
+
         void CreateDescriptorSetLayout(std::span<VkDescriptorSetLayoutBinding> descriptorSetLayoutBindings);
         void CreateDescriptorPool(std::span<VkDescriptorPoolSize> descriptorPoolSizes);
         void CreateDescriptorSets();
@@ -37,16 +48,28 @@ namespace eng
         RenderContext& m_Context; // non-owning
         VkDescriptorSetLayout m_DescriptorSetLayout = VK_NULL_HANDLE;
         VkDescriptorPool m_DescriptorPool = VK_NULL_HANDLE;
-        std::vector<VkDescriptorSet> m_DescriptorSets;
         VkPipelineLayout m_PipelineLayout = VK_NULL_HANDLE;
         VkPipeline m_Pipeline = VK_NULL_HANDLE;
 
         // Shader resources.
 
-        // Map from bindings to per-frame uniform buffers.
-        // TODO: this *really* needs to be improved in terms of capabilities.
-        std::unordered_map<std::uint32_t, std::vector<std::unique_ptr<UniformBuffer>>> m_UniformBuffers;
-        // TODO: storage buffers
-        // TODO: image samplers
+        template <typename T>
+        struct ResourceData
+        {
+            std::uint32_t Binding = 0;
+            std::unique_ptr<T> Resource;
+        };
+
+        struct FrameData
+        {
+            // NOTE: Assuming one descriptor set per frame.
+            // Realistically, there can/should be up to four,
+            // but this is the simplest option right now.
+            VkDescriptorSet DescriptorSet;
+            std::vector<ResourceData<UniformBuffer>> UniformBuffers;
+            // TODO: storage buffers
+            // TODO: image samplers
+        };
+        std::vector<FrameData> m_FrameData;
     };
 }

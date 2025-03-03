@@ -125,8 +125,8 @@ namespace vc
         vkCmdBeginRenderPass(commandBuffer, &info, VK_SUBPASS_CONTENTS_INLINE);
 
         m_Shader->Bind(commandBuffer);
-        m_Shader->GetUniformBuffer(0).SetData(m_ViewProjection);
-        m_Shader->UpdateDescriptorSets();
+        m_Shader->GetUniformBuffer(0)->SetData(m_ViewProjection);
+        m_Shader->UpdateDescriptorSet();
 
         m_VertexBuffer->Bind(commandBuffer);
 
