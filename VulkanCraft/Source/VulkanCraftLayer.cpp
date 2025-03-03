@@ -40,6 +40,13 @@ namespace vc
             });
             m_VertexBuffer->SetData(data);
         }
+
+        m_CameraController.SetPosition(glm::vec3(0.0f, 0.0f, 1.0f));
+        m_CameraController.SetFOV(glm::radians(90.0f));
+        m_CameraController.SetNearPlane(0.001f);
+        m_CameraController.SetFarPlane(1000.0f);
+        m_CameraController.SetMovementSpeed(1.0f);
+        m_CameraController.SetMouseSensitivity(1.0f);
     }
 
     void VulkanCraftLayer::OnDetach()
@@ -56,17 +63,16 @@ namespace vc
     void VulkanCraftLayer::OnEvent(eng::Event& event)
     {
         // TODO: remove
-        ENG_LOG_DEBUG("VulkanCraftLayer::OnEvent(TODO: event logging)");
+        //ENG_LOG_DEBUG("VulkanCraftLayer::OnEvent(TODO: event logging)");
         event.Dispatch(this, &VulkanCraftLayer::OnWindowCloseEvent);
+        event.Dispatch(&m_CameraController, &CameraController::OnEvent);
     }
 
     static float angle = 0.0f;
     void VulkanCraftLayer::OnUpdate(eng::Timestep timestep)
     {
         angle += timestep;
-
-        m_ViewProjection = glm::perspective(glm::radians(90.0f), 1.0f, 0.001f, 1000.0f)
-            * glm::inverse(glm::translate(glm::mat4(1.0f), glm::vec3(cosf(angle) * 0.5f, sinf(angle) * 0.5f, 1.0f)));
+        m_CameraController.OnUpdate(timestep);
     }
 
     void VulkanCraftLayer::OnRender()
@@ -130,7 +136,7 @@ namespace vc
         vkCmdBeginRenderPass(commandBuffer, &info, VK_SUBPASS_CONTENTS_INLINE);
 
         m_Shader->Bind(commandBuffer);
-        m_Shader->GetUniformBuffer(0)->SetData(m_ViewProjection);
+        m_Shader->GetUniformBuffer(0)->SetData(m_CameraController.GetViewProjection());
         m_Shader->UpdateDescriptorSet();
 
         m_VertexBuffer->Bind(commandBuffer, 0);

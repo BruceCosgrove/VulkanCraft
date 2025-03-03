@@ -32,6 +32,11 @@ namespace eng
         glfwShowWindow(m_NativeWindow.Handle);
     }
 
+    void Window::OnEvent(Event& event)
+    {
+        m_LayerStack.OnEvent(event);
+    }
+
     void Window::OnUpdate()
     {
         // Calculate the time since the last update/frame combo.
@@ -53,6 +58,11 @@ namespace eng
         m_RenderContext.BeginFrame();
         m_LayerStack.OnRender();
         m_RenderContext.EndFrame();
+    }
+
+    void Window::GetFramebufferSize(std::uint32_t& width, std::uint32_t& height) const
+    {
+        glfwGetFramebufferSize(m_NativeWindow.Handle, (int*)&width, (int*)&height);
     }
 
     void Window::OnWindowMinimizeEvent(WindowMinimizeEvent& event)
@@ -187,14 +197,9 @@ namespace eng
             switch (action)
             {
                 case GLFW_PRESS:
-                {
-                    MouseButtonPressEvent event(static_cast<MouseButton>(button), static_cast<Modifiers>(mods));
-                    window.m_LayerStack.OnEvent(event);
-                    break;
-                }
                 case GLFW_RELEASE:
                 {
-                    MouseButtonReleaseEvent event(static_cast<MouseButton>(button), static_cast<Modifiers>(mods));
+                    MouseButtonPressEvent event(static_cast<MouseButton>(button), static_cast<Modifiers>(mods), action == GLFW_PRESS);
                     window.m_LayerStack.OnEvent(event);
                     break;
                 }
@@ -232,14 +237,9 @@ namespace eng
             switch (action)
             {
                 case GLFW_PRESS:
-                {
-                    KeyPressEvent event(static_cast<Keycode>(key), static_cast<Modifiers>(mods));
-                    window.m_LayerStack.OnEvent(event);
-                    break;
-                }
                 case GLFW_RELEASE:
                 {
-                    KeyReleaseEvent event(static_cast<Keycode>(key), static_cast<Modifiers>(mods));
+                    KeyPressEvent event(static_cast<Keycode>(key), static_cast<Modifiers>(mods), action == GLFW_PRESS);
                     window.m_LayerStack.OnEvent(event);
                     break;
                 }

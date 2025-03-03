@@ -2,10 +2,11 @@
 
 namespace eng
 {
-    MouseButtonPressEvent::MouseButtonPressEvent(MouseButton button, Modifiers modifiers) noexcept
-        : Event(EventType::MouseButtonPress)
+    MouseButtonPressEvent::MouseButtonPressEvent(MouseButton button, Modifiers modifiers, bool pressed) noexcept
+        : Event(GetStaticType())
         , m_Button(button)
         , m_Modifiers(modifiers)
+        , m_Pressed(pressed)
     {
 
     }
@@ -20,30 +21,15 @@ namespace eng
         return m_Modifiers;
     }
 
-
-
-    MouseButtonReleaseEvent::MouseButtonReleaseEvent(MouseButton button, Modifiers modifiers) noexcept
-        : Event(EventType::MouseButtonRelease)
-        , m_Button(button)
-        , m_Modifiers(modifiers)
+    bool MouseButtonPressEvent::IsPressed() const noexcept
     {
-
-    }
-
-    MouseButton MouseButtonReleaseEvent::GetButton() const noexcept
-    {
-        return m_Button;
-    }
-
-    Modifiers MouseButtonReleaseEvent::GetModifiers() const noexcept
-    {
-        return m_Modifiers;
+        return m_Pressed;
     }
 
 
 
     MouseMoveEvent::MouseMoveEvent(float x, float y) noexcept
-        : Event(EventType::MouseMove)
+        : Event(GetStaticType())
         , m_X(x)
         , m_Y(y)
     {
@@ -63,7 +49,7 @@ namespace eng
 
 
     MouseEnterEvent::MouseEnterEvent(bool entered) noexcept
-        : Event(EventType::MouseMove)
+        : Event(GetStaticType())
         , m_Entered(entered)
     {
 
@@ -77,7 +63,7 @@ namespace eng
 
 
     MouseScrollEvent::MouseScrollEvent(float scrollX, float scrollY) noexcept
-        : Event(EventType::MouseMove)
+        : Event(GetStaticType())
         , m_ScrollX(scrollX)
         , m_ScrollY(scrollY)
     {

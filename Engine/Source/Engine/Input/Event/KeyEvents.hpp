@@ -10,31 +10,17 @@ namespace eng
     {
     public:
         _ENG_EVENT_GET_STATIC_TYPE(EventType::KeyPress);
-        KeyPressEvent(Keycode keycode, Modifiers modifiers) noexcept;
+        KeyPressEvent(Keycode keycode, Modifiers modifiers, bool pressed) noexcept;
 
         Keycode GetKeycode() const noexcept;
         Modifiers GetModifiers() const noexcept;
+        bool IsPressed() const noexcept;
     private:
         Keycode m_Keycode;
         Modifiers m_Modifiers;
+        bool m_Pressed;
     };
     _ENG_ASSERT_EVENT_INTERFACE(KeyPressEvent);
-
-
-
-    class KeyReleaseEvent : public Event
-    {
-    public:
-        _ENG_EVENT_GET_STATIC_TYPE(EventType::KeyRelease);
-        KeyReleaseEvent(Keycode keycode, Modifiers modifiers) noexcept;
-
-        Keycode GetKeycode() const noexcept;
-        Modifiers GetModifiers() const noexcept;
-    private:
-        Keycode m_Keycode;
-        Modifiers m_Modifiers;
-    };
-    _ENG_ASSERT_EVENT_INTERFACE(KeyReleaseEvent);
 
 
 

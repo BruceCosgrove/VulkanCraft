@@ -28,8 +28,12 @@ namespace eng
     private:
         friend class Application;
         Window(WindowInfo const& info);
+        void OnEvent(Event& event);
         void OnUpdate();
         void OnRender();
+
+        // TODO: refactor this
+        void GetFramebufferSize(std::uint32_t& width, std::uint32_t& height) const;
     private:
         void OnWindowMinimizeEvent(WindowMinimizeEvent& event);
         void OnWindowFramebufferResizeEvent(WindowFramebufferResizeEvent& event);

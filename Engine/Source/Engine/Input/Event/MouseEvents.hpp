@@ -10,31 +10,17 @@ namespace eng
     {
     public:
         _ENG_EVENT_GET_STATIC_TYPE(EventType::MouseButtonPress);
-        MouseButtonPressEvent(MouseButton button, Modifiers modifiers) noexcept;
+        MouseButtonPressEvent(MouseButton button, Modifiers modifiers, bool pressed) noexcept;
 
         MouseButton GetButton() const noexcept;
         Modifiers GetModifiers() const noexcept;
+        bool IsPressed() const noexcept;
     private:
         MouseButton m_Button;
         Modifiers m_Modifiers;
+        bool m_Pressed;
     };
     _ENG_ASSERT_EVENT_INTERFACE(MouseButtonPressEvent);
-
-
-
-    class MouseButtonReleaseEvent : public Event
-    {
-    public:
-        _ENG_EVENT_GET_STATIC_TYPE(EventType::MouseButtonRelease);
-        MouseButtonReleaseEvent(MouseButton button, Modifiers modifiers) noexcept;
-
-        MouseButton GetButton() const noexcept;
-        Modifiers GetModifiers() const noexcept;
-    private:
-        MouseButton m_Button;
-        Modifiers m_Modifiers;
-    };
-    _ENG_ASSERT_EVENT_INTERFACE(MouseButtonReleaseEvent);
 
     
 

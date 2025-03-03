@@ -1,5 +1,6 @@
 #pragma once
 
+#include "CameraController.hpp"
 #include <Engine.hpp>
 #include <memory>
 
@@ -26,7 +27,6 @@ namespace vc
         std::unique_ptr<eng::Shader> m_Shader;
         std::unique_ptr<eng::VertexBuffer> m_VertexBuffer;
 
-        // TODO: move
-        glm::mat4 m_ViewProjection{1.0f};
+        CameraController m_CameraController;
     };
 }

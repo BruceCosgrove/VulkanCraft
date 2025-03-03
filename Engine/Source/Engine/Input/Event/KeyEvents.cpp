@@ -2,10 +2,11 @@
 
 namespace eng
 {
-    KeyPressEvent::KeyPressEvent(Keycode keycode, Modifiers modifiers) noexcept
+    KeyPressEvent::KeyPressEvent(Keycode keycode, Modifiers modifiers, bool pressed) noexcept
         : Event(GetStaticType())
         , m_Keycode(keycode)
         , m_Modifiers(modifiers)
+        , m_Pressed(pressed)
     {
 
     }
@@ -20,24 +21,9 @@ namespace eng
         return m_Modifiers;
     }
 
-
-    
-    KeyReleaseEvent::KeyReleaseEvent(Keycode keycode, Modifiers modifiers) noexcept
-        : Event(GetStaticType())
-        , m_Keycode(keycode)
-        , m_Modifiers(modifiers)
+    bool KeyPressEvent::IsPressed() const noexcept
     {
-
-    }
-
-    Keycode KeyReleaseEvent::GetKeycode() const noexcept
-    {
-        return m_Keycode;
-    }
-
-    Modifiers KeyReleaseEvent::GetModifiers() const noexcept
-    {
-        return m_Modifiers;
+        return m_Pressed;
     }
 
 

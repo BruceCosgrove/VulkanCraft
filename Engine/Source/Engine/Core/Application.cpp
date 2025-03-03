@@ -1,5 +1,6 @@
 #include "Application.hpp"
 #include "Engine/Core/AssertOrVerify.hpp"
+#include "Engine/Input/Event/WindowEvents.hpp"
 #define GLFW_INCLUDE_NONE
 #include <glfw/glfw3.h>
 #include <vulkan/vulkan.h>
@@ -30,6 +31,14 @@ namespace eng
 
     void Application::Run()
     {
+        // Send initial framebuffer resize event to initialize all client systems.
+        {
+            std::uint32_t width, height;
+            m_Window.GetFramebufferSize(width, height);
+            WindowFramebufferResizeEvent event(width, height);
+            m_Window.OnEvent(event);
+        }
+
         while (m_Running)
         {
             glfwPollEvents();
