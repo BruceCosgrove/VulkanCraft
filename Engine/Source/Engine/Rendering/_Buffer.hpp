@@ -17,15 +17,13 @@ namespace eng::detail
         Buffer(RenderContext* context);
         ~Buffer() = default;
 
-        void Createbuffer(
+        void CreateBuffer(
+            VkDeviceSize size,
             VkBufferUsageFlags usage,
             VkMemoryPropertyFlags flags,
-            VkDeviceSize& size,
             VkBuffer& buffer,
             VkDeviceMemory& deviceMemory
         );
-
-        void DestroyBuffer(VkBuffer buffer, VkDeviceMemory deviceMemory);
 
         void MapMemory(
             VkDeviceMemory deviceMemory,
@@ -34,16 +32,12 @@ namespace eng::detail
             void*& mappedMemory
         );
 
-        void UnmapMemory(
-            VkDeviceMemory deviceMemory,
-            void* mappedMemory
-        );
+        void UnmapMemory(VkDeviceMemory deviceMemory);
+
+        static std::uint32_t SelectMemoryType(std::uint32_t memoryType, VkMemoryPropertyFlags flags);
 
     protected:
         RenderContext& m_Context; // non-owning
-
-    private:
-        static std::uint32_t SelectMemoryType(std::uint32_t memoryType, VkMemoryPropertyFlags flags);
     };
 }
 

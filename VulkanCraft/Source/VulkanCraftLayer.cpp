@@ -14,12 +14,26 @@ namespace vc
         CreateFramebuffer();
 
         {
+#define VC_TEXTURE(x) R"(D:\Dorkspace\Programming\Archive\VanillaDefault-Resource-Pack-16x-1.21\assets\minecraft\textures\)" x
+            eng::LocalTexture2D texture(VC_TEXTURE("block/ancient_debris_side.png"));
+
+            eng::Texture2DInfo info;
+            info.RenderContext = &context;
+            info.LocalTexture = &texture;
+            m_Texture = std::make_shared<eng::Texture2D>(info);
+        }
+
+        {
             eng::ShaderInfo info;
             info.RenderContext = &context;
             info.Filepath = "Assets/Shaders/Basic";
             info.VertexBindings =
             {
-                {0, VK_VERTEX_INPUT_RATE_VERTEX, {0, 1}},
+                {0, VK_VERTEX_INPUT_RATE_VERTEX, {0, 1, 2}},
+            };
+            info.Images =
+            {
+                {1, m_Texture},
             };
             info.Topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
             info.RenderPass = m_RenderPass;
@@ -34,9 +48,12 @@ namespace vc
 
             constexpr auto data = std::to_array
             ({
-                -0.5f, -0.5f, 0.0f, 1.0f, 0.5f, 0.5f,
-                +1.0f, -1.0f, 0.0f, 0.5f, 1.0f, 0.5f,
-                 0.0f, +1.0f, 0.0f, 0.5f, 0.5f, 1.0f,
+                -0.5f, -0.5f, 0.0f,  1.0f, 0.0f, 0.0f,  0.0f, 1.0f, // 0
+                +0.5f, -0.5f, 0.0f,  0.0f, 1.0f, 0.0f,  1.0f, 1.0f, // 1
+                +0.5f, +0.5f, 0.0f,  0.0f, 0.0f, 1.0f,  1.0f, 0.0f, // 2
+                +0.5f, +0.5f, 0.0f,  0.0f, 0.0f, 1.0f,  1.0f, 0.0f, // 2
+                -0.5f, +0.5f, 0.0f,  1.0f, 1.0f, 1.0f,  0.0f, 0.0f, // 3
+                -0.5f, -0.5f, 0.0f,  1.0f, 0.0f, 0.0f,  0.0f, 1.0f, // 0
             });
             m_VertexBuffer->SetData(data);
         }
@@ -54,6 +71,7 @@ namespace vc
         auto& context = eng::Application::Get().GetWindow().GetRenderContext();
         VkDevice device = context.GetDevice();
 
+        m_Texture.reset();
         m_VertexBuffer.reset();
         m_Shader.reset();
         vkDestroyFramebuffer(device, m_Framebuffer, nullptr);
@@ -157,7 +175,7 @@ namespace vc
         scissor.extent = extent;
         vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 
-        vkCmdDraw(commandBuffer, 3, 1, 0, 0);
+        vkCmdDraw(commandBuffer, 6, 1, 0, 0);
 
         // End the render pass.
         vkCmdEndRenderPass(commandBuffer);

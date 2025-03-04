@@ -10,10 +10,10 @@ namespace eng::detail
 
     }
 
-    void Buffer::Createbuffer(
+    void Buffer::CreateBuffer(
+        VkDeviceSize size,
         VkBufferUsageFlags usage,
         VkMemoryPropertyFlags flags,
-        VkDeviceSize& size,
         VkBuffer& buffer,
         VkDeviceMemory& deviceMemory
     )
@@ -33,14 +33,11 @@ namespace eng::detail
         // Get memory requirements.
         VkMemoryRequirements memoryRequirements;
         vkGetBufferMemoryRequirements(device, buffer, &memoryRequirements);
-        //size = memoryRequirements.size; // TODO
-
-        std::uint32_t memoryTypeIndex = SelectMemoryType(memoryRequirements.memoryTypeBits, flags);
 
         VkMemoryAllocateInfo memoryAllocateInfo{};
         memoryAllocateInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
         memoryAllocateInfo.allocationSize = memoryRequirements.size;
-        memoryAllocateInfo.memoryTypeIndex = memoryTypeIndex;
+        memoryAllocateInfo.memoryTypeIndex = SelectMemoryType(memoryRequirements.memoryTypeBits, flags);
 
         // Allocate the memory.
         // TODO: use https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator
@@ -52,14 +49,6 @@ namespace eng::detail
         ENG_ASSERT(result == VK_SUCCESS, "Failed to bind buffer memory.");
     }
 
-    void Buffer::DestroyBuffer(VkBuffer buffer, VkDeviceMemory deviceMemory)
-    {
-        VkDevice device = m_Context.GetDevice();
-
-        vkFreeMemory(device, deviceMemory, nullptr);
-        vkDestroyBuffer(device, buffer, nullptr);
-    }
-
     void Buffer::MapMemory(VkDeviceMemory deviceMemory, VkDeviceSize offset, VkDeviceSize size, void*& mappedMemory)
     {
         VkDevice device = m_Context.GetDevice();
@@ -68,7 +57,7 @@ namespace eng::detail
         ENG_ASSERT(result == VK_SUCCESS, "Failed to map buffer memory.");
     }
 
-    void Buffer::UnmapMemory(VkDeviceMemory deviceMemory, void* mappedMemory)
+    void Buffer::UnmapMemory(VkDeviceMemory deviceMemory)
     {
         VkDevice device = m_Context.GetDevice();
 

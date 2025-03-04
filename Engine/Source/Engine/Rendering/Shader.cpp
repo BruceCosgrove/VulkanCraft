@@ -2,6 +2,7 @@
 #include "Engine/Core/AssertOrVerify.hpp"
 #include "Engine/IO/FileIO.hpp"
 #include "Engine/Rendering/RenderContext.hpp"
+#include "Engine/Rendering/Texture2D.hpp"
 #include "Engine/Rendering/UniformBuffer.hpp"
 #include <shaderc/shaderc.hpp>
 #include <spirv_cross/spirv_reflect.hpp>
@@ -97,12 +98,14 @@ namespace eng
         // Get the data for this frame.
         auto& descriptorSet = m_FrameData[swapchainImageIndex].DescriptorSet;
         auto& uniformBuffers = m_FrameData[swapchainImageIndex].UniformBuffers;
+        auto& images = m_Images;
 
         // Count the number of descriptor sets to update.
         std::uint32_t uniformBufferCount = static_cast<std::uint32_t>(uniformBuffers.size());
+        std::uint32_t imageCount = static_cast<std::uint32_t>(images.size());
 
         // TODO: other resource types, e.g. storage buffers
-        std::uint32_t writeCount = uniformBufferCount;
+        std::uint32_t writeCount = uniformBufferCount + imageCount;
         if (writeCount == 0)
             return;
 
@@ -111,6 +114,8 @@ namespace eng
         writes.reserve(writeCount);
         std::vector<VkDescriptorBufferInfo> bufferInfos;
         bufferInfos.reserve(uniformBufferCount);
+        std::vector<VkDescriptorImageInfo> imageInfos;
+        imageInfos.reserve(imageCount);
 
         for (auto& uniformBuffer : uniformBuffers)
         {
@@ -129,10 +134,27 @@ namespace eng
             write.dstSet = descriptorSet;
             write.dstBinding = uniformBuffer.Binding;
             write.dstArrayElement = 0; // TODO: arrays
-            write.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER; // TODO: other types
+            write.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
             write.descriptorCount = 1; // TODO: arrays
-            //write.pImageInfo = // TODO: samplers
             write.pBufferInfo = &bufferInfo;
+            //write.pTexelBufferView = // TODO: idk what these are
+        }
+
+        for (auto& image : images)
+        {
+            auto& imageInfo = imageInfos.emplace_back();
+            imageInfo.sampler = image.Resource->GetSampler();
+            imageInfo.imageView = image.Resource->GetImageView();
+            imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
+            auto& write = writes.emplace_back();
+            write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            write.dstSet = descriptorSet;
+            write.dstBinding = image.Binding;
+            write.dstArrayElement = 0; // TODO: arrays
+            write.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+            write.descriptorCount = 1; // TODO: arrays
+            write.pImageInfo = &imageInfo;
             //write.pTexelBufferView = // TODO: idk what these are
         }
 
@@ -275,12 +297,10 @@ namespace eng
         ENG_ASSERT(std::get<1>(stages.front()) != VK_SHADER_STAGE_COMPUTE_BIT, "TODO: how to support compute shaders.");
         //reflection->get_work_group_size_specialization_constants(); // related to compute shaders
 
-        std::span vertexBindings = info.VertexBindings;
-
 #if ENG_ENABLE_ASSERTS
         {
             std::size_t count = 0;
-            for (auto& vertexBinding : vertexBindings)
+            for (auto& vertexBinding : info.VertexBindings)
                 count += vertexBinding.Locations.size();
             ENG_ASSERT(count == resources->stage_inputs.size(), "Shader input count mismatch; expected {}, got {}.", count, resources->stage_inputs.size());
         }
@@ -288,11 +308,11 @@ namespace eng
 
         auto findBinding = [&](std::uint32_t location) -> std::uint32_t
         {
-            for (std::uint32_t i = 0; i < vertexBindings.size(); i++)
-                for (std::uint32_t requiredLocation : vertexBindings[i].Locations)
+            for (std::uint32_t i = 0; i < info.VertexBindings.size(); i++)
+                for (std::uint32_t requiredLocation : info.VertexBindings[i].Locations)
                     if (requiredLocation == location)
                         return i;
-            ENG_ASSERT(false);
+            ENG_ASSERT(false, "Failed to find vertex binding.");
             return 0;
         };
 
@@ -396,7 +416,12 @@ namespace eng
             processResources(resources->sampled_images, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
             [&](spirv_cross::SPIRType const& type, std::uint32_t binding)
             {
-
+                auto it = std::find_if(info.Images.begin(), info.Images.end(), [binding](ImageBinding const& imageBinding)
+                {
+                    return imageBinding.Binding == binding;
+                });
+                ENG_ASSERT(it != info.Images.end(), "Failed to find image binding.");
+                m_Images.emplace_back(binding, it->Image);
             });
             // TODO: there's quite a few more resource types to handle.
         };
@@ -417,6 +442,8 @@ namespace eng
 
             processStage(std::get<1>(stage));
         }
+
+        ENG_ASSERT(info.Images.size() == m_Images.size(), "Shader image count mismatch; expected {}, got {}.", info.Images.size(), m_Images.size());
     }
 
     void Shader::CreateDescriptorSetLayout(std::span<VkDescriptorSetLayoutBinding> descriptorSetLayoutBindings)

@@ -42,6 +42,47 @@ namespace eng
     }
 #endif
 
+    VkCommandBuffer RenderContext::BeginOneTimeCommandBuffer()
+    {
+        VkCommandBufferAllocateInfo allocateInfo{};
+        allocateInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+        allocateInfo.commandPool = m_CommandPool;
+        allocateInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+        allocateInfo.commandBufferCount = 1;
+
+        VkCommandBuffer commandBuffer;
+        VkResult result = vkAllocateCommandBuffers(m_Device, &allocateInfo, &commandBuffer);
+        ENG_ASSERT(result == VK_SUCCESS, "Failed to allocate one-time command buffer.");
+
+        VkCommandBufferBeginInfo beginInfo{};
+        beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+        beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+
+        result = vkBeginCommandBuffer(commandBuffer, &beginInfo);
+        ENG_ASSERT(result == VK_SUCCESS, "Failed to begin one-time command buffer.");
+
+        return commandBuffer;
+    }
+
+    void RenderContext::EndOneTimeCommandBuffer(VkCommandBuffer commandBuffer)
+    {
+        VkResult result = vkEndCommandBuffer(commandBuffer);
+        ENG_ASSERT(result == VK_SUCCESS, "Failed to end one-time command buffer.");
+
+        VkSubmitInfo info{};
+        info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+        info.commandBufferCount = 1;
+        info.pCommandBuffers = &commandBuffer;
+
+        result = vkQueueSubmit(m_GraphicsQueue, 1, &info, VK_NULL_HANDLE);
+        ENG_ASSERT(result == VK_SUCCESS, "Failed to submit queue for one-time command buffer.");
+
+        result = vkQueueWaitIdle(m_GraphicsQueue);
+        ENG_ASSERT(result == VK_SUCCESS, "Failed to wait for queue for one-time command buffer.");
+
+        vkFreeCommandBuffers(m_Device, m_CommandPool, 1, &commandBuffer);
+    }
+
     VkInstance RenderContext::GetInstance()
     {
         return s_Instance;
@@ -50,6 +91,11 @@ namespace eng
     VkPhysicalDevice RenderContext::GetPhysicalDevice()
     {
         return s_PhysicalDevice;
+    }
+
+    VkPhysicalDeviceProperties const& RenderContext::GetPhysicalDeviceProperties()
+    {
+        return s_PhysicalDeviceProperties;
     }
 
     VkDevice RenderContext::GetDevice() const
@@ -361,6 +407,8 @@ namespace eng
             ENG_LOG_WARN("Warning: no dedicated GPU found, falling back to other physical device.");
         }
         s_PhysicalDevice = physicalDevices[selectedPhysicalDeviceIndex];
+        // Cache the physical device properties for later querying.
+        vkGetPhysicalDeviceProperties(s_PhysicalDevice, &s_PhysicalDeviceProperties);
     }
 
     void RenderContext::CreateSurface()
@@ -432,6 +480,7 @@ namespace eng
         VkPhysicalDeviceFeatures2 features{};
         features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
         features.pNext = &imagelessFramebufferFeatures;
+        features.features.samplerAnisotropy = VK_TRUE; // TODO
 
         VkDeviceCreateInfo deviceCreateInfo{};
         deviceCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;

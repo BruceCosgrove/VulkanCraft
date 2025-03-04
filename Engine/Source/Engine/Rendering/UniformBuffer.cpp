@@ -8,10 +8,10 @@ namespace eng
         : Buffer(info.RenderContext)
         , m_Size(info.Size)
     {
-        Buffer::Createbuffer(
+        Buffer::CreateBuffer(
+            m_Size,
             VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
             VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-            m_Size,
             m_Buffer,
             m_DeviceMemory
         );
@@ -20,8 +20,12 @@ namespace eng
 
     UniformBuffer::~UniformBuffer()
     {
-        Buffer::UnmapMemory(m_DeviceMemory, m_MappedMemory);
-        Buffer::DestroyBuffer(m_Buffer, m_DeviceMemory);
+        VkDevice device = m_Context.GetDevice();
+
+        Buffer::UnmapMemory(m_DeviceMemory);
+
+        vkFreeMemory(device, m_DeviceMemory, nullptr);
+        vkDestroyBuffer(device, m_Buffer, nullptr);
     }
 
     void UniformBuffer::SetData(std::span<std::uint8_t const> data)

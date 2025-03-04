@@ -12,8 +12,12 @@ namespace eng
     class RenderContext
     {
     public:
+        VkCommandBuffer BeginOneTimeCommandBuffer();
+        void EndOneTimeCommandBuffer(VkCommandBuffer commandBuffer);
+
         static VkInstance GetInstance();
         static VkPhysicalDevice GetPhysicalDevice();
+        static VkPhysicalDeviceProperties const& GetPhysicalDeviceProperties();
 
         VkSurfaceKHR GetSurface() const;
         VkDevice GetDevice() const;
@@ -65,6 +69,7 @@ namespace eng
         inline static VkDebugUtilsMessengerEXT s_DebugUtilsMessenger = VK_NULL_HANDLE;
 #endif
         inline static VkPhysicalDevice s_PhysicalDevice = VK_NULL_HANDLE;
+        inline static VkPhysicalDeviceProperties s_PhysicalDeviceProperties{};
 
     private:
         // TODO: Per-window context

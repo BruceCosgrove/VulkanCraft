@@ -22,7 +22,7 @@ static void* _stbi_realloc_sized_impl(void* p, size_t old_size, size_t new_size)
 #include "stb_image.h"
 
 #define STB_IMAGE_WRITE_IMPLEMENTATION
-#if defined(_WIN32) && (defined(UNICODE) || defined(_UNICODE))
+#if defined(_WIN32) and (defined(UNICODE) or defined(_UNICODE))
     #define STBIW_WINDOWS_UTF8
 #endif
 #include "stb_image_write.h"

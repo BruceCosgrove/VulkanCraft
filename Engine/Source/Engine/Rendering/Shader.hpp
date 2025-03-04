@@ -2,6 +2,7 @@
 
 #include <vulkan/vulkan.h>
 #include <filesystem>
+#include <memory>
 #include <span>
 #include <vector>
 
@@ -9,19 +10,27 @@ namespace eng
 {
     class RenderContext;
     class UniformBuffer;
+    class Texture2D; // TODO: make this not depend on Texture2D's, but Texture's in general (no vtable needed).
 
     struct VertexBinding
     {
         std::uint32_t Binding = 0;
         VkVertexInputRate InputRate = VK_VERTEX_INPUT_RATE_VERTEX;
-        std::initializer_list<std::uint32_t> Locations;
+        std::vector<std::uint32_t> Locations;
+    };
+
+    struct ImageBinding
+    {
+        std::uint32_t Binding = 0;
+        std::shared_ptr<Texture2D> Image;
     };
 
     struct ShaderInfo
     {
         RenderContext* RenderContext = nullptr;
         std::filesystem::path Filepath;
-        std::initializer_list<VertexBinding> VertexBindings;
+        std::vector<VertexBinding> VertexBindings;
+        std::vector<ImageBinding> Images;
         VkPrimitiveTopology Topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
         VkRenderPass RenderPass = VK_NULL_HANDLE;
     };
@@ -80,7 +89,7 @@ namespace eng
         struct ResourceData
         {
             std::uint32_t Binding = 0;
-            std::unique_ptr<T> Resource;
+            std::shared_ptr<T> Resource;
         };
 
         struct FrameData
@@ -91,8 +100,11 @@ namespace eng
             VkDescriptorSet DescriptorSet;
             std::vector<ResourceData<UniformBuffer>> UniformBuffers;
             // TODO: storage buffers
-            // TODO: image samplers
         };
         std::vector<FrameData> m_FrameData;
+
+        // NOTE: these are out of FrameData because they're read only.
+        // TODO: writable images would go in FrameData.
+        std::vector<ResourceData<Texture2D>> m_Images;
     };
 }

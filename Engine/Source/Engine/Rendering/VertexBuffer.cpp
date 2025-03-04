@@ -5,13 +5,13 @@
 namespace eng
 {
     VertexBuffer::VertexBuffer(VertexBufferInfo const& info)
-        : detail::Buffer(info.RenderContext)
+        : Buffer(info.RenderContext)
         , m_Size(info.Size)
     {
-        Buffer::Createbuffer(
+        Buffer::CreateBuffer(
+            m_Size,
             VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
             VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-            m_Size,
             m_Buffer,
             m_DeviceMemory
         );
@@ -20,8 +20,12 @@ namespace eng
 
     VertexBuffer::~VertexBuffer()
     {
-        Buffer::UnmapMemory(m_DeviceMemory, m_MappedMemory);
-        Buffer::DestroyBuffer(m_Buffer, m_DeviceMemory);
+        VkDevice device = m_Context.GetDevice();
+
+        Buffer::UnmapMemory(m_DeviceMemory);
+
+        vkFreeMemory(device, m_DeviceMemory, nullptr);
+        vkDestroyBuffer(device, m_Buffer, nullptr);
     }
 
     void VertexBuffer::SetData(std::span<std::uint8_t const> data)

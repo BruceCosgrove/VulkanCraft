@@ -22,8 +22,10 @@
 #include "Engine/Input/Event/MouseEvents.hpp"
 #include "Engine/Input/Event/WindowEvents.hpp"
 #include "Engine/IO/FileIO.hpp"
+#include "Engine/Rendering/LocalTexture2D.hpp"
 #include "Engine/Rendering/RenderContext.hpp"
 #include "Engine/Rendering/Shader.hpp"
+#include "Engine/Rendering/Texture2D.hpp"
 #include "Engine/Rendering/UniformBuffer.hpp"
 #include "Engine/Rendering/VertexBuffer.hpp"
 
