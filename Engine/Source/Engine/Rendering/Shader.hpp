@@ -101,9 +101,8 @@ namespace eng
         template <typename T>
         struct ResourceData
         {
-            std::uint32_t Binding = 0;
-            // TODO: mod count, both here and in the resource T. Reupload iff they dont match.
             std::shared_ptr<T> Resource;
+            std::uint32_t Binding = 0;
         };
 
         std::vector<ResourceData<VertexBuffer>> m_VertexBuffers;

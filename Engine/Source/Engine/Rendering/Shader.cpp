@@ -4,6 +4,7 @@
 #include "Engine/Rendering/RenderContext.hpp"
 #include "Engine/Rendering/Texture2D.hpp"
 #include "Engine/Rendering/UniformBuffer.hpp"
+#include "Engine/Rendering/VertexBuffer.hpp"
 #include <shaderc/shaderc.hpp>
 #include <spirv_cross/spirv_reflect.hpp>
 #include <array>
@@ -92,27 +93,18 @@ namespace eng
     {
         // Get the data for this frame.
         VkDescriptorSet descriptorSet = m_DescriptorSets[m_Context.GetSwapchainImageIndex()];
-        auto& uniformBuffers = m_UniformBuffers;
-        auto& images = m_Textures;
-
-        // Count the number of descriptor sets to update.
-        std::uint32_t uniformBufferCount = static_cast<std::uint32_t>(uniformBuffers.size());
-        std::uint32_t imageCount = static_cast<std::uint32_t>(images.size());
-
-        // TODO: other resource types, e.g. storage buffers
-        std::uint32_t writeCount = uniformBufferCount + imageCount;
-        if (writeCount == 0)
-            return;
 
         // TODO: don't allocate every frame.
         std::vector<VkWriteDescriptorSet> writes;
-        writes.reserve(writeCount);
+        writes.reserve(m_UniformBuffers.size() + m_Textures.size());
         std::vector<VkDescriptorBufferInfo> bufferInfos;
-        bufferInfos.reserve(uniformBufferCount);
+        writes.reserve(m_UniformBuffers.size());
         std::vector<VkDescriptorImageInfo> imageInfos;
-        imageInfos.reserve(imageCount);
+        writes.reserve(m_Textures.size());
 
-        for (auto& uniformBuffer : uniformBuffers)
+        // Update descriptor sets.
+
+        for (auto& uniformBuffer : m_UniformBuffers)
         {
             auto& bufferInfo = bufferInfos.emplace_back();
             bufferInfo.buffer = uniformBuffer.Resource->GetBuffer();
@@ -135,7 +127,7 @@ namespace eng
             //write.pTexelBufferView = // TODO: idk what these are
         }
 
-        for (auto& image : images)
+        for (auto& image : m_Textures)
         {
             auto& imageInfo = imageInfos.emplace_back();
             imageInfo.sampler = image.Resource->GetSampler();
@@ -153,7 +145,10 @@ namespace eng
             //write.pTexelBufferView = // TODO: idk what these are
         }
 
-        vkUpdateDescriptorSets(m_Context.GetDevice(), writeCount, writes.data(), 0, nullptr);
+        // TODO: other resource types, e.g. storage buffers
+
+        if (not writes.empty())
+            vkUpdateDescriptorSets(m_Context.GetDevice(), static_cast<std::uint32_t>(writes.size()), writes.data(), 0, nullptr);
     }
 
     std::vector<std::tuple<std::vector<std::uint8_t>, VkShaderStageFlagBits>> Shader::CompileExistingSources(fs::path const& filepath)
@@ -389,7 +384,7 @@ namespace eng
                     return texture.Binding == binding;
                 });
                 ENG_ASSERT(it != info.UniformBufferBindings.end(), "Failed to find uniform buffer binding.");
-                m_UniformBuffers.emplace_back(binding, it->UniformBuffer);
+                m_UniformBuffers.emplace_back(it->UniformBuffer, binding);
             });
             processResources(resources->storage_buffers, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
             [&](spirv_cross::SPIRType const& type, std::uint32_t binding)
@@ -405,7 +400,7 @@ namespace eng
                     return texture.Binding == binding;
                 });
                 ENG_ASSERT(it != info.TextureBindings.end(), "Failed to find texture binding.");
-                m_Textures.emplace_back(binding, it->Texture);
+                m_Textures.emplace_back(it->Texture, binding);
             });
             // TODO: there's quite a few more resource types to handle.
         };
@@ -429,7 +424,7 @@ namespace eng
 
         m_VertexBuffers.reserve(info.VertexBufferBindings.size());
         for (auto& vertexBufferBinding : info.VertexBufferBindings)
-            m_VertexBuffers.emplace_back(vertexBufferBinding.Binding, vertexBufferBinding.VertexBuffer);
+            m_VertexBuffers.emplace_back(vertexBufferBinding.VertexBuffer, vertexBufferBinding.Binding);
 
         ENG_ASSERT(info.UniformBufferBindings.size() == m_UniformBuffers.size(), "Shader texture count mismatch; expected {}, got {}.", info.UniformBufferBindings.size(), m_UniformBuffers.size());
         ENG_ASSERT(info.TextureBindings.size() == m_Textures.size(), "Shader texture count mismatch; expected {}, got {}.", info.TextureBindings.size(), m_Textures.size());

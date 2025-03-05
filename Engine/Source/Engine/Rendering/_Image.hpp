@@ -10,7 +10,7 @@ namespace eng
 namespace eng::detail
 {
     // Helper class for common image functionality.
-    class Image : protected detail::Buffer
+    class Image : protected Buffer
     {
     protected:
         Image(RenderContext* context);
