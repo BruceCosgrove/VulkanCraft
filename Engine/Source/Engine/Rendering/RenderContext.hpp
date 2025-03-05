@@ -32,7 +32,6 @@ namespace eng
         VkFormat GetSwapchainFormat() const;
         bool WasSwapchainRecreated() const;
         VkCommandBuffer GetActiveCommandBuffer() const;
-
     private:
         friend class Window;
 
@@ -71,7 +70,6 @@ namespace eng
         inline static VkPhysicalDevice s_PhysicalDevice = VK_NULL_HANDLE;
         inline static VkPhysicalDeviceProperties s_PhysicalDeviceProperties{};
 
-    private:
         // TODO: Per-window context
 
         GLFWwindow* m_Window = nullptr; // Non-owning

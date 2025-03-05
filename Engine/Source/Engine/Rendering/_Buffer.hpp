@@ -2,6 +2,7 @@
 
 #include <vulkan/vulkan.h>
 #include <concepts>
+#include <ranges>
 
 namespace eng
 {
@@ -35,7 +36,6 @@ namespace eng::detail
         void UnmapMemory(VkDeviceMemory deviceMemory);
 
         static std::uint32_t SelectMemoryType(std::uint32_t memoryType, VkMemoryPropertyFlags flags);
-
     protected:
         RenderContext& m_Context; // non-owning
     };
@@ -45,12 +45,7 @@ namespace eng::detail
     template <typename Container> \
     void setDataFunc(Container const& container) \
     { \
-        /* TODO: this is not foolproof. */ \
-        constexpr bool isContainer = requires() \
-        { \
-            { container.size() } -> ::std::same_as<::std::size_t>; \
-        }; \
-        if constexpr (isContainer) \
+        if constexpr (::std::ranges::range<Container>) \
         { \
             static_assert(::std::is_convertible_v<Container, ::std::span<::std::add_const_t<typename Container::value_type>>>); \
             ::std::span<::std::add_const_t<typename Container::value_type>> data = container; \

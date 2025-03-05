@@ -22,12 +22,10 @@ namespace eng
 
         VkImageView GetImageView() const;
         VkSampler GetSampler() const;
-
     private:
         void CreateImageAndAllocateMemory(LocalTexture2D& localTexture, VkFormat format);
         void CreateImageView(VkFormat format);
         void CreateSampler();
-
     private:
         VkImage m_Image = VK_NULL_HANDLE;
         VkDeviceMemory m_DeviceMemory = VK_NULL_HANDLE;

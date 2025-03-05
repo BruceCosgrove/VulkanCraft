@@ -25,7 +25,6 @@ namespace eng
         void OnEvent(Event& event);
         void OnUpdate(Timestep timestep);
         void OnRender();
-        void OnImGuiRender();
     private:
         std::vector<std::unique_ptr<Layer>> m_Layers;
         std::size_t m_OverlayInsertIndex = 0;

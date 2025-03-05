@@ -4,6 +4,11 @@
 
 namespace vc
 {
+    struct LocalUniformBuffer
+    {
+        alignas(16) glm::mat4 ViewProjection;
+    };
+
     void VulkanCraftLayer::OnAttach()
     {
         // TODO: context retrieval needs to be reworked with multiple windows.
@@ -12,6 +17,31 @@ namespace vc
 
         CreateRenderPass();
         CreateFramebuffer();
+
+        {
+            eng::VertexBufferInfo info;
+            info.RenderContext = &context;
+            info.Size = 1024; // 1 KiB for now, nothing fancy
+            m_VertexBuffer = std::make_shared<eng::VertexBuffer>(info);
+
+            constexpr auto data = std::to_array
+            ({
+                -0.5f, -0.5f, 0.0f,  1.0f, 0.0f, 0.0f,  0.0f, 1.0f, // 0
+                +0.5f, -0.5f, 0.0f,  0.0f, 1.0f, 0.0f,  1.0f, 1.0f, // 1
+                +0.5f, +0.5f, 0.0f,  0.0f, 0.0f, 1.0f,  1.0f, 0.0f, // 2
+                +0.5f, +0.5f, 0.0f,  0.0f, 0.0f, 1.0f,  1.0f, 0.0f, // 2
+                -0.5f, +0.5f, 0.0f,  1.0f, 1.0f, 1.0f,  0.0f, 0.0f, // 3
+                -0.5f, -0.5f, 0.0f,  1.0f, 0.0f, 0.0f,  0.0f, 1.0f, // 0
+            });
+            m_VertexBuffer->SetData(data);
+        }
+
+        {
+            eng::UniformBufferInfo info;
+            info.RenderContext = &context;
+            info.Size = sizeof(LocalUniformBuffer);
+            m_UniformBuffer = std::make_shared<eng::UniformBuffer>(info);
+        }
 
         {
 #define VC_TEXTURE(x) R"(D:\Dorkspace\Programming\Archive\VanillaDefault-Resource-Pack-16x-1.21\assets\minecraft\textures\)" x
@@ -27,35 +57,21 @@ namespace vc
             eng::ShaderInfo info;
             info.RenderContext = &context;
             info.Filepath = "Assets/Shaders/Basic";
-            info.VertexBindings =
+            info.VertexBufferBindings =
             {
-                {0, VK_VERTEX_INPUT_RATE_VERTEX, {0, 1, 2}},
+                {0, VK_VERTEX_INPUT_RATE_VERTEX, {0, 1, 2}, m_VertexBuffer},
             };
-            info.Images =
+            info.UniformBufferBindings =
+            {
+                {0, m_UniformBuffer},
+            };
+            info.TextureBindings =
             {
                 {1, m_Texture},
             };
             info.Topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
             info.RenderPass = m_RenderPass;
-            m_Shader = std::make_unique<eng::Shader>(info);
-        }
-
-        {
-            eng::VertexBufferInfo info;
-            info.RenderContext = &context;
-            info.Size = 1024; // 1 KiB for now, nothing fancy
-            m_VertexBuffer = std::make_unique<eng::VertexBuffer>(info);
-
-            constexpr auto data = std::to_array
-            ({
-                -0.5f, -0.5f, 0.0f,  1.0f, 0.0f, 0.0f,  0.0f, 1.0f, // 0
-                +0.5f, -0.5f, 0.0f,  0.0f, 1.0f, 0.0f,  1.0f, 1.0f, // 1
-                +0.5f, +0.5f, 0.0f,  0.0f, 0.0f, 1.0f,  1.0f, 0.0f, // 2
-                +0.5f, +0.5f, 0.0f,  0.0f, 0.0f, 1.0f,  1.0f, 0.0f, // 2
-                -0.5f, +0.5f, 0.0f,  1.0f, 1.0f, 1.0f,  0.0f, 0.0f, // 3
-                -0.5f, -0.5f, 0.0f,  1.0f, 0.0f, 0.0f,  0.0f, 1.0f, // 0
-            });
-            m_VertexBuffer->SetData(data);
+            m_Shader = std::make_shared<eng::Shader>(info);
         }
 
         m_CameraController.SetPosition(glm::vec3(0.0f, 0.0f, 1.0f));
@@ -71,8 +87,9 @@ namespace vc
         auto& context = eng::Application::Get().GetWindow().GetRenderContext();
         VkDevice device = context.GetDevice();
 
-        m_Texture.reset();
         m_VertexBuffer.reset();
+        m_UniformBuffer.reset();
+        m_Texture.reset();
         m_Shader.reset();
         vkDestroyFramebuffer(device, m_Framebuffer, nullptr);
         vkDestroyRenderPass(device, m_RenderPass, nullptr);
@@ -153,10 +170,14 @@ namespace vc
         // Begin the render pass.
         vkCmdBeginRenderPass(commandBuffer, &info, VK_SUBPASS_CONTENTS_INLINE);
 
-        m_Shader->Bind(commandBuffer);
-        m_Shader->GetUniformBuffer(0)->SetData(m_CameraController.GetViewProjection());
+        // Set all the necessary data.
+        LocalUniformBuffer localUniformBuffer;
+        localUniformBuffer.ViewProjection = m_CameraController.GetViewProjection();
+        m_UniformBuffer->SetData(localUniformBuffer);
         m_Shader->UpdateDescriptorSet();
 
+        // Bind everything.
+        m_Shader->Bind(commandBuffer);
         m_VertexBuffer->Bind(commandBuffer, 0);
 
         // Vulkan's +y direction is down, this fixes that.

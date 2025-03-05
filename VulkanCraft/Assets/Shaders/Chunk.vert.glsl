@@ -12,11 +12,10 @@ layout(location = 3) out flat float o_TexLayer;
 layout(std140, binding = 0) uniform _FrameData {
     mat4 ViewProjection;
     
-    uint BlockTextureSize; // Always a power of 2; default resource pack is 16.
     uvec2 BlockTextureAtlasBlockSize; // Always a power of 2. Size, in number of block textures, of the block texture atlas.
 } FrameData;
 
-// Chunk data; storage buffer; changes every time the player moves between two chunks.
+// Chunk data; storage buffer; changes every time the player moves between two chunks, or changes render distance.
 layout(std140, binding = 1) readonly buffer _ChunkData {
     uvec2 PackedChunkData[];
 } ChunkData;

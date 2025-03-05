@@ -65,10 +65,4 @@ namespace eng
         for (auto& layer : m_Layers)
             layer->OnRender();
     }
-
-    void LayerStack::OnImGuiRender()
-    {
-        for (auto& layer : m_Layers)
-            layer->OnImGuiRender();
-    }
 }

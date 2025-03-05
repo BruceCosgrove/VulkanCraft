@@ -10,7 +10,7 @@
         { \
             if (!(condition)) \
             { \
-                ENG_LOG_ERROR(#which " (" #condition ") failed at {}:{}", ::std::string_view(__FILE__).substr(::std::string_view(__FILE__).find("VulkanCraft") + 12ull), __LINE__); \
+                ENG_LOG_ERROR(#which " ({}) failed at {}:{}", #condition, ::std::string_view(__FILE__).substr(::std::string_view(__FILE__).find("VulkanCraft") + 12ull), __LINE__); \
                 __VA_OPT__(ENG_LOG_ERROR(__VA_ARGS__);) \
                 dobreak \
             } \

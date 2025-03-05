@@ -40,8 +40,6 @@ namespace eng
         auto stages = CompileExistingSources(info.Filepath);
         auto pipelineShaderStageInfos = GetPipelineShaderStageInfos(stages);
 
-        m_FrameData.resize(m_Context.GetSwapchainImageCount());
-
         // Get vertex strides, vertex input attribute descriptions, descriptor set layout bindings, and descriptor pool sizes.
         std::vector<std::uint32_t> strides;
         std::vector<VkVertexInputAttributeDescription> vertexInputAttributeDescriptions;
@@ -72,8 +70,7 @@ namespace eng
 
     void Shader::Bind(VkCommandBuffer commandBuffer)
     {
-        std::uint32_t swapchainImageIndex = m_Context.GetSwapchainImageIndex();
-        auto& descriptorSet = m_FrameData[swapchainImageIndex].DescriptorSet;
+        auto& descriptorSet = m_DescriptorSets[m_Context.GetSwapchainImageIndex()];
 
         vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_Pipeline);
 
@@ -93,12 +90,10 @@ namespace eng
 
     void Shader::UpdateDescriptorSet()
     {
-        std::uint32_t swapchainImageIndex = m_Context.GetSwapchainImageIndex();
-
         // Get the data for this frame.
-        auto& descriptorSet = m_FrameData[swapchainImageIndex].DescriptorSet;
-        auto& uniformBuffers = m_FrameData[swapchainImageIndex].UniformBuffers;
-        auto& images = m_Images;
+        VkDescriptorSet descriptorSet = m_DescriptorSets[m_Context.GetSwapchainImageIndex()];
+        auto& uniformBuffers = m_UniformBuffers;
+        auto& images = m_Textures;
 
         // Count the number of descriptor sets to update.
         std::uint32_t uniformBufferCount = static_cast<std::uint32_t>(uniformBuffers.size());
@@ -121,13 +116,13 @@ namespace eng
         {
             auto& bufferInfo = bufferInfos.emplace_back();
             bufferInfo.buffer = uniformBuffer.Resource->GetBuffer();
-            bufferInfo.offset = 0;
-            bufferInfo.range = VK_WHOLE_SIZE;
+            bufferInfo.offset = uniformBuffer.Resource->GetOffset();
+            bufferInfo.range = uniformBuffer.Resource->GetSize();
 
             // TODO: multiple VkWriteDescriptorSet's, same dstSet, different dstBinding, different descriptorType
             // e.g. VkWriteDescriptorSet 0: dstSet = set 0, dstBinding = 0, descriptorType = UNIFORM_BUFFER
             // e.g. VkWriteDescriptorSet 1: dstSet = set 0, dstBinding = 1, descriptorType = STORAGE_BUFFER
-            // e.g. VkWriteDescriptorSet 2: dstSet = set 0, dstBinding = 2, descriptorType = SAMPLER
+            // e.g. VkWriteDescriptorSet 2: dstSet = set 0, dstBinding = 2, descriptorType = COMBINED_IMAGE_SAMPLER
 
             auto& write = writes.emplace_back();
             write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
@@ -159,17 +154,6 @@ namespace eng
         }
 
         vkUpdateDescriptorSets(m_Context.GetDevice(), writeCount, writes.data(), 0, nullptr);
-    }
-
-    UniformBuffer* Shader::GetUniformBuffer(std::uint32_t binding)
-    {
-        auto& uniformBuffers = m_FrameData[m_Context.GetSwapchainImageIndex()].UniformBuffers;
-        for (auto& uniformBuffer : uniformBuffers)
-            if (uniformBuffer.Binding == binding)
-                return uniformBuffer.Resource.get();
-
-        ENG_ASSERT(false);
-        return nullptr;
     }
 
     std::vector<std::tuple<std::vector<std::uint8_t>, VkShaderStageFlagBits>> Shader::CompileExistingSources(fs::path const& filepath)
@@ -300,7 +284,7 @@ namespace eng
 #if ENG_ENABLE_ASSERTS
         {
             std::size_t count = 0;
-            for (auto& vertexBinding : info.VertexBindings)
+            for (auto& vertexBinding : info.VertexBufferBindings)
                 count += vertexBinding.Locations.size();
             ENG_ASSERT(count == resources->stage_inputs.size(), "Shader input count mismatch; expected {}, got {}.", count, resources->stage_inputs.size());
         }
@@ -308,16 +292,16 @@ namespace eng
 
         auto findBinding = [&](std::uint32_t location) -> std::uint32_t
         {
-            for (std::uint32_t i = 0; i < info.VertexBindings.size(); i++)
-                for (std::uint32_t requiredLocation : info.VertexBindings[i].Locations)
+            for (std::uint32_t i = 0; i < info.VertexBufferBindings.size(); i++)
+                for (std::uint32_t requiredLocation : info.VertexBufferBindings[i].Locations)
                     if (requiredLocation == location)
                         return i;
-            ENG_ASSERT(false, "Failed to find vertex binding.");
+            ENG_ASSERT(false, "Failed to find vertex buffer binding.");
             return 0;
         };
 
         // Do extra processing for the vertex shader.
-        strides.resize(info.VertexBindings.size());
+        strides.resize(info.VertexBufferBindings.size());
         vertexInputAttributeDescriptions.reserve(resources->stage_inputs.size());
 
         for (auto& resource : resources->stage_inputs)
@@ -356,13 +340,11 @@ namespace eng
                     std::uint32_t count = type.array.size() == 0 ? 1 : type.array[0];
 
                     // Get the descriptor set layout binding if it exists.
-                    auto itBindings = std::find_if(
-                        descriptorSetLayoutBindings.begin(),
-                        descriptorSetLayoutBindings.end(),
-                        [binding](VkDescriptorSetLayoutBinding& descriptorSetLayoutBinding)
-                        {
-                            return descriptorSetLayoutBinding.binding == binding;
-                        });
+                    auto itBindings = std::find_if(descriptorSetLayoutBindings.begin(), descriptorSetLayoutBindings.end(),
+                    [binding](VkDescriptorSetLayoutBinding& descriptorSetLayoutBinding)
+                    {
+                        return descriptorSetLayoutBinding.binding == binding;
+                    });
                     // If doesn't already exist, create it.
                     if (itBindings == descriptorSetLayoutBindings.end())
                     {
@@ -377,15 +359,14 @@ namespace eng
                     }
                     // Add the current stage to the binding.
                     itBindings->stageFlags |= stage;
+                    ENG_ASSERT(itBindings->descriptorType == descriptorType, "Tried to reuse existing binding.");
 
                     // Get the descriptor pool size if it exists.
-                    auto itSizes = std::find_if(
-                        descriptorPoolSizes.begin(),
-                        descriptorPoolSizes.end(),
-                        [descriptorType](VkDescriptorPoolSize& size)
-                        {
-                            return size.type == descriptorType;
-                        });
+                    auto itSizes = std::find_if(descriptorPoolSizes.begin(), descriptorPoolSizes.end(),
+                    [descriptorType](VkDescriptorPoolSize& size)
+                    {
+                        return size.type == descriptorType;
+                    });
                     // If doesn't already exist, create it.
                     if (itSizes == descriptorPoolSizes.end())
                     {
@@ -402,11 +383,13 @@ namespace eng
             processResources(resources->uniform_buffers, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
             [&](spirv_cross::SPIRType const& type, std::uint32_t binding)
             {
-                UniformBufferInfo info;
-                info.RenderContext = &m_Context;
-                info.Size = reflection->get_declared_struct_size(type);
-                for (auto& frame : m_FrameData)
-                    frame.UniformBuffers.emplace_back(binding, std::make_unique<UniformBuffer>(info));
+                auto it = std::find_if(info.UniformBufferBindings.begin(), info.UniformBufferBindings.end(),
+                [binding](ShaderUniformBufferBinding const& texture)
+                {
+                    return texture.Binding == binding;
+                });
+                ENG_ASSERT(it != info.UniformBufferBindings.end(), "Failed to find uniform buffer binding.");
+                m_UniformBuffers.emplace_back(binding, it->UniformBuffer);
             });
             processResources(resources->storage_buffers, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
             [&](spirv_cross::SPIRType const& type, std::uint32_t binding)
@@ -416,12 +399,13 @@ namespace eng
             processResources(resources->sampled_images, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
             [&](spirv_cross::SPIRType const& type, std::uint32_t binding)
             {
-                auto it = std::find_if(info.Images.begin(), info.Images.end(), [binding](ImageBinding const& imageBinding)
+                auto it = std::find_if(info.TextureBindings.begin(), info.TextureBindings.end(),
+                [binding](ShaderTextureBinding const& texture)
                 {
-                    return imageBinding.Binding == binding;
+                    return texture.Binding == binding;
                 });
-                ENG_ASSERT(it != info.Images.end(), "Failed to find image binding.");
-                m_Images.emplace_back(binding, it->Image);
+                ENG_ASSERT(it != info.TextureBindings.end(), "Failed to find texture binding.");
+                m_Textures.emplace_back(binding, it->Texture);
             });
             // TODO: there's quite a few more resource types to handle.
         };
@@ -443,7 +427,12 @@ namespace eng
             processStage(std::get<1>(stage));
         }
 
-        ENG_ASSERT(info.Images.size() == m_Images.size(), "Shader image count mismatch; expected {}, got {}.", info.Images.size(), m_Images.size());
+        m_VertexBuffers.reserve(info.VertexBufferBindings.size());
+        for (auto& vertexBufferBinding : info.VertexBufferBindings)
+            m_VertexBuffers.emplace_back(vertexBufferBinding.Binding, vertexBufferBinding.VertexBuffer);
+
+        ENG_ASSERT(info.UniformBufferBindings.size() == m_UniformBuffers.size(), "Shader texture count mismatch; expected {}, got {}.", info.UniformBufferBindings.size(), m_UniformBuffers.size());
+        ENG_ASSERT(info.TextureBindings.size() == m_Textures.size(), "Shader texture count mismatch; expected {}, got {}.", info.TextureBindings.size(), m_Textures.size());
     }
 
     void Shader::CreateDescriptorSetLayout(std::span<VkDescriptorSetLayoutBinding> descriptorSetLayoutBindings)
@@ -480,7 +469,7 @@ namespace eng
         std::uint32_t swapchainImageCount = m_Context.GetSwapchainImageCount();
 
         std::vector<VkDescriptorSetLayout> descriptorSetLayouts(swapchainImageCount, m_DescriptorSetLayout);
-        std::vector<VkDescriptorSet> descriptorSets(swapchainImageCount);
+        m_DescriptorSets.resize(swapchainImageCount);
 
         VkDescriptorSetAllocateInfo info{};
         info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
@@ -488,12 +477,8 @@ namespace eng
         info.descriptorSetCount = static_cast<std::uint32_t>(descriptorSetLayouts.size());
         info.pSetLayouts = descriptorSetLayouts.data();
 
-        VkResult result = vkAllocateDescriptorSets(device, &info, descriptorSets.data());
+        VkResult result = vkAllocateDescriptorSets(device, &info, m_DescriptorSets.data());
         ENG_ASSERT(result == VK_SUCCESS, "Failed to allocate descriptor sets.");
-
-        // Copy the descriptor set handles.
-        for (std::uint32_t i = 0; i < swapchainImageCount; i++)
-            m_FrameData[i].DescriptorSet = descriptorSets[i];
     }
 
     void Shader::CreatePipelineLayout()
@@ -529,11 +514,10 @@ namespace eng
         dynamicStateInfo.dynamicStateCount = static_cast<std::uint32_t>(dynamicStates.size());
         dynamicStateInfo.pDynamicStates = dynamicStates.data();
 
-        std::span vertexBindings = info.VertexBindings;
-        std::vector<VkVertexInputBindingDescription> vertexInputBindingDescriptions(vertexBindings.size());
-        for (std::size_t i = 0; i < vertexBindings.size(); i++)
+        std::vector<VkVertexInputBindingDescription> vertexInputBindingDescriptions(info.VertexBufferBindings.size());
+        for (std::size_t i = 0; i < info.VertexBufferBindings.size(); i++)
         {
-            auto& vertexBinding = vertexBindings[i];
+            auto& vertexBinding = info.VertexBufferBindings[i];
             auto& vertexInputBindingDescription = vertexInputBindingDescriptions[i];
             vertexInputBindingDescription.binding = vertexBinding.Binding;
             vertexInputBindingDescription.stride = strides[i];
