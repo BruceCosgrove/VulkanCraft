@@ -7,6 +7,10 @@ project "VulkanCraft"
     targetdir "%{TargetDir}"
     objdir "%{OBJDir}"
 
+    defines {
+        "GLM_FORCE_DEPTH_ZERO_TO_ONE",
+    }
+
     files {
         "Source/**.h",
         "Source/**.c",

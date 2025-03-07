@@ -9,9 +9,17 @@ struct GLFWwindow;
 
 namespace eng
 {
+    class Framebuffer;
+    class Image;
+    class RenderPass;
+    class Shader;
+
     class RenderContext
     {
     public:
+        // TODO: how to avoid this
+        void SetFrameImage(std::shared_ptr<Image> imageView);
+
         VkCommandBuffer BeginOneTimeCommandBuffer();
         void EndOneTimeCommandBuffer(VkCommandBuffer commandBuffer);
 
@@ -38,8 +46,10 @@ namespace eng
         RenderContext(GLFWwindow* window);
         ~RenderContext();
 
-        void BeginFrame();
+        bool BeginFrame();
         void EndFrame();
+    private:
+        void RenderFullscreenQuad();
     private:
         static void CreateInstance();
 #if ENG_CONFIG_DEBUG
@@ -50,7 +60,9 @@ namespace eng
         void CreateSurface();
         void SelectQueueFamilies();
         void CreateLogicalDevice();
+        void CreateRenderPass();
         void CreateOrRecreateSwapchain();
+        void CreateShader();
         void CreateCommandPool();
         void CreateCommandBuffers();
         void CreateFencesAndSemaphores();
@@ -99,5 +111,14 @@ namespace eng
         std::unique_ptr<VkFence[]> m_FrameInFlightFences;
         std::unique_ptr<VkSemaphore[]> m_ImageAcquiredSemaphores;
         std::unique_ptr<VkSemaphore[]> m_RenderCompleteSemaphores;
+
+        // TODO: rename this section, idk what to call it.
+        // My rendering solution.
+
+        VkSampler m_Sampler = VK_NULL_HANDLE;
+        std::shared_ptr<RenderPass> m_RenderPass;
+        std::shared_ptr<Shader> m_Shader;
+        std::vector<std::shared_ptr<Framebuffer>> m_Framebuffers;
+        std::vector<std::shared_ptr<Image>> m_FrameImages; // co-owning
     };
 }

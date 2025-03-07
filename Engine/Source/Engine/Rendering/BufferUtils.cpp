@@ -1,16 +1,11 @@
-#include "_Buffer.hpp"
+#include "BufferUtils.hpp"
 #include "Engine/Core/AssertOrVerify.hpp"
 #include "Engine/Rendering/RenderContext.hpp"
 
-namespace eng::detail
+namespace eng
 {
-    Buffer::Buffer(RenderContext* context)
-        : m_Context(*context)
-    {
-
-    }
-
-    void Buffer::CreateBuffer(
+    void BufferUtils::CreateBuffer(
+        RenderContext& context,
         VkDeviceSize size,
         VkBufferUsageFlags usage,
         VkMemoryPropertyFlags flags,
@@ -18,7 +13,7 @@ namespace eng::detail
         VkDeviceMemory& deviceMemory
     )
     {
-        VkDevice device = m_Context.GetDevice();
+        VkDevice device = context.GetDevice();
 
         // Create the buffer.
         VkBufferCreateInfo bufferInfo{};
@@ -49,22 +44,18 @@ namespace eng::detail
         ENG_ASSERT(result == VK_SUCCESS, "Failed to bind buffer memory.");
     }
 
-    void Buffer::MapMemory(VkDeviceMemory deviceMemory, VkDeviceSize offset, VkDeviceSize size, void*& mappedMemory)
+    void BufferUtils::MapMemory(RenderContext& context, VkDeviceMemory deviceMemory, VkDeviceSize offset, VkDeviceSize size, void*& mappedMemory)
     {
-        VkDevice device = m_Context.GetDevice();
-
-        VkResult result = vkMapMemory(device, deviceMemory, offset, size, 0, &mappedMemory);
+        VkResult result = vkMapMemory(context.GetDevice(), deviceMemory, offset, size, 0, &mappedMemory);
         ENG_ASSERT(result == VK_SUCCESS, "Failed to map buffer memory.");
     }
 
-    void Buffer::UnmapMemory(VkDeviceMemory deviceMemory)
+    void BufferUtils::UnmapMemory(RenderContext& context, VkDeviceMemory deviceMemory)
     {
-        VkDevice device = m_Context.GetDevice();
-
-        vkUnmapMemory(device, deviceMemory);
+        vkUnmapMemory(context.GetDevice(), deviceMemory);
     }
 
-    std::uint32_t Buffer::SelectMemoryType(std::uint32_t memoryType, VkMemoryPropertyFlags flags)
+    std::uint32_t BufferUtils::SelectMemoryType(std::uint32_t memoryType, VkMemoryPropertyFlags flags)
     {
         VkPhysicalDevice physicalDevice = RenderContext::GetPhysicalDevice();
 

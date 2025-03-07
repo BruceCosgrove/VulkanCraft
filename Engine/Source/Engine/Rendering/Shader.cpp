@@ -2,7 +2,6 @@
 #include "Engine/Core/AssertOrVerify.hpp"
 #include "Engine/IO/FileIO.hpp"
 #include "Engine/Rendering/RenderContext.hpp"
-#include "Engine/Rendering/Texture2D.hpp"
 #include "Engine/Rendering/UniformBuffer.hpp"
 #include "Engine/Rendering/VertexBuffer.hpp"
 #include <shaderc/shaderc.hpp>
@@ -89,27 +88,27 @@ namespace eng
         );
     }
 
-    void Shader::UpdateDescriptorSet()
+    void Shader::UpdateDescriptorSet(ShaderDescriptorSetData const& data)
     {
         // Get the data for this frame.
         VkDescriptorSet descriptorSet = m_DescriptorSets[m_Context.GetSwapchainImageIndex()];
 
         // TODO: don't allocate every frame.
         std::vector<VkWriteDescriptorSet> writes;
-        writes.reserve(m_UniformBuffers.size() + m_Textures.size());
+        writes.reserve(data.UniformBuffers.size() + data.Samplers.size());
         std::vector<VkDescriptorBufferInfo> bufferInfos;
-        writes.reserve(m_UniformBuffers.size());
+        writes.reserve(data.UniformBuffers.size());
         std::vector<VkDescriptorImageInfo> imageInfos;
-        writes.reserve(m_Textures.size());
+        writes.reserve(data.Samplers.size());
 
         // Update descriptor sets.
 
-        for (auto& uniformBuffer : m_UniformBuffers)
+        for (auto& uniformBuffer : data.UniformBuffers)
         {
             auto& bufferInfo = bufferInfos.emplace_back();
-            bufferInfo.buffer = uniformBuffer.Resource->GetBuffer();
-            bufferInfo.offset = uniformBuffer.Resource->GetOffset();
-            bufferInfo.range = uniformBuffer.Resource->GetSize();
+            bufferInfo.buffer = uniformBuffer.Descriptor->GetBuffer();
+            bufferInfo.offset = uniformBuffer.Descriptor->GetOffset();
+            bufferInfo.range = uniformBuffer.Descriptor->GetSize();
 
             // TODO: multiple VkWriteDescriptorSet's, same dstSet, different dstBinding, different descriptorType
             // e.g. VkWriteDescriptorSet 0: dstSet = set 0, dstBinding = 0, descriptorType = UNIFORM_BUFFER
@@ -127,11 +126,11 @@ namespace eng
             //write.pTexelBufferView = // TODO: idk what these are
         }
 
-        for (auto& image : m_Textures)
+        for (auto& image : data.Samplers)
         {
             auto& imageInfo = imageInfos.emplace_back();
-            imageInfo.sampler = image.Resource->GetSampler();
-            imageInfo.imageView = image.Resource->GetImageView();
+            imageInfo.sampler = image.Sampler;
+            imageInfo.imageView = image.ImageView;
             imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
             auto& write = writes.emplace_back();
@@ -325,8 +324,7 @@ namespace eng
         {
             auto processResources = [&](
                 spirv_cross::SmallVector<spirv_cross::Resource>& resources,
-                VkDescriptorType descriptorType,
-                auto&& specializationFunc)
+                VkDescriptorType descriptorType)
             {
                 for (auto& resource : resources)
                 {
@@ -343,8 +341,6 @@ namespace eng
                     // If doesn't already exist, create it.
                     if (itBindings == descriptorSetLayoutBindings.end())
                     {
-                        specializationFunc(type, binding);
-
                         auto& descriptorSetLayoutBinding = descriptorSetLayoutBindings.emplace_back();
                         descriptorSetLayoutBinding.binding = binding;
                         descriptorSetLayoutBinding.descriptorType = descriptorType;
@@ -375,33 +371,9 @@ namespace eng
                 }
             };
 
-            processResources(resources->uniform_buffers, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-            [&](spirv_cross::SPIRType const& type, std::uint32_t binding)
-            {
-                auto it = std::find_if(info.UniformBufferBindings.begin(), info.UniformBufferBindings.end(),
-                [binding](ShaderUniformBufferBinding const& texture)
-                {
-                    return texture.Binding == binding;
-                });
-                ENG_ASSERT(it != info.UniformBufferBindings.end(), "Failed to find uniform buffer binding.");
-                m_UniformBuffers.emplace_back(it->UniformBuffer, binding);
-            });
-            processResources(resources->storage_buffers, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-            [&](spirv_cross::SPIRType const& type, std::uint32_t binding)
-            {
-
-            });
-            processResources(resources->sampled_images, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-            [&](spirv_cross::SPIRType const& type, std::uint32_t binding)
-            {
-                auto it = std::find_if(info.TextureBindings.begin(), info.TextureBindings.end(),
-                [binding](ShaderTextureBinding const& texture)
-                {
-                    return texture.Binding == binding;
-                });
-                ENG_ASSERT(it != info.TextureBindings.end(), "Failed to find texture binding.");
-                m_Textures.emplace_back(it->Texture, binding);
-            });
+            processResources(resources->uniform_buffers, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
+            processResources(resources->storage_buffers, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER);
+            processResources(resources->sampled_images, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
             // TODO: there's quite a few more resource types to handle.
         };
 
@@ -421,13 +393,6 @@ namespace eng
 
             processStage(std::get<1>(stage));
         }
-
-        m_VertexBuffers.reserve(info.VertexBufferBindings.size());
-        for (auto& vertexBufferBinding : info.VertexBufferBindings)
-            m_VertexBuffers.emplace_back(vertexBufferBinding.VertexBuffer, vertexBufferBinding.Binding);
-
-        ENG_ASSERT(info.UniformBufferBindings.size() == m_UniformBuffers.size(), "Shader texture count mismatch; expected {}, got {}.", info.UniformBufferBindings.size(), m_UniformBuffers.size());
-        ENG_ASSERT(info.TextureBindings.size() == m_Textures.size(), "Shader texture count mismatch; expected {}, got {}.", info.TextureBindings.size(), m_Textures.size());
     }
 
     void Shader::CreateDescriptorSetLayout(std::span<VkDescriptorSetLayoutBinding> descriptorSetLayoutBindings)

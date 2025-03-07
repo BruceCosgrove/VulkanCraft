@@ -13,10 +13,46 @@ namespace vc
     {
         // TODO: context retrieval needs to be reworked with multiple windows.
         auto& context = eng::Application::Get().GetWindow().GetRenderContext();
-        std::uint32_t swapchainImageCount = context.GetSwapchainImageCount();
 
-        CreateRenderPass();
-        CreateFramebuffer();
+        {
+            // TODO: update pipeline to add depth
+
+            VkAttachmentDescription colorAttachment{};
+            colorAttachment.format = context.GetSwapchainFormat();
+            colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
+            colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+            colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+            colorAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+            colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+            colorAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+            colorAttachment.finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL; // TODO: might be wrong?
+
+            VkAttachmentReference colorAttachmentReference{};
+            colorAttachmentReference.attachment = 0; // Index into info.pAttachments; referring to colorAttachment
+            colorAttachmentReference.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+            VkSubpassDescription subpass{};
+            subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+            subpass.colorAttachmentCount = 1;
+            subpass.pColorAttachments = &colorAttachmentReference;
+
+            VkSubpassDependency dependency{};
+            dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
+            dependency.dstSubpass = 0;
+            dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+            dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+            dependency.srcAccessMask = 0;
+            dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+
+            eng::RenderPassInfo info;
+            info.RenderContext = &context;
+            info.Attachments = std::span(&colorAttachment, 1);
+            info.Subpasses = std::span(&subpass, 1);
+            info.SubpassDependencies = std::span(&dependency, 1);
+            m_RenderPass = std::make_shared<eng::RenderPass>(info);
+        }
+
+        CreateOrRecreateFramebuffers();
 
         {
             eng::VertexBufferInfo info;
@@ -44,6 +80,38 @@ namespace vc
         }
 
         {
+            eng::ShaderInfo info;
+            info.RenderContext = &context;
+            info.Filepath = "Assets/Shaders/Basic";
+            info.VertexBufferBindings =
+            {
+                {0, VK_VERTEX_INPUT_RATE_VERTEX, {0, 1, 2}},
+            };
+            info.Topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+            info.RenderPass = m_RenderPass->GetRenderPass();
+            m_Shader = std::make_shared<eng::Shader>(info);
+        }
+
+        {
+            VkSamplerCreateInfo info{};
+            info.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+            info.magFilter = VK_FILTER_NEAREST;
+            info.minFilter = VK_FILTER_LINEAR;
+            info.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+            info.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+            info.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+            info.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+            info.anisotropyEnable = VK_TRUE; // TODO: slider for performance, 0 (off) -> max
+            info.maxAnisotropy = eng::RenderContext::GetPhysicalDeviceProperties().limits.maxSamplerAnisotropy;
+            info.compareEnable = VK_FALSE;
+            info.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
+            info.unnormalizedCoordinates = VK_FALSE;
+
+            VkResult result = vkCreateSampler(context.GetDevice(), &info, nullptr, &m_Sampler);
+            ENG_ASSERT(result == VK_SUCCESS, "Failed to create sampler.");
+        }
+
+        {
 #define VC_TEXTURE(x) R"(D:\Dorkspace\Programming\Archive\VanillaDefault-Resource-Pack-16x-1.21\assets\minecraft\textures\)" x
             eng::LocalTexture2D texture(VC_TEXTURE("block/ancient_debris_side.png"));
 
@@ -51,27 +119,6 @@ namespace vc
             info.RenderContext = &context;
             info.LocalTexture = &texture;
             m_Texture = std::make_shared<eng::Texture2D>(info);
-        }
-
-        {
-            eng::ShaderInfo info;
-            info.RenderContext = &context;
-            info.Filepath = "Assets/Shaders/Basic";
-            info.VertexBufferBindings =
-            {
-                {0, VK_VERTEX_INPUT_RATE_VERTEX, {0, 1, 2}, m_VertexBuffer},
-            };
-            info.UniformBufferBindings =
-            {
-                {0, m_UniformBuffer},
-            };
-            info.TextureBindings =
-            {
-                {1, m_Texture},
-            };
-            info.Topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
-            info.RenderPass = m_RenderPass;
-            m_Shader = std::make_shared<eng::Shader>(info);
         }
 
         m_CameraController.SetPosition(glm::vec3(0.0f, 0.0f, 1.0f));
@@ -87,12 +134,15 @@ namespace vc
         auto& context = eng::Application::Get().GetWindow().GetRenderContext();
         VkDevice device = context.GetDevice();
 
-        m_VertexBuffer.reset();
-        m_UniformBuffer.reset();
         m_Texture.reset();
+        vkDestroySampler(device, m_Sampler, nullptr);
+
         m_Shader.reset();
-        vkDestroyFramebuffer(device, m_Framebuffer, nullptr);
-        vkDestroyRenderPass(device, m_RenderPass, nullptr);
+        m_UniformBuffer.reset();
+        m_VertexBuffer.reset();
+        m_Framebuffers.clear();
+        m_FramebufferColorAttachments.clear();
+        m_RenderPass.reset();
     }
 
     void VulkanCraftLayer::OnEvent(eng::Event& event)
@@ -117,9 +167,10 @@ namespace vc
         // It will simply render a client framebuffer to a fullscreen quad. Since
         // it's using a shader, client framebuffer resizes can be called from OnEvent,
         // since it will be stretched, via a sampler2D, to fit the swapchain extent.
-        // This will also allow for a modular Framebuffer.hpp/cpp in Engine/Rendering/
-        // that the client can use one of, without having to rely on it being imageless.
-        // Same thing for RenderPass.hpp/cpp.
+        // 
+        // UPDATE: the above stretching one, does not work, and two does not make sense.
+        // I'm going to attempt to remove the extra pipeline, renderpass, and framebuffers,
+        // but I'm committing this because I did a lot of work and it currently works.
         // 
         // Rendering order:
         //  1) RenderContext::BeginFrame
@@ -134,35 +185,24 @@ namespace vc
         // any graphics commands, it just collates all its textured quads into a
         // draw list. This draw list will then be used to actually render it.
 
-        // TODO: Each window should own its own layer stack.
-        // Store a window's render context as a pointer in each
+        // TODO: Store a window's render context as a pointer in each
         // layer with a "RenderContext& Layer::GetRenderContext()"?
         auto& context = eng::Application::Get().GetWindow().GetRenderContext();
-        VkDevice device = context.GetDevice();
         VkExtent2D extent = context.GetSwapchainExtent();
-        VkImageView imageView = context.GetActiveSwapchainImageView();
         VkCommandBuffer commandBuffer = context.GetActiveCommandBuffer();
+        std::uint32_t swapchainImageIndex = context.GetSwapchainImageIndex();
 
-        // Recreate the framebuffer.
+        // Recreate the framebuffer if necessary.
         if (context.WasSwapchainRecreated())
-        {
-            vkDestroyFramebuffer(device, m_Framebuffer, nullptr);
-            CreateFramebuffer();
-        };
-
-        VkRenderPassAttachmentBeginInfo attachmentInfo{};
-        attachmentInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_ATTACHMENT_BEGIN_INFO;
-        attachmentInfo.attachmentCount = 1;
-        attachmentInfo.pAttachments = &imageView;
+            CreateOrRecreateFramebuffers();
 
         VkClearValue clearValue{};
         clearValue.color = {(std::cosf(angle) + 1.0f) * 0.5f, 0.0f, (std::sinf(angle) + 1.0f) * 0.5f, 1.0f};
 
         VkRenderPassBeginInfo info{};
         info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-        info.pNext = &attachmentInfo;
-        info.renderPass = m_RenderPass;
-        info.framebuffer = m_Framebuffer;
+        info.renderPass = m_RenderPass->GetRenderPass();
+        info.framebuffer = m_Framebuffers[swapchainImageIndex]->GetFramebuffer();
         info.renderArea.extent = extent;
         info.clearValueCount = 1;
         info.pClearValues = &clearValue;
@@ -171,10 +211,19 @@ namespace vc
         vkCmdBeginRenderPass(commandBuffer, &info, VK_SUBPASS_CONTENTS_INLINE);
 
         // Set all the necessary data.
-        LocalUniformBuffer localUniformBuffer;
-        localUniformBuffer.ViewProjection = m_CameraController.GetViewProjection();
-        m_UniformBuffer->SetData(localUniformBuffer);
-        m_Shader->UpdateDescriptorSet();
+        {
+            LocalUniformBuffer localUniformBuffer;
+            localUniformBuffer.ViewProjection = m_CameraController.GetViewProjection();
+            m_UniformBuffer->SetData(localUniformBuffer);
+
+            eng::ShaderUniformBufferBinding binding0(0, m_UniformBuffer);
+            eng::ShaderSamplerBinding binding1(1, m_Sampler, m_Texture->GetImageView());
+
+            auto uniformBuffers = std::to_array({binding0});
+            auto samplers = std::to_array({binding1});
+
+            m_Shader->UpdateDescriptorSet({uniformBuffers, samplers});
+        }
 
         // Bind everything.
         m_Shader->Bind(commandBuffer);
@@ -200,6 +249,8 @@ namespace vc
 
         // End the render pass.
         vkCmdEndRenderPass(commandBuffer);
+
+        context.SetFrameImage(m_FramebufferColorAttachments[swapchainImageIndex]);
     }
 
     void VulkanCraftLayer::OnImGuiRender()
@@ -216,91 +267,44 @@ namespace vc
         eng::Application::Get().Terminate();
     }
 
-    void VulkanCraftLayer::CreateRenderPass()
+    void VulkanCraftLayer::CreateOrRecreateFramebuffers()
     {
         auto& context = eng::Application::Get().GetWindow().GetRenderContext();
-        VkFormat format = context.GetSwapchainFormat();
-        VkDevice device = context.GetDevice();
+        VkExtent2D swapchainExtent = context.GetSwapchainExtent();
+        VkFormat swapchainFormat = context.GetSwapchainFormat();
+        std::uint32_t swapchainImageCount = context.GetSwapchainImageCount();
 
-        VkAttachmentDescription colorAttachment{};
-        colorAttachment.format = format;
-        colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
-        colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR; // TODO: relevant
-        colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE; // TODO: relevant
-        colorAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-        colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-        colorAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED; // TODO: relevant
-        colorAttachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR; // TODO: relevant
+        // Recreate the framebuffer color attachments.
+        {
+            m_FramebufferColorAttachments.clear();
+            m_FramebufferColorAttachments.reserve(swapchainImageCount);
 
-        VkAttachmentReference colorAttachmentReference{};
-        colorAttachmentReference.attachment = 0; // Index into info.pAttachments; referring to colorAttachment
-        colorAttachmentReference.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+            eng::FramebufferAttachmentInfo framebufferAttachmentInfo;
+            framebufferAttachmentInfo.RenderContext = &context;
+            framebufferAttachmentInfo.Extent = swapchainExtent;
+            framebufferAttachmentInfo.Format = swapchainFormat;
+            framebufferAttachmentInfo.Usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+            framebufferAttachmentInfo.Aspect = VK_IMAGE_ASPECT_COLOR_BIT;
+            framebufferAttachmentInfo.Layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
-        VkSubpassDescription subpass{};
-        subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-        subpass.colorAttachmentCount = 1;
-        subpass.pColorAttachments = &colorAttachmentReference;
+            for (std::uint32_t i = 0; i < swapchainImageCount; i++)
+                m_FramebufferColorAttachments.push_back(std::make_shared<eng::FramebufferAttachment>(framebufferAttachmentInfo));
+        }
 
-        VkSubpassDependency dependency{};
-        dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
-        dependency.dstSubpass = 0;
-        dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-        dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-        dependency.srcAccessMask = 0;
-        dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+        // Recreate the framebuffers.
+        {
+            m_Framebuffers.clear();
+            m_Framebuffers.reserve(swapchainImageCount);
 
-        VkRenderPassCreateInfo info{};
-        info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-        info.attachmentCount = 1;
-        info.pAttachments = &colorAttachment;
-        info.subpassCount = 1;
-        info.pSubpasses = &subpass;
-        info.dependencyCount = 1;
-        info.pDependencies = &dependency;
-
-        VkResult result = vkCreateRenderPass(device, &info, nullptr, &m_RenderPass);
-        ENG_ASSERT(result == VK_SUCCESS, "Failed to create render pass.");
-    }
-
-    void VulkanCraftLayer::CreateFramebuffer()
-    {
-        auto& context = eng::Application::Get().GetWindow().GetRenderContext();
-        VkFormat format = context.GetSwapchainFormat();
-        VkDevice device = context.GetDevice();
-        VkExtent2D extent = context.GetSwapchainExtent();
-
-        // Defer giving the framebuffer an image until the render pass is began.
-
-        VkFramebufferAttachmentImageInfo attachmentImageInfo{};
-        attachmentImageInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_ATTACHMENT_IMAGE_INFO;
-        attachmentImageInfo.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
-        attachmentImageInfo.width = extent.width;
-        attachmentImageInfo.height = extent.height;
-        attachmentImageInfo.layerCount = 1;
-
-        // TODO: this MIGHT be required to render this as a texture in imgui
-        // https://registry.khronos.org/vulkan/specs/latest/man/html/VkFramebufferAttachmentImageInfo.html
-        // TODO: is this required???
-        attachmentImageInfo.viewFormatCount = 1;
-        attachmentImageInfo.pViewFormats = &format;
-
-        VkFramebufferAttachmentsCreateInfo attachmentsInfo{};
-        attachmentsInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_ATTACHMENTS_CREATE_INFO;
-        attachmentsInfo.attachmentImageInfoCount = 1;
-        attachmentsInfo.pAttachmentImageInfos = &attachmentImageInfo;
-
-        VkFramebufferCreateInfo framebufferInfo{};
-        framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-        framebufferInfo.pNext = &attachmentsInfo;
-        framebufferInfo.flags = VK_FRAMEBUFFER_CREATE_IMAGELESS_BIT;
-        framebufferInfo.renderPass = m_RenderPass;
-        framebufferInfo.attachmentCount = 1;
-        framebufferInfo.width = extent.width;
-        framebufferInfo.height = extent.height;
-        framebufferInfo.layers = 1;
-
-        // TODO: keep this framebuffer in sync with the window resizes.
-        VkResult result = vkCreateFramebuffer(device, &framebufferInfo, nullptr, &m_Framebuffer);
-        ENG_ASSERT(result == VK_SUCCESS, "Failed to create swapchain framebuffer.");
+            eng::FramebufferInfo info;
+            info.RenderContext = &context;
+            info.RenderPass = m_RenderPass->GetRenderPass();
+            for (std::uint32_t i = 0; i < swapchainImageCount; i++)
+            {
+                VkImageView colorAttachment = m_FramebufferColorAttachments[i]->GetImageView();
+                info.Attachments = std::span(&colorAttachment, 1);
+                m_Framebuffers.push_back(std::make_shared<eng::Framebuffer>(info));
+            }
+        }
     }
 }

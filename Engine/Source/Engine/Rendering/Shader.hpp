@@ -9,28 +9,13 @@
 namespace eng
 {
     class RenderContext;
-    class VertexBuffer;
     class UniformBuffer;
-    class Texture2D; // TODO: make this not depend on Texture2D's, but Texture's in general (no vtable needed).
 
     struct ShaderVertexBufferBinding
     {
         std::uint32_t Binding = 0;
         VkVertexInputRate InputRate = VK_VERTEX_INPUT_RATE_VERTEX;
         std::vector<std::uint32_t> Locations;
-        std::shared_ptr<VertexBuffer> VertexBuffer;
-    };
-
-    struct ShaderUniformBufferBinding
-    {
-        std::uint32_t Binding = 0;
-        std::shared_ptr<UniformBuffer> UniformBuffer;
-    };
-
-    struct ShaderTextureBinding
-    {
-        std::uint32_t Binding = 0;
-        std::shared_ptr<Texture2D> Texture;
     };
 
     struct ShaderInfo
@@ -38,10 +23,27 @@ namespace eng
         RenderContext* RenderContext = nullptr;
         std::filesystem::path Filepath;
         std::vector<ShaderVertexBufferBinding> VertexBufferBindings;
-        std::vector<ShaderUniformBufferBinding> UniformBufferBindings;
-        std::vector<ShaderTextureBinding> TextureBindings;
         VkPrimitiveTopology Topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
         VkRenderPass RenderPass = VK_NULL_HANDLE;
+    };
+
+    struct ShaderUniformBufferBinding
+    {
+        std::uint32_t Binding = 0;
+        std::shared_ptr<UniformBuffer> Descriptor;
+    };
+
+    struct ShaderSamplerBinding
+    {
+        std::uint32_t Binding = 0;
+        VkSampler Sampler = VK_NULL_HANDLE;
+        VkImageView ImageView = VK_NULL_HANDLE;
+    };
+
+    struct ShaderDescriptorSetData
+    {
+        std::span<ShaderUniformBufferBinding> UniformBuffers;
+        std::span<ShaderSamplerBinding> Samplers;
     };
 
     // TODO: separate shader from pipeline.
@@ -53,7 +55,7 @@ namespace eng
         ~Shader();
 
         void Bind(VkCommandBuffer commandBuffer);
-        void UpdateDescriptorSet();
+        void UpdateDescriptorSet(ShaderDescriptorSetData const& data);
     private:
         std::vector<std::tuple<std::vector<std::uint8_t>, VkShaderStageFlagBits>> CompileExistingSources(
             std::filesystem::path const& filepath
@@ -95,18 +97,5 @@ namespace eng
 
         VkPipelineLayout m_PipelineLayout = VK_NULL_HANDLE;
         VkPipeline m_Pipeline = VK_NULL_HANDLE;
-
-        // Shader resources.
-
-        template <typename T>
-        struct ResourceData
-        {
-            std::shared_ptr<T> Resource;
-            std::uint32_t Binding = 0;
-        };
-
-        std::vector<ResourceData<VertexBuffer>> m_VertexBuffers;
-        std::vector<ResourceData<UniformBuffer>> m_UniformBuffers;
-        std::vector<ResourceData<Texture2D>> m_Textures;
     };
 }

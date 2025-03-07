@@ -55,9 +55,11 @@ namespace eng
         if (m_Minimized or m_ZeroSize)
             return;
 
-        m_RenderContext.BeginFrame();
-        m_LayerStack.OnRender();
-        m_RenderContext.EndFrame();
+        if (m_RenderContext.BeginFrame())
+        {
+            m_LayerStack.OnRender();
+            m_RenderContext.EndFrame();
+        }
     }
 
     void Window::GetFramebufferSize(std::uint32_t& width, std::uint32_t& height) const

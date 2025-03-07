@@ -5,7 +5,7 @@
 namespace eng
 {
     UniformBuffer::UniformBuffer(UniformBufferInfo const& info)
-        : Buffer(info.RenderContext)
+        : m_Context(*info.RenderContext)
         , m_Size(info.Size)
     {
         VkDeviceSize minAlignment = m_Context.GetPhysicalDeviceProperties().limits.minUniformBufferOffsetAlignment;
@@ -14,7 +14,8 @@ namespace eng
 
         VkDeviceSize totalSize = m_AlignedSize * m_Context.GetSwapchainImageCount();
 
-        Buffer::CreateBuffer(
+        BufferUtils::CreateBuffer(
+            m_Context,
             totalSize,
             VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
             VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
@@ -23,7 +24,7 @@ namespace eng
         );
 
         void* mappedMemory;
-        Buffer::MapMemory(m_DeviceMemory, 0, m_Size, mappedMemory);
+        BufferUtils::MapMemory(m_Context, m_DeviceMemory, 0, m_Size, mappedMemory);
 
         m_MappedMemory = std::span(static_cast<std::uint8_t*>(mappedMemory), totalSize);
     }
@@ -32,7 +33,7 @@ namespace eng
     {
         VkDevice device = m_Context.GetDevice();
 
-        Buffer::UnmapMemory(m_DeviceMemory);
+        BufferUtils::UnmapMemory(m_Context, m_DeviceMemory);
 
         vkFreeMemory(device, m_DeviceMemory, nullptr);
         vkDestroyBuffer(device, m_Buffer, nullptr);

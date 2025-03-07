@@ -1,24 +1,21 @@
 #pragma once
 
+#include "Engine/Core/ClassTypes.hpp"
 #include <vulkan/vulkan.h>
-#include <concepts>
 #include <ranges>
 
 namespace eng
 {
     class RenderContext;
-}
 
-namespace eng::detail
-{
     // Helper class for common buffer functionality.
-    class Buffer
+    class BufferUtils
     {
-    protected:
-        Buffer(RenderContext* context);
-        ~Buffer() = default;
+    public:
+        ENG_STATIC_CLASS(BufferUtils);
 
-        void CreateBuffer(
+        static void CreateBuffer(
+            RenderContext& context,
             VkDeviceSize size,
             VkBufferUsageFlags usage,
             VkMemoryPropertyFlags flags,
@@ -26,18 +23,17 @@ namespace eng::detail
             VkDeviceMemory& deviceMemory
         );
 
-        void MapMemory(
+        static void MapMemory(
+            RenderContext& context,
             VkDeviceMemory deviceMemory,
             VkDeviceSize offset,
             VkDeviceSize size,
             void*& mappedMemory
         );
 
-        void UnmapMemory(VkDeviceMemory deviceMemory);
+        static void UnmapMemory(RenderContext& context, VkDeviceMemory deviceMemory);
 
         static std::uint32_t SelectMemoryType(std::uint32_t memoryType, VkMemoryPropertyFlags flags);
-    protected:
-        RenderContext& m_Context; // non-owning
     };
 }
 

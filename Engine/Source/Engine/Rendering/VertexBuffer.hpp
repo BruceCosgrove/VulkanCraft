@@ -1,12 +1,10 @@
 #pragma once
 
-#include "Engine/Rendering/_Buffer.hpp"
+#include "Engine/Rendering/BufferUtils.hpp"
 #include <span>
 
 namespace eng
 {
-    class RenderContext;
-
     struct VertexBufferInfo
     {
         RenderContext* RenderContext = nullptr;
@@ -14,7 +12,7 @@ namespace eng
     };
 
     // NOTE: this assumes it will be updated every frame, and thus does not bother with a staging buffer.
-    class VertexBuffer : private detail::Buffer
+    class VertexBuffer
     {
     public:
         VertexBuffer(VertexBufferInfo const& info);
@@ -25,6 +23,7 @@ namespace eng
 
         void Bind(VkCommandBuffer commandBuffer, std::uint32_t binding = 0);
     private:
+        RenderContext& m_Context; // non-owning
         VkDeviceSize m_Size = 0;
         VkBuffer m_Buffer = VK_NULL_HANDLE;
         VkDeviceMemory m_DeviceMemory = VK_NULL_HANDLE;

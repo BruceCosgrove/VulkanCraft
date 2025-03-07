@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Engine/Rendering/_Buffer.hpp"
+#include "Engine/Rendering/BufferUtils.hpp"
 #include <span>
 
 namespace eng
@@ -15,7 +15,7 @@ namespace eng
 
     // NOTE: this assumes it will be updated every frame, and thus does not bother with a staging buffer.
     // NOTE: allocates enough memory for each frame in flight in the same buffer object.
-    class UniformBuffer : private detail::Buffer
+    class UniformBuffer
     {
     public:
         UniformBuffer(UniformBufferInfo const& info);
@@ -28,6 +28,7 @@ namespace eng
         VkDeviceSize GetSize() const;
         VkBuffer GetBuffer() const;
     private:
+        RenderContext& m_Context; // non-owning
         VkDeviceSize m_Size = 0;
         VkDeviceSize m_AlignedSize = 0;
         VkBuffer m_Buffer = VK_NULL_HANDLE;
