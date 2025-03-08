@@ -22,7 +22,7 @@ namespace eng
 
         VkCommandBuffer commandBuffer = m_Context.BeginOneTimeCommandBuffer();
         // Transition the image layout to be optimal for this attachment.
-        ImageUtils::TransitionImageLayout(commandBuffer, m_Image, info.Format, VK_IMAGE_LAYOUT_UNDEFINED, info.Layout);
+        ImageUtils::TransitionImageLayout(commandBuffer, m_Image, VK_IMAGE_LAYOUT_UNDEFINED, info.Layout);
         m_Context.EndOneTimeCommandBuffer(commandBuffer);
     }
 }

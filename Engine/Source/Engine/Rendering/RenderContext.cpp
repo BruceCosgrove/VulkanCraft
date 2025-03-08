@@ -347,7 +347,6 @@ namespace eng
         ImageUtils::TransitionImageLayout(
             commandBuffer,
             image.GetImage(),
-            m_SwapchainSurfaceFormat.format,
             VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
             VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
         );
@@ -395,7 +394,6 @@ namespace eng
         ImageUtils::TransitionImageLayout(
             commandBuffer,
             image.GetImage(),
-            m_SwapchainSurfaceFormat.format,
             VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
             VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
         );

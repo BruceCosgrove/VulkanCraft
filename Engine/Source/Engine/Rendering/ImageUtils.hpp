@@ -29,7 +29,6 @@ namespace eng
         static void TransitionImageLayout(
             VkCommandBuffer commandBuffer,
             VkImage image,
-            VkFormat format,
             VkImageLayout oldLayout,
             VkImageLayout newLayout
         );

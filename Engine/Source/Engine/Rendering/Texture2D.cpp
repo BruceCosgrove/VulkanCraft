@@ -47,11 +47,11 @@ namespace eng
 
         VkCommandBuffer commandBuffer = m_Context.BeginOneTimeCommandBuffer();
         // Transition the image layout to be written to.
-        ImageUtils::TransitionImageLayout(commandBuffer, m_Image, info.Format, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+        ImageUtils::TransitionImageLayout(commandBuffer, m_Image, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
         // Copy the texture from the staging buffer to the image.
         ImageUtils::CopyBufferToImage(commandBuffer, stagingBuffer, m_Image, extent);
         // Transition the image layout to be read from shaders.
-        ImageUtils::TransitionImageLayout(commandBuffer, m_Image, info.Format, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+        ImageUtils::TransitionImageLayout(commandBuffer, m_Image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
         m_Context.EndOneTimeCommandBuffer(commandBuffer);
 
         // Destroy the staging buffer and free its memory.

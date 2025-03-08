@@ -74,7 +74,6 @@ namespace eng
     void ImageUtils::TransitionImageLayout(
         VkCommandBuffer commandBuffer,
         VkImage image,
-        VkFormat format,
         VkImageLayout oldLayout,
         VkImageLayout newLayout
     )
