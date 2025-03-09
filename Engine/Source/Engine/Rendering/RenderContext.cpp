@@ -47,11 +47,6 @@ namespace eng
     }
 #endif
 
-    void RenderContext::SetFrameImage(std::shared_ptr<Image> image)
-    {
-        m_FrameImages[m_FrameIndex] = std::move(image);
-    }
-
     VkCommandBuffer RenderContext::BeginOneTimeCommandBuffer()
     {
         VkCommandBufferAllocateInfo allocateInfo{};
@@ -133,9 +128,9 @@ namespace eng
         return m_PresentQueue;
     }
 
-    VkImageView RenderContext::GetActiveSwapchainImageView() const
+    VkImageView RenderContext::GetSwapchainImageView(std::uint32_t index) const
     {
-        return m_SwapchainImageViews[m_FrameIndex];
+        return m_SwapchainImageViews[index];
     }
 
     std::uint32_t RenderContext::GetSwapchainImageCount() const
@@ -190,11 +185,7 @@ namespace eng
         CreateSurface();
         SelectQueueFamilies();
         CreateLogicalDevice();
-        m_SwapchainSurfaceFormat = SelectSurfaceFormat(); // Pull this out because CreateRenderPass needs it.
-        CreateRenderPass();
         CreateOrRecreateSwapchain();
-        m_FrameImages.resize(m_SwapchainImageCount);
-        CreateShader();
         CreateCommandPool();
         CreateCommandBuffers();
         CreateFencesAndSemaphores();
@@ -209,14 +200,9 @@ namespace eng
             vkDestroyFence(m_Device, m_FrameInFlightFences[i], nullptr);
         }
         vkDestroyCommandPool(m_Device, m_CommandPool, nullptr);
-        m_FrameImages.clear();
-        m_Framebuffers.clear();
         for (std::uint32_t i = 0; i < m_SwapchainImageCount; i++)
             vkDestroyImageView(m_Device, m_SwapchainImageViews[i], nullptr);
         vkDestroySwapchainKHR(m_Device, m_Swapchain, nullptr);
-        m_Shader.reset();
-        m_RenderPass.reset();
-        vkDestroySampler(m_Device, m_Sampler, nullptr);
         vkDestroyDevice(m_Device, nullptr);
         vkDestroySurfaceKHR(s_Instance, m_Surface, nullptr);
 
@@ -283,8 +269,6 @@ namespace eng
     {
         ENG_ASSERT(not m_RecreateSwapchain);
 
-        RenderFullscreenQuad();
-
         VkResult result = VK_SUCCESS;
         VkSemaphore imageAcquiredSemaphore = m_ImageAcquiredSemaphores[m_SemaphoreIndex];
         VkSemaphore renderCompleteSemaphore = m_RenderCompleteSemaphores[m_SemaphoreIndex];
@@ -335,68 +319,6 @@ namespace eng
             // Use the next semaphore.
             m_SemaphoreIndex = (m_SemaphoreIndex + 1) % m_SwapchainImageCount;
         }
-    }
-
-    void RenderContext::RenderFullscreenQuad()
-    {
-        VkCommandBuffer commandBuffer = m_FrameCommandBuffers[m_FrameIndex];
-
-        auto& image = *m_FrameImages[m_FrameIndex].get();
-
-        // Transition the Client image from color attachment to shader read only so this pipeline can use it.
-        ImageUtils::TransitionImageLayout(
-            commandBuffer,
-            image.GetImage(),
-            VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-            VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
-        );
-
-        VkRenderPassBeginInfo info{};
-        info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-        info.renderPass = m_RenderPass->GetRenderPass();
-        info.framebuffer = m_Framebuffers[m_FrameIndex]->GetFramebuffer();
-        info.renderArea.extent = m_SwapchainExtent;
-
-        // Begin the render pass.
-        vkCmdBeginRenderPass(commandBuffer, &info, VK_SUBPASS_CONTENTS_INLINE);
-
-        // Set all the necessary data.
-        {
-            eng::ShaderSamplerBinding binding0(0, m_Sampler, image.GetImageView());
-            auto samplers = std::to_array({binding0});
-            m_Shader->UpdateDescriptorSet({{}, samplers});
-        }
-
-        // Bind the shader.
-        m_Shader->Bind(commandBuffer);
-
-        // Vulkan's +y direction is down, this fixes that.
-        // https://stackoverflow.com/questions/45570326/flipping-the-viewport-in-vulkan
-        VkViewport viewport{};
-        viewport.x = 0.0f;
-        viewport.y = static_cast<float>(m_SwapchainExtent.height);
-        viewport.width = static_cast<float>(m_SwapchainExtent.width);
-        viewport.height = -static_cast<float>(m_SwapchainExtent.height);
-        viewport.minDepth = 0.0f;
-        viewport.maxDepth = 1.0f;
-        vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
-
-        VkRect2D scissor{};
-        scissor.offset = {0, 0};
-        scissor.extent = m_SwapchainExtent;
-        vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
-
-        vkCmdDraw(commandBuffer, 4, 1, 0, 0);
-
-        vkCmdEndRenderPass(commandBuffer);
-
-        // Transition the Client image to color attachment from shader read only so the Client can use it again.
-        ImageUtils::TransitionImageLayout(
-            commandBuffer,
-            image.GetImage(),
-            VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-            VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
-        );
     }
 
     void RenderContext::CreateInstance()
@@ -581,43 +503,6 @@ namespace eng
         vkGetDeviceQueue(m_Device, m_PresentFamily, 0, &m_PresentQueue);
     }
 
-    void RenderContext::CreateRenderPass()
-    {
-        VkAttachmentDescription colorAttachment{};
-        colorAttachment.format = m_SwapchainSurfaceFormat.format;
-        colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
-        colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE; // A fullscreen quad will be rendered, covering everything.
-        colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-        colorAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-        colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-        colorAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-        colorAttachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-
-        VkAttachmentReference colorAttachmentReference{};
-        colorAttachmentReference.attachment = 0;
-        colorAttachmentReference.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-
-        VkSubpassDescription subpass{};
-        subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-        subpass.colorAttachmentCount = 1;
-        subpass.pColorAttachments = &colorAttachmentReference;
-
-        VkSubpassDependency dependency{};
-        dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
-        dependency.dstSubpass = 0;
-        dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-        dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-        dependency.srcAccessMask = 0;
-        dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-
-        eng::RenderPassInfo info;
-        info.RenderContext = this;
-        info.Attachments = std::span(&colorAttachment, 1);
-        info.Subpasses = std::span(&subpass, 1);
-        info.SubpassDependencies = std::span(&dependency, 1);
-        m_RenderPass = std::make_shared<eng::RenderPass>(info);
-    }
-
     void RenderContext::CreateOrRecreateSwapchain()
     {
         VkSurfaceCapabilitiesKHR surfaceCapabilities;
@@ -632,14 +517,15 @@ namespace eng
             // Choose swapchain properties.
             std::uint32_t imageCount = SelectImageCount(surfaceCapabilities);
             VkExtent2D extent = SelectExtent(surfaceCapabilities);
+            VkSurfaceFormatKHR surfaceFormat = SelectSurfaceFormat();
             VkPresentModeKHR presentMode = SelectPresentMode();
 
             VkSwapchainCreateInfoKHR info{};
             info.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
             info.surface = m_Surface;
             info.minImageCount = imageCount;
-            info.imageFormat = m_SwapchainSurfaceFormat.format;
-            info.imageColorSpace = m_SwapchainSurfaceFormat.colorSpace;
+            info.imageFormat = surfaceFormat.format;
+            info.imageColorSpace = surfaceFormat.colorSpace;
             info.imageExtent = extent;
             info.imageArrayLayers = 1; // NOTE: Set to 2 for VR (one per eye).
             info.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
@@ -678,7 +564,6 @@ namespace eng
                 result = vkQueueWaitIdle(m_GraphicsQueue);
                 ENG_ASSERT(result == VK_SUCCESS, "Failed to wait for queue to finish.");
 
-                m_Framebuffers.clear();
                 for (std::uint32_t i = 0; i < m_SwapchainImageCount; i++)
                     vkDestroyImageView(m_Device, oldSwapchainImageViews[i], nullptr);
                 vkDestroySwapchainKHR(m_Device, oldSwapchain, nullptr);
@@ -690,6 +575,7 @@ namespace eng
             // Save these for later.
             m_SwapchainImageCount = imageCount;
             m_SwapchainExtent = extent;
+            m_SwapchainSurfaceFormat = surfaceFormat;
         }
 
         // Create swapchain image views.
@@ -716,52 +602,6 @@ namespace eng
                 VkResult result = vkCreateImageView(m_Device, &info, nullptr, &m_SwapchainImageViews[i]);
                 ENG_ASSERT(result == VK_SUCCESS, "Failed to create swapchain image view {}/{}.", i + 1, m_SwapchainImageCount);
             }
-        }
-
-        // Create swapchain framebuffers.
-        {
-            m_Framebuffers.reserve(m_SwapchainImageCount);
-
-            FramebufferInfo info;
-            info.RenderContext = this;
-            info.RenderPass = m_RenderPass->GetRenderPass();
-
-            for (std::uint32_t i = 0; i < m_SwapchainImageCount; i++)
-            {
-                info.Attachments = std::span(&m_SwapchainImageViews[i], 1);
-                m_Framebuffers.push_back(std::make_shared<Framebuffer>(info));
-            }
-        }
-    }
-
-    void RenderContext::CreateShader()
-    {
-        {
-            VkSamplerCreateInfo info{};
-            info.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
-            info.magFilter = VK_FILTER_LINEAR;
-            info.minFilter = VK_FILTER_LINEAR;
-            info.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
-            info.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-            info.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-            info.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-            info.anisotropyEnable = VK_FALSE;
-            info.compareEnable = VK_FALSE;
-            info.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
-            info.unnormalizedCoordinates = VK_FALSE;
-
-            VkResult result = vkCreateSampler(m_Device, &info, nullptr, &m_Sampler);
-            ENG_ASSERT(result == VK_SUCCESS, "Failed to create sampler.");
-        }
-
-        {
-            ShaderInfo info;
-            info.RenderContext = this;
-            info.Filepath = "Assets/Shaders/RenderContext"; // TODO, allow for non-disk stored shaders.
-            info.Topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_FAN;
-            info.RenderPass = m_RenderPass->GetRenderPass();
-
-            m_Shader = std::make_shared<Shader>(info);
         }
     }
 

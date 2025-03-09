@@ -25,7 +25,7 @@ namespace vc
             colorAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
             colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
             colorAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-            colorAttachment.finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL; // TODO: might be wrong?
+            colorAttachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
 
             VkAttachmentReference colorAttachmentReference{};
             colorAttachmentReference.attachment = 0; // Index into info.pAttachments; referring to colorAttachment
@@ -162,29 +162,6 @@ namespace vc
 
     void VulkanCraftLayer::OnRender()
     {
-        // TODO: my plan
-        // RenderContext will have its own pipeline, renderpass, and framebuffers.
-        // It will simply render a client framebuffer to a fullscreen quad. Since
-        // it's using a shader, client framebuffer resizes can be called from OnEvent,
-        // since it will be stretched, via a sampler2D, to fit the swapchain extent.
-        // 
-        // UPDATE: the above stretching one, does not work, and two does not make sense.
-        // I'm going to attempt to remove the extra pipeline, renderpass, and framebuffers,
-        // but I'm committing this because I did a lot of work and it currently works.
-        // 
-        // Rendering order:
-        //  1) RenderContext::BeginFrame
-        //  2) begin first client renderpass
-        //  3) render client stuff to client framebuffer
-        //  4) end last client renderpass (likely same as first)
-        //  5) OnImGuiRender
-        //  6) execute imgui draw list (imgui's own renderpass, pipeline, vertex/index buffers)
-        //  7) RenderContext::EndFrame
-        // 
-        // NOTE: ImGui "rendering" code (OnImGuiRender) doesn't actually execute
-        // any graphics commands, it just collates all its textured quads into a
-        // draw list. This draw list will then be used to actually render it.
-
         // TODO: Store a window's render context as a pointer in each
         // layer with a "RenderContext& Layer::GetRenderContext()"?
         auto& context = eng::Application::Get().GetWindow().GetRenderContext();
@@ -249,8 +226,6 @@ namespace vc
 
         // End the render pass.
         vkCmdEndRenderPass(commandBuffer);
-
-        context.SetFrameImage(m_FramebufferColorAttachments[swapchainImageIndex]);
     }
 
     void VulkanCraftLayer::OnImGuiRender()
@@ -275,21 +250,21 @@ namespace vc
         std::uint32_t swapchainImageCount = context.GetSwapchainImageCount();
 
         // Recreate the framebuffer color attachments.
-        {
-            m_FramebufferColorAttachments.clear();
-            m_FramebufferColorAttachments.reserve(swapchainImageCount);
+        //{
+        //    m_FramebufferColorAttachments.clear();
+        //    m_FramebufferColorAttachments.reserve(swapchainImageCount);
 
-            eng::FramebufferAttachmentInfo framebufferAttachmentInfo;
-            framebufferAttachmentInfo.RenderContext = &context;
-            framebufferAttachmentInfo.Extent = swapchainExtent;
-            framebufferAttachmentInfo.Format = swapchainFormat;
-            framebufferAttachmentInfo.Usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
-            framebufferAttachmentInfo.Aspect = VK_IMAGE_ASPECT_COLOR_BIT;
-            framebufferAttachmentInfo.Layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+        //    eng::FramebufferAttachmentInfo framebufferAttachmentInfo;
+        //    framebufferAttachmentInfo.RenderContext = &context;
+        //    framebufferAttachmentInfo.Extent = swapchainExtent;
+        //    framebufferAttachmentInfo.Format = swapchainFormat;
+        //    framebufferAttachmentInfo.Usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+        //    framebufferAttachmentInfo.Aspect = VK_IMAGE_ASPECT_COLOR_BIT;
+        //    framebufferAttachmentInfo.Layout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
 
-            for (std::uint32_t i = 0; i < swapchainImageCount; i++)
-                m_FramebufferColorAttachments.push_back(std::make_shared<eng::FramebufferAttachment>(framebufferAttachmentInfo));
-        }
+        //    for (std::uint32_t i = 0; i < swapchainImageCount; i++)
+        //        m_FramebufferColorAttachments.push_back(std::make_shared<eng::FramebufferAttachment>(framebufferAttachmentInfo));
+        //}
 
         // Recreate the framebuffers.
         {
@@ -301,7 +276,8 @@ namespace vc
             info.RenderPass = m_RenderPass->GetRenderPass();
             for (std::uint32_t i = 0; i < swapchainImageCount; i++)
             {
-                VkImageView colorAttachment = m_FramebufferColorAttachments[i]->GetImageView();
+                //VkImageView colorAttachment = m_FramebufferColorAttachments[i]->GetImageView();
+                VkImageView colorAttachment = context.GetSwapchainImageView(i);
                 info.Attachments = std::span(&colorAttachment, 1);
                 m_Framebuffers.push_back(std::make_shared<eng::Framebuffer>(info));
             }
