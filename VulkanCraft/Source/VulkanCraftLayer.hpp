@@ -26,7 +26,7 @@ namespace vc
         // long-term storage vs temp storage
 
         std::shared_ptr<eng::RenderPass> m_RenderPass;
-        std::vector<std::shared_ptr<eng::Image>> m_FramebufferColorAttachments;
+        std::vector<std::shared_ptr<eng::Image>> m_FramebufferDepthAttachments;
         std::vector<std::shared_ptr<eng::Framebuffer>> m_Framebuffers;
         std::shared_ptr<eng::VertexBuffer> m_VertexBuffer;
         std::shared_ptr<eng::UniformBuffer> m_UniformBuffer;

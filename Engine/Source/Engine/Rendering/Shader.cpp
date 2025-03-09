@@ -517,11 +517,13 @@ namespace eng
         multisampleStateInfo.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
         multisampleStateInfo.sampleShadingEnable = VK_FALSE;
 
-        //VkPipelineDepthStencilStateCreateInfo depthStencilInfo{};
-        //depthStencilInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
-        //depthStencilInfo.depthTestEnable = VK_FALSE; // TODO: relevant
-        //depthStencilInfo.depthWriteEnable = VK_FALSE; // TODO: relevant
-        //depthStencilInfo.depthCompareOp = VK_COMPARE_OP_LESS; // TODO: relevant
+        VkPipelineDepthStencilStateCreateInfo depthStencilInfo{};
+        depthStencilInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
+        depthStencilInfo.depthTestEnable = VK_TRUE; // TODO: relevant
+        depthStencilInfo.depthWriteEnable = VK_TRUE; // TODO: relevant
+        depthStencilInfo.depthCompareOp = VK_COMPARE_OP_LESS; // TODO: relevant
+        depthStencilInfo.depthBoundsTestEnable = VK_FALSE; // TODO
+        depthStencilInfo.stencilTestEnable = VK_FALSE; // TODO
 
         // NOTE: one of these per attachments, e.g. color outputs from fragment shader.
         VkPipelineColorBlendAttachmentState colorBlendAttachmentState{};
@@ -554,7 +556,7 @@ namespace eng
         graphicsPipelineInfo.pViewportState = &pipelineViewportStateInfo;
         graphicsPipelineInfo.pRasterizationState = &rasterizationStateInfo;
         graphicsPipelineInfo.pMultisampleState = &multisampleStateInfo;
-        graphicsPipelineInfo.pDepthStencilState = nullptr; // TODO &depthStencilInfo;
+        graphicsPipelineInfo.pDepthStencilState = &depthStencilInfo;
         graphicsPipelineInfo.pColorBlendState = &colorBlendStateInfo;
         graphicsPipelineInfo.pDynamicState = &dynamicStateInfo;
         graphicsPipelineInfo.layout = m_PipelineLayout;

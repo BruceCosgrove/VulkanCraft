@@ -15,9 +15,9 @@ namespace vc
         auto& context = eng::Application::Get().GetWindow().GetRenderContext();
 
         {
-            // TODO: update pipeline to add depth
+            std::array<VkAttachmentDescription, 2> attachments{};
 
-            VkAttachmentDescription colorAttachment{};
+            auto& colorAttachment = attachments[0];
             colorAttachment.format = context.GetSwapchainFormat();
             colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
             colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
@@ -27,26 +27,41 @@ namespace vc
             colorAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
             colorAttachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
 
+            auto& depthAttachment = attachments[1];
+            depthAttachment.format = VK_FORMAT_D24_UNORM_S8_UINT;
+            depthAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
+            depthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+            depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+            depthAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+            depthAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+            depthAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+            depthAttachment.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+
             VkAttachmentReference colorAttachmentReference{};
             colorAttachmentReference.attachment = 0; // Index into info.pAttachments; referring to colorAttachment
             colorAttachmentReference.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+            VkAttachmentReference depthAttachmentReference{};
+            depthAttachmentReference.attachment = 1; // Index into info.pAttachments; referring to colorAttachment
+            depthAttachmentReference.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 
             VkSubpassDescription subpass{};
             subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
             subpass.colorAttachmentCount = 1;
             subpass.pColorAttachments = &colorAttachmentReference;
+            subpass.pDepthStencilAttachment = &depthAttachmentReference;
 
             VkSubpassDependency dependency{};
             dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
             dependency.dstSubpass = 0;
-            dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-            dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+            dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
+            dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
             dependency.srcAccessMask = 0;
-            dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+            dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
 
             eng::RenderPassInfo info;
             info.RenderContext = &context;
-            info.Attachments = std::span(&colorAttachment, 1);
+            info.Attachments = attachments;
             info.Subpasses = std::span(&subpass, 1);
             info.SubpassDependencies = std::span(&dependency, 1);
             m_RenderPass = std::make_shared<eng::RenderPass>(info);
@@ -60,14 +75,23 @@ namespace vc
             info.Size = 1024; // 1 KiB for now, nothing fancy
             m_VertexBuffer = std::make_shared<eng::VertexBuffer>(info);
 
+            // NOTE: Assets/Shaders/Chunk uses packed data and instanced rendering,
+            // so there's no need for index buffers, hence these vertices are duplicated.
             constexpr auto data = std::to_array
             ({
-                -0.5f, -0.5f, 0.0f,  1.0f, 0.0f, 0.0f,  0.0f, 1.0f, // 0
-                +0.5f, -0.5f, 0.0f,  0.0f, 1.0f, 0.0f,  1.0f, 1.0f, // 1
-                +0.5f, +0.5f, 0.0f,  0.0f, 0.0f, 1.0f,  1.0f, 0.0f, // 2
-                +0.5f, +0.5f, 0.0f,  0.0f, 0.0f, 1.0f,  1.0f, 0.0f, // 2
-                -0.5f, +0.5f, 0.0f,  1.0f, 1.0f, 1.0f,  0.0f, 0.0f, // 3
-                -0.5f, -0.5f, 0.0f,  1.0f, 0.0f, 0.0f,  0.0f, 1.0f, // 0
+                -0.5f, -0.5f,  0.0f,  1.0f, 0.0f, 0.0f,  0.0f, 1.0f, // 0
+                +0.5f, -0.5f,  0.0f,  0.0f, 1.0f, 0.0f,  1.0f, 1.0f, // 1
+                +0.5f, +0.5f,  0.0f,  0.0f, 0.0f, 1.0f,  1.0f, 0.0f, // 2
+                +0.5f, +0.5f,  0.0f,  0.0f, 0.0f, 1.0f,  1.0f, 0.0f, // 2
+                -0.5f, +0.5f,  0.0f,  1.0f, 1.0f, 1.0f,  0.0f, 0.0f, // 3
+                -0.5f, -0.5f,  0.0f,  1.0f, 0.0f, 0.0f,  0.0f, 1.0f, // 0
+
+                 0.0f,  0.0f, -1.0f,  1.0f, 0.0f, 0.0f,  0.0f, 1.0f, // 4
+                +2.0f,  0.0f, -1.0f,  0.0f, 1.0f, 0.0f,  1.0f, 1.0f, // 5
+                +2.0f, +2.0f, -1.0f,  0.0f, 0.0f, 1.0f,  1.0f, 0.0f, // 6
+                +2.0f, +2.0f, -1.0f,  0.0f, 0.0f, 1.0f,  1.0f, 0.0f, // 6
+                 0.0f, +2.0f, -1.0f,  1.0f, 1.0f, 1.0f,  0.0f, 0.0f, // 7
+                 0.0f,  0.0f, -1.0f,  1.0f, 0.0f, 0.0f,  0.0f, 1.0f, // 4
             });
             m_VertexBuffer->SetData(data);
         }
@@ -141,7 +165,7 @@ namespace vc
         m_UniformBuffer.reset();
         m_VertexBuffer.reset();
         m_Framebuffers.clear();
-        m_FramebufferColorAttachments.clear();
+        m_FramebufferDepthAttachments.clear();
         m_RenderPass.reset();
     }
 
@@ -173,16 +197,17 @@ namespace vc
         if (context.WasSwapchainRecreated())
             CreateOrRecreateFramebuffers();
 
-        VkClearValue clearValue{};
-        clearValue.color = {(std::cosf(angle) + 1.0f) * 0.5f, 0.0f, (std::sinf(angle) + 1.0f) * 0.5f, 1.0f};
+        std::array<VkClearValue, 2> clearValues{};
+        clearValues[0].color = {(std::cosf(angle) + 1.0f) * 0.5f, 0.0f, (std::sinf(angle) + 1.0f) * 0.5f, 1.0f};
+        clearValues[1].depthStencil = {1.0f, 0};
 
         VkRenderPassBeginInfo info{};
         info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
         info.renderPass = m_RenderPass->GetRenderPass();
         info.framebuffer = m_Framebuffers[swapchainImageIndex]->GetFramebuffer();
         info.renderArea.extent = extent;
-        info.clearValueCount = 1;
-        info.pClearValues = &clearValue;
+        info.clearValueCount = static_cast<std::uint32_t>(clearValues.size());
+        info.pClearValues = clearValues.data();
 
         // Begin the render pass.
         vkCmdBeginRenderPass(commandBuffer, &info, VK_SUBPASS_CONTENTS_INLINE);
@@ -222,7 +247,7 @@ namespace vc
         scissor.extent = extent;
         vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 
-        vkCmdDraw(commandBuffer, 6, 1, 0, 0);
+        vkCmdDraw(commandBuffer, 12, 1, 0, 0);
 
         // End the render pass.
         vkCmdEndRenderPass(commandBuffer);
@@ -250,21 +275,21 @@ namespace vc
         std::uint32_t swapchainImageCount = context.GetSwapchainImageCount();
 
         // Recreate the framebuffer color attachments.
-        //{
-        //    m_FramebufferColorAttachments.clear();
-        //    m_FramebufferColorAttachments.reserve(swapchainImageCount);
+        {
+            m_FramebufferDepthAttachments.clear();
+            m_FramebufferDepthAttachments.reserve(swapchainImageCount);
 
-        //    eng::FramebufferAttachmentInfo framebufferAttachmentInfo;
-        //    framebufferAttachmentInfo.RenderContext = &context;
-        //    framebufferAttachmentInfo.Extent = swapchainExtent;
-        //    framebufferAttachmentInfo.Format = swapchainFormat;
-        //    framebufferAttachmentInfo.Usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
-        //    framebufferAttachmentInfo.Aspect = VK_IMAGE_ASPECT_COLOR_BIT;
-        //    framebufferAttachmentInfo.Layout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+            eng::FramebufferAttachmentInfo framebufferAttachmentInfo;
+            framebufferAttachmentInfo.RenderContext = &context;
+            framebufferAttachmentInfo.Extent = swapchainExtent;
+            framebufferAttachmentInfo.Format = VK_FORMAT_D24_UNORM_S8_UINT;
+            framebufferAttachmentInfo.Usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+            framebufferAttachmentInfo.Aspect = VK_IMAGE_ASPECT_DEPTH_BIT;
+            framebufferAttachmentInfo.Layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 
-        //    for (std::uint32_t i = 0; i < swapchainImageCount; i++)
-        //        m_FramebufferColorAttachments.push_back(std::make_shared<eng::FramebufferAttachment>(framebufferAttachmentInfo));
-        //}
+            for (std::uint32_t i = 0; i < swapchainImageCount; i++)
+                m_FramebufferDepthAttachments.push_back(std::make_shared<eng::FramebufferAttachment>(framebufferAttachmentInfo));
+        }
 
         // Recreate the framebuffers.
         {
@@ -276,9 +301,12 @@ namespace vc
             info.RenderPass = m_RenderPass->GetRenderPass();
             for (std::uint32_t i = 0; i < swapchainImageCount; i++)
             {
-                //VkImageView colorAttachment = m_FramebufferColorAttachments[i]->GetImageView();
-                VkImageView colorAttachment = context.GetSwapchainImageView(i);
-                info.Attachments = std::span(&colorAttachment, 1);
+                auto attachments = std::to_array
+                ({
+                    context.GetSwapchainImageView(i),
+                    m_FramebufferDepthAttachments[i]->GetImageView(),
+                });
+                info.Attachments = attachments;
                 m_Framebuffers.push_back(std::make_shared<eng::Framebuffer>(info));
             }
         }
