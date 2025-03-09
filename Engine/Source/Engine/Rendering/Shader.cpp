@@ -3,6 +3,7 @@
 #include "Engine/IO/FileIO.hpp"
 #include "Engine/Rendering/RenderContext.hpp"
 #include "Engine/Rendering/UniformBuffer.hpp"
+#include "Engine/Rendering/StorageBuffer.hpp"
 #include "Engine/Rendering/VertexBuffer.hpp"
 #include <shaderc/shaderc.hpp>
 #include <spirv_cross/spirv_reflect.hpp>
@@ -90,16 +91,21 @@ namespace eng
 
     void Shader::UpdateDescriptorSet(ShaderDescriptorSetData const& data)
     {
-        // Get the data for this frame.
-        VkDescriptorSet descriptorSet = m_DescriptorSets[m_Context.GetSwapchainImageIndex()];
+        std::uint32_t writeCount = static_cast<std::uint32_t>(data.UniformBuffers.size() + data.StorageBuffers.size() + data.Samplers.size());
+
+        if (writeCount == 0)
+            return;
 
         // TODO: don't allocate every frame.
         std::vector<VkWriteDescriptorSet> writes;
-        writes.reserve(data.UniformBuffers.size() + data.Samplers.size());
+        writes.reserve(writeCount);
         std::vector<VkDescriptorBufferInfo> bufferInfos;
-        writes.reserve(data.UniformBuffers.size());
+        writes.reserve(data.UniformBuffers.size() + data.StorageBuffers.size());
         std::vector<VkDescriptorImageInfo> imageInfos;
         writes.reserve(data.Samplers.size());
+
+        // Get the data for this frame.
+        VkDescriptorSet descriptorSet = m_DescriptorSets[m_Context.GetSwapchainImageIndex()];
 
         // Update descriptor sets.
 
@@ -110,17 +116,30 @@ namespace eng
             bufferInfo.offset = uniformBuffer.Descriptor->GetOffset();
             bufferInfo.range = uniformBuffer.Descriptor->GetSize();
 
-            // TODO: multiple VkWriteDescriptorSet's, same dstSet, different dstBinding, different descriptorType
-            // e.g. VkWriteDescriptorSet 0: dstSet = set 0, dstBinding = 0, descriptorType = UNIFORM_BUFFER
-            // e.g. VkWriteDescriptorSet 1: dstSet = set 0, dstBinding = 1, descriptorType = STORAGE_BUFFER
-            // e.g. VkWriteDescriptorSet 2: dstSet = set 0, dstBinding = 2, descriptorType = COMBINED_IMAGE_SAMPLER
-
             auto& write = writes.emplace_back();
             write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
             write.dstSet = descriptorSet;
             write.dstBinding = uniformBuffer.Binding;
             write.dstArrayElement = 0; // TODO: arrays
             write.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+            write.descriptorCount = 1; // TODO: arrays
+            write.pBufferInfo = &bufferInfo;
+            //write.pTexelBufferView = // TODO: idk what these are
+        }
+
+        for (auto& storageBuffer : data.StorageBuffers)
+        {
+            auto& bufferInfo = bufferInfos.emplace_back();
+            bufferInfo.buffer = storageBuffer.Descriptor->GetBuffer();
+            bufferInfo.offset = storageBuffer.Descriptor->GetOffset();
+            bufferInfo.range = storageBuffer.Descriptor->GetSize();
+
+            auto& write = writes.emplace_back();
+            write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            write.dstSet = descriptorSet;
+            write.dstBinding = storageBuffer.Binding;
+            write.dstArrayElement = 0; // TODO: arrays
+            write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
             write.descriptorCount = 1; // TODO: arrays
             write.pBufferInfo = &bufferInfo;
             //write.pTexelBufferView = // TODO: idk what these are
@@ -144,10 +163,9 @@ namespace eng
             //write.pTexelBufferView = // TODO: idk what these are
         }
 
-        // TODO: other resource types, e.g. storage buffers
+        // TODO: other resource types
 
-        if (not writes.empty())
-            vkUpdateDescriptorSets(m_Context.GetDevice(), static_cast<std::uint32_t>(writes.size()), writes.data(), 0, nullptr);
+        vkUpdateDescriptorSets(m_Context.GetDevice(), writeCount, writes.data(), 0, nullptr);
     }
 
     std::vector<std::tuple<std::vector<std::uint8_t>, VkShaderStageFlagBits>> Shader::CompileExistingSources(fs::path const& filepath)

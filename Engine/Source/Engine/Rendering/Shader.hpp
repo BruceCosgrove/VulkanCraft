@@ -10,6 +10,7 @@ namespace eng
 {
     class RenderContext;
     class UniformBuffer;
+    class StorageBuffer;
 
     struct ShaderVertexBufferBinding
     {
@@ -33,6 +34,12 @@ namespace eng
         std::shared_ptr<UniformBuffer> Descriptor;
     };
 
+    struct ShaderStorageBufferBinding
+    {
+        std::uint32_t Binding = 0;
+        std::shared_ptr<StorageBuffer> Descriptor;
+    };
+
     struct ShaderSamplerBinding
     {
         std::uint32_t Binding = 0;
@@ -43,6 +50,7 @@ namespace eng
     struct ShaderDescriptorSetData
     {
         std::span<ShaderUniformBufferBinding> UniformBuffers;
+        std::span<ShaderStorageBufferBinding> StorageBuffers;
         std::span<ShaderSamplerBinding> Samplers;
     };
 

@@ -224,7 +224,7 @@ namespace vc
             auto uniformBuffers = std::to_array({binding0});
             auto samplers = std::to_array({binding1});
 
-            m_Shader->UpdateDescriptorSet({uniformBuffers, samplers});
+            m_Shader->UpdateDescriptorSet({uniformBuffers, {}, samplers});
         }
 
         // Bind everything.

@@ -1,10 +1,10 @@
-#include "UniformBuffer.hpp"
+#include "StorageBuffer.hpp"
 #include "Engine/Core/AssertOrVerify.hpp"
 #include "Engine/Rendering/RenderContext.hpp"
 
 namespace eng
 {
-    UniformBuffer::UniformBuffer(UniformBufferInfo const& info)
+    StorageBuffer::StorageBuffer(StorageBufferInfo const& info)
         : m_Context(*info.RenderContext)
         , m_Size(info.Size)
     {
@@ -19,7 +19,7 @@ namespace eng
         BufferUtils::CreateBuffer(
             m_Context,
             totalSize,
-            VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+            VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
             VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
             m_Buffer,
             m_DeviceMemory
@@ -31,7 +31,7 @@ namespace eng
         m_MappedMemory = std::span(static_cast<std::uint8_t*>(mappedMemory), totalSize);
     }
 
-    UniformBuffer::~UniformBuffer()
+    StorageBuffer::~StorageBuffer()
     {
         VkDevice device = m_Context.GetDevice();
 
@@ -41,7 +41,7 @@ namespace eng
         vkDestroyBuffer(device, m_Buffer, nullptr);
     }
 
-    void UniformBuffer::SetData(std::span<std::uint8_t const> data)
+    void StorageBuffer::SetData(std::span<std::uint8_t const> data)
     {
         ENG_ASSERT(data.size() <= m_Size);
 
@@ -49,17 +49,17 @@ namespace eng
         std::memcpy(frameMemory.data(), data.data(), data.size());
     }
 
-    VkDeviceSize UniformBuffer::GetOffset() const
+    VkDeviceSize StorageBuffer::GetOffset() const
     {
         return m_Size * m_Context.GetSwapchainImageIndex();
     }
 
-    VkDeviceSize UniformBuffer::GetSize() const
+    VkDeviceSize StorageBuffer::GetSize() const
     {
         return m_Size;
     }
 
-    VkBuffer UniformBuffer::GetBuffer() const
+    VkBuffer StorageBuffer::GetBuffer() const
     {
         return m_Buffer;
     }
