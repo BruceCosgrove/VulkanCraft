@@ -7,6 +7,8 @@ namespace vc
     class TextureAtlas
     {
     public:
+        ENG_IMMOVABLE_UNCOPYABLE_CLASS(TextureAtlas);
+
         TextureAtlas(
             eng::RenderContext& context,
             std::uint32_t textureSize,

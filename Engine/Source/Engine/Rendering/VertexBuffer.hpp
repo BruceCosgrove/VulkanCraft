@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Engine/Core/ClassTypes.hpp"
 #include "Engine/Rendering/BufferUtils.hpp"
 #include <span>
 
@@ -15,6 +16,8 @@ namespace eng
     class VertexBuffer
     {
     public:
+        ENG_IMMOVABLE_UNCOPYABLE_CLASS(VertexBuffer);
+
         VertexBuffer(VertexBufferInfo const& info);
         ~VertexBuffer();
 

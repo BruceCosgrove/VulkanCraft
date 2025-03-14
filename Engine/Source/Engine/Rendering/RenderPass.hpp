@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Engine/Core/ClassTypes.hpp"
 #include <vulkan/vulkan.h>
 #include <span>
 
@@ -18,6 +19,8 @@ namespace eng
     class RenderPass
     {
     public:
+        ENG_IMMOVABLE_UNCOPYABLE_CLASS(RenderPass);
+
         RenderPass(RenderPassInfo const& info);
         ~RenderPass();
 

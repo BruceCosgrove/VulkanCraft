@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Engine/Core/ClassTypes.hpp"
 #include "Engine/Rendering/BufferUtils.hpp"
 #include <span>
 
@@ -18,6 +19,8 @@ namespace eng
     class StorageBuffer
     {
     public:
+        ENG_IMMOVABLE_UNCOPYABLE_CLASS(StorageBuffer);
+
         StorageBuffer(StorageBufferInfo const& info);
         ~StorageBuffer();
 

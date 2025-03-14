@@ -91,7 +91,7 @@ namespace eng
 }
 
 #define _ENG_EVENT_GET_STATIC_TYPE(type) \
-    static EventType GetStaticType() noexcept { return type; }
+    static ::eng::EventType GetStaticType() noexcept { return type; }
 
 #define _ENG_ASSERT_EVENT_INTERFACE(type) \
-    static_assert(EventI<type>, #type " must satisfy the event interface concept.")
+    static_assert(::eng::EventI<type>, #type " must satisfy the event interface concept.")

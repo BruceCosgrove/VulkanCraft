@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Engine/Core/ClassTypes.hpp"
 #include <vulkan/vulkan.h>
 #include <span>
 
@@ -17,6 +18,8 @@ namespace eng
     class Framebuffer
     {
     public:
+        ENG_IMMOVABLE_UNCOPYABLE_CLASS(Framebuffer);
+
         Framebuffer(FramebufferInfo const& info);
         ~Framebuffer();
 

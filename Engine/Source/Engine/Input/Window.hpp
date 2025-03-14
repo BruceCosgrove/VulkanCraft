@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Engine/Core/ClassTypes.hpp"
 #include "Engine/Core/LayerStack.hpp"
 #include "Engine/Rendering/RenderContext.hpp"
 #include <string>
@@ -22,6 +23,8 @@ namespace eng
     class Window
     {
     public:
+        ENG_IMMOVABLE_UNCOPYABLE_CLASS(Window);
+
         GLFWwindow* GetNativeWindow();
         RenderContext& GetRenderContext();
         LayerStack& GetLayerStack();

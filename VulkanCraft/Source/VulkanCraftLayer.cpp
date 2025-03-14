@@ -99,13 +99,15 @@ namespace vc
         }
 
         {
+            auto bindings = std::to_array<eng::ShaderVertexBufferBinding>
+            ({
+                {0, VK_VERTEX_INPUT_RATE_VERTEX, {0}},
+            });
+
             eng::ShaderInfo info;
             info.RenderContext = &context;
             info.Filepath = "Assets/Shaders/Chunk";
-            info.VertexBufferBindings =
-            {
-                {0, VK_VERTEX_INPUT_RATE_VERTEX, {0}},
-            };
+            info.VertexBufferBindings = bindings;
             info.Topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
             info.RenderPass = m_RenderPass->GetRenderPass();
             m_Shader = std::make_shared<eng::Shader>(info);

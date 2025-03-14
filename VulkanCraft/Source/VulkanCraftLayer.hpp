@@ -10,6 +10,8 @@ namespace vc
     class VulkanCraftLayer : public eng::Layer
     {
     public:
+        ENG_IMMOVABLE_UNCOPYABLE_DEFAULTABLE_CLASS(VulkanCraftLayer);
+
         virtual void OnAttach() override;
         virtual void OnDetach() override;
         virtual void OnEvent(eng::Event& event) override;

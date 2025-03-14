@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Engine/Core/ClassTypes.hpp"
 #include <spdlog/spdlog.h>
 #include <memory>
 #include <string>
@@ -16,6 +17,8 @@ namespace eng
     class Log
     {
     public:
+        ENG_STATIC_CLASS(Log);
+
         static spdlog::logger& GetEngineLogger();
         static spdlog::logger& GetClientLogger();
     private:

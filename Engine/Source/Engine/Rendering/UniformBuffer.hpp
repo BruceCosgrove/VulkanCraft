@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Engine/Core/ClassTypes.hpp"
 #include "Engine/Rendering/BufferUtils.hpp"
 #include <span>
 
@@ -18,6 +19,8 @@ namespace eng
     class UniformBuffer
     {
     public:
+        ENG_IMMOVABLE_UNCOPYABLE_CLASS(UniformBuffer);
+
         UniformBuffer(UniformBufferInfo const& info);
         ~UniformBuffer();
 

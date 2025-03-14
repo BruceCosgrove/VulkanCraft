@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Engine/Core/ClassTypes.hpp"
 #include "Engine/Input/Window.hpp"
 
 namespace eng
@@ -15,6 +16,8 @@ namespace eng
     class Application
     {
     public:
+        ENG_IMMOVABLE_UNCOPYABLE_CLASS(Application);
+
         // Global accessor for the application instance.
         static Application& Get(); // Defined in Entrypoint.cpp
 

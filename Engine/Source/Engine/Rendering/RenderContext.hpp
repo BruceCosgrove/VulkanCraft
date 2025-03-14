@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Engine/Core/ClassTypes.hpp"
 #include <vulkan/vulkan.h>
 #include <functional>
 #include <memory>
@@ -17,6 +18,8 @@ namespace eng
     class RenderContext
     {
     public:
+        ENG_IMMOVABLE_UNCOPYABLE_CLASS(RenderContext);
+
         VkCommandBuffer BeginOneTimeCommandBuffer();
         void EndOneTimeCommandBuffer(VkCommandBuffer commandBuffer);
 

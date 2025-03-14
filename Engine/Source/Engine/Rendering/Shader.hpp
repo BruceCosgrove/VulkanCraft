@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Engine/Core/ClassTypes.hpp"
 #include <vulkan/vulkan.h>
 #include <filesystem>
 #include <memory>
@@ -17,15 +18,6 @@ namespace eng
         std::uint32_t Binding = 0;
         VkVertexInputRate InputRate = VK_VERTEX_INPUT_RATE_VERTEX;
         std::vector<std::uint32_t> Locations;
-    };
-
-    struct ShaderInfo
-    {
-        RenderContext* RenderContext = nullptr;
-        std::filesystem::path Filepath;
-        std::vector<ShaderVertexBufferBinding> VertexBufferBindings;
-        VkPrimitiveTopology Topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
-        VkRenderPass RenderPass = VK_NULL_HANDLE;
     };
 
     struct ShaderUniformBufferBinding
@@ -54,11 +46,22 @@ namespace eng
         std::span<ShaderSamplerBinding> Samplers;
     };
 
+    struct ShaderInfo
+    {
+        RenderContext* RenderContext = nullptr;
+        std::filesystem::path Filepath;
+        std::span<ShaderVertexBufferBinding> VertexBufferBindings;
+        VkPrimitiveTopology Topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+        VkRenderPass RenderPass = VK_NULL_HANDLE;
+    };
+
     // TODO: separate shader from pipeline.
     // The pipeline can be recreated without recreating the shader.
     class Shader
     {
     public:
+        ENG_IMMOVABLE_UNCOPYABLE_CLASS(Shader);
+
         Shader(ShaderInfo const& info);
         ~Shader();
 

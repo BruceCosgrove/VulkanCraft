@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Engine/Core/ClassTypes.hpp"
 #include "Engine/Core/Timestep.hpp"
 #include "Engine/Input/Event/Event.hpp"
 
@@ -8,7 +9,8 @@ namespace eng
     class Layer
     {
     public:
-        virtual ~Layer() = default;
+        ENG_IMMOVABLE_UNCOPYABLE_INHERITABLE_CLASS(Layer);
+
         virtual void OnAttach() {}
         virtual void OnDetach() {}
         virtual void OnEvent(Event& event) {}
