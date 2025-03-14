@@ -50,7 +50,7 @@ namespace vc
             colorAttachmentReference.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
             VkAttachmentReference depthAttachmentReference{};
-            depthAttachmentReference.attachment = 1; // Index into info.pAttachments; referring to colorAttachment
+            depthAttachmentReference.attachment = 1; // Index into info.pAttachments; referring to depthAttachment
             depthAttachmentReference.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 
             VkSubpassDescription subpass{};
