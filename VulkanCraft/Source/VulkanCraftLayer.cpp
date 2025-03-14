@@ -6,21 +6,21 @@ namespace vc
 {
     struct LocalUniformBuffer
     {
-        alignas(16) glm::mat4 ViewProjection;
+        alignas(16) mat4 ViewProjection;
 
         struct alignas(16)
         {
-            alignas(8) glm::uvec2 TextureCount;
-            alignas(8) glm::vec2 TextureScale;         // 1.0f / TextureCount
-            alignas(4) std::uint32_t TexturesPerLayer; // TextureCount.x * TextureCount.y
-            alignas(4) float TextureThreshold;         // 0.5f / (size of a single texture in pixels)
+            alignas(8) uvec2 TextureCount;
+            alignas(8) vec2 TextureScale;    // 1.0f / TextureCount
+            alignas(4) u32 TexturesPerLayer; // TextureCount.x * TextureCount.y
+            alignas(4) f32 TextureThreshold; // 0.5f / (size of a single texture in pixels)
         } BlockTextureAtlas;
     };
 
     void VulkanCraftLayer::OnAttach()
     {
         // TODO: context retrieval needs to be reworked with multiple windows.
-        auto& context = eng::Application::Get().GetWindow().GetRenderContext();
+        auto& context = Application::Get().GetWindow().GetRenderContext();
 
         {
             std::array<VkAttachmentDescription, 2> attachments{};
@@ -67,55 +67,55 @@ namespace vc
             dependency.srcAccessMask = 0;
             dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
 
-            eng::RenderPassInfo info;
+            RenderPassInfo info;
             info.RenderContext = &context;
             info.Attachments = attachments;
             info.Subpasses = std::span(&subpass, 1);
             info.SubpassDependencies = std::span(&dependency, 1);
-            m_RenderPass = std::make_shared<eng::RenderPass>(info);
+            m_RenderPass = std::make_shared<RenderPass>(info);
         }
 
         CreateOrRecreateFramebuffers();
 
         {
-            eng::VertexBufferInfo info;
+            VertexBufferInfo info;
             info.RenderContext = &context;
             info.Size = 1024; // 1 KiB for now, nothing fancy
-            m_VertexBuffer = std::make_shared<eng::VertexBuffer>(info);
+            m_VertexBuffer = std::make_shared<VertexBuffer>(info);
         }
 
         {
-            eng::UniformBufferInfo info;
+            UniformBufferInfo info;
             info.RenderContext = &context;
             info.Size = sizeof(LocalUniformBuffer);
-            m_UniformBuffer = std::make_shared<eng::UniformBuffer>(info);
+            m_UniformBuffer = std::make_shared<UniformBuffer>(info);
         }
 
         {
-            eng::StorageBufferInfo info;
+            StorageBufferInfo info;
             info.RenderContext = &context;
             info.Size = 1024; // 1 KiB for now, nothing fancy
-            m_StorageBuffer = std::make_shared<eng::StorageBuffer>(info);
+            m_StorageBuffer = std::make_shared<StorageBuffer>(info);
         }
 
         {
-            auto bindings = std::to_array<eng::ShaderVertexBufferBinding>
+            auto bindings = std::to_array<ShaderVertexBufferBinding>
             ({
                 {0, VK_VERTEX_INPUT_RATE_VERTEX, {0}},
             });
 
-            eng::ShaderInfo info;
+            ShaderInfo info;
             info.RenderContext = &context;
             info.Filepath = "Assets/Shaders/Chunk";
             info.VertexBufferBindings = bindings;
             info.Topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
             info.RenderPass = m_RenderPass->GetRenderPass();
-            m_Shader = std::make_shared<eng::Shader>(info);
+            m_Shader = std::make_shared<Shader>(info);
         }
 
         {
 #define VC_TEXTURE(x) R"(D:\Dorkspace\Programming\Archive\VanillaDefault-Resource-Pack-16x-1.21\assets\minecraft\textures\)" x
-            std::vector<eng::LocalTexture> textures;
+            std::vector<LocalTexture> textures;
             textures.reserve(4);
             textures.emplace_back(VC_TEXTURE("block/amethyst_block.png"));
             textures.emplace_back(VC_TEXTURE("block/ancient_debris_side.png"));
@@ -124,8 +124,8 @@ namespace vc
             m_BlockTextureAtlas = std::make_unique<TextureAtlas>(context, 16, textures);
         }
 
-        m_CameraController.SetPosition(glm::vec3(0.0f, 0.0f, -1.0f));
-        m_CameraController.SetRotation(glm::vec3(0.0f, glm::radians(180.0f), 0.0f));
+        m_CameraController.SetPosition(vec3(0.0f, 0.0f, -1.0f));
+        m_CameraController.SetRotation(vec3(0.0f, glm::radians(180.0f), 0.0f));
         m_CameraController.SetFOV(glm::radians(90.0f));
         m_CameraController.SetNearPlane(0.001f);
         m_CameraController.SetFarPlane(1000.0f);
@@ -135,7 +135,7 @@ namespace vc
 
     void VulkanCraftLayer::OnDetach()
     {
-        auto& context = eng::Application::Get().GetWindow().GetRenderContext();
+        auto& context = Application::Get().GetWindow().GetRenderContext();
         VkDevice device = context.GetDevice();
 
         m_BlockTextureAtlas.reset();
@@ -149,7 +149,7 @@ namespace vc
         m_RenderPass.reset();
     }
 
-    void VulkanCraftLayer::OnEvent(eng::Event& event)
+    void VulkanCraftLayer::OnEvent(Event& event)
     {
         // TODO: remove
         //ENG_LOG_DEBUG("VulkanCraftLayer::OnEvent(TODO: event logging)");
@@ -157,8 +157,8 @@ namespace vc
         event.Dispatch(&m_CameraController, &CameraController::OnEvent);
     }
 
-    static float angle = 0.0f;
-    void VulkanCraftLayer::OnUpdate(eng::Timestep timestep)
+    static f32 angle = 0.0f;
+    void VulkanCraftLayer::OnUpdate(Timestep timestep)
     {
         angle += timestep;
         m_CameraController.OnUpdate(timestep);
@@ -168,10 +168,10 @@ namespace vc
     {
         // TODO: Store a window's render context as a pointer in each
         // layer with a "RenderContext& Layer::GetRenderContext()"?
-        auto& context = eng::Application::Get().GetWindow().GetRenderContext();
+        auto& context = Application::Get().GetWindow().GetRenderContext();
         VkExtent2D extent = context.GetSwapchainExtent();
         VkCommandBuffer commandBuffer = context.GetActiveCommandBuffer();
-        std::uint32_t swapchainImageIndex = context.GetSwapchainImageIndex();
+        u32 swapchainImageIndex = context.GetSwapchainImageIndex();
 
         // Recreate the framebuffer if necessary.
         if (context.WasSwapchainRecreated())
@@ -186,7 +186,7 @@ namespace vc
         info.renderPass = m_RenderPass->GetRenderPass();
         info.framebuffer = m_Framebuffers[swapchainImageIndex]->GetFramebuffer();
         info.renderArea.extent = extent;
-        info.clearValueCount = static_cast<std::uint32_t>(clearValues.size());
+        info.clearValueCount = static_cast<u32>(clearValues.size());
         info.pClearValues = clearValues.data();
 
         // Begin the render pass.
@@ -194,7 +194,7 @@ namespace vc
 
         // Set all the necessary data.
         {
-            m_VertexBuffer->SetData(std::to_array<glm::uvec2>
+            m_VertexBuffer->SetData(std::to_array<uvec2>
             ({
                 {0, 0},
             }));
@@ -207,20 +207,20 @@ namespace vc
             localUniformBuffer.BlockTextureAtlas.TextureThreshold = m_BlockTextureAtlas->GetTextureThreshold();
             m_UniformBuffer->SetData(localUniformBuffer);
 
-            m_StorageBuffer->SetData(std::to_array<glm::uvec2>
+            m_StorageBuffer->SetData(std::to_array<uvec2>
             ({
                 {0, 4 << 16}, // back face
             }));
 
-            auto uniformBuffers = std::to_array<eng::ShaderUniformBufferBinding>
+            auto uniformBuffers = std::to_array<ShaderUniformBufferBinding>
             ({
                 {0, m_UniformBuffer},
             });
-            auto storageBuffers = std::to_array<eng::ShaderStorageBufferBinding>
+            auto storageBuffers = std::to_array<ShaderStorageBufferBinding>
             ({
                 {1, m_StorageBuffer},
             });
-            auto samplers = std::to_array<eng::ShaderSamplerBinding>
+            auto samplers = std::to_array<ShaderSamplerBinding>
             ({
                 {2, m_BlockTextureAtlas->GetSampler(), m_BlockTextureAtlas->GetTexture()->GetImageView()},
             });
@@ -236,9 +236,9 @@ namespace vc
         // https://stackoverflow.com/questions/45570326/flipping-the-viewport-in-vulkan
         VkViewport viewport{};
         viewport.x = 0.0f;
-        viewport.y = static_cast<float>(extent.height);
-        viewport.width = static_cast<float>(extent.width);
-        viewport.height = -static_cast<float>(extent.height);
+        viewport.y = static_cast<f32>(extent.height);
+        viewport.width = static_cast<f32>(extent.width);
+        viewport.height = -static_cast<f32>(extent.height);
         viewport.minDepth = 0.0f;
         viewport.maxDepth = 1.0f;
         vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
@@ -263,24 +263,24 @@ namespace vc
         ImGui::End();
     }
 
-    void VulkanCraftLayer::OnWindowCloseEvent(eng::WindowCloseEvent& event)
+    void VulkanCraftLayer::OnWindowCloseEvent(WindowCloseEvent& event)
     {
-        eng::Application::Get().Terminate();
+        Application::Get().Terminate();
     }
 
     void VulkanCraftLayer::CreateOrRecreateFramebuffers()
     {
-        auto& context = eng::Application::Get().GetWindow().GetRenderContext();
+        auto& context = Application::Get().GetWindow().GetRenderContext();
         VkExtent2D swapchainExtent = context.GetSwapchainExtent();
         VkFormat swapchainFormat = context.GetSwapchainFormat();
-        std::uint32_t swapchainImageCount = context.GetSwapchainImageCount();
+        u32 swapchainImageCount = context.GetSwapchainImageCount();
 
         // Recreate the framebuffer color attachments.
         {
             m_FramebufferDepthAttachments.clear();
             m_FramebufferDepthAttachments.reserve(swapchainImageCount);
 
-            eng::FramebufferAttachmentInfo framebufferAttachmentInfo;
+            FramebufferAttachmentInfo framebufferAttachmentInfo;
             framebufferAttachmentInfo.RenderContext = &context;
             framebufferAttachmentInfo.Extent = swapchainExtent;
             framebufferAttachmentInfo.Format = VK_FORMAT_D24_UNORM_S8_UINT;
@@ -288,8 +288,8 @@ namespace vc
             framebufferAttachmentInfo.Aspect = VK_IMAGE_ASPECT_DEPTH_BIT;
             framebufferAttachmentInfo.Layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 
-            for (std::uint32_t i = 0; i < swapchainImageCount; i++)
-                m_FramebufferDepthAttachments.push_back(std::make_shared<eng::FramebufferAttachment>(framebufferAttachmentInfo));
+            for (u32 i = 0; i < swapchainImageCount; i++)
+                m_FramebufferDepthAttachments.push_back(std::make_shared<FramebufferAttachment>(framebufferAttachmentInfo));
         }
 
         // Recreate the framebuffers.
@@ -297,10 +297,10 @@ namespace vc
             m_Framebuffers.clear();
             m_Framebuffers.reserve(swapchainImageCount);
 
-            eng::FramebufferInfo info;
+            FramebufferInfo info;
             info.RenderContext = &context;
             info.RenderPass = m_RenderPass->GetRenderPass();
-            for (std::uint32_t i = 0; i < swapchainImageCount; i++)
+            for (u32 i = 0; i < swapchainImageCount; i++)
             {
                 auto attachments = std::to_array
                 ({
@@ -308,7 +308,7 @@ namespace vc
                     m_FramebufferDepthAttachments[i]->GetImageView(),
                 });
                 info.Attachments = attachments;
-                m_Framebuffers.push_back(std::make_shared<eng::Framebuffer>(info));
+                m_Framebuffers.push_back(std::make_shared<Framebuffer>(info));
             }
         }
     }

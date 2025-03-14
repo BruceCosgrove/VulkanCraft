@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Engine/Core/ClassTypes.hpp"
+#include "Engine/Core/DataTypes.hpp"
 #include <vulkan/vulkan.h>
 #include <functional>
 #include <memory>
@@ -29,13 +30,13 @@ namespace eng
 
         VkSurfaceKHR GetSurface() const;
         VkDevice GetDevice() const;
-        std::uint32_t GetGraphicsFamily() const;
-        std::uint32_t GetPresentFamily() const;
+        u32 GetGraphicsFamily() const;
+        u32 GetPresentFamily() const;
         VkQueue GetGraphicsQueue() const;
         VkQueue GetPresentQueue() const;
-        VkImageView GetSwapchainImageView(std::uint32_t index) const;
-        std::uint32_t GetSwapchainImageCount() const;
-        std::uint32_t GetSwapchainImageIndex() const;
+        VkImageView GetSwapchainImageView(u32 index) const;
+        u32 GetSwapchainImageCount() const;
+        u32 GetSwapchainImageIndex() const;
         VkExtent2D GetSwapchainExtent() const;
         VkFormat GetSwapchainFormat() const;
         bool WasSwapchainRecreated() const;
@@ -64,13 +65,13 @@ namespace eng
         void CreateFencesAndSemaphores();
 
         VkExtent2D SelectExtent(VkSurfaceCapabilitiesKHR const& surfaceCapabilities) const;
-        std::uint32_t SelectImageCount(VkSurfaceCapabilitiesKHR const& surfaceCapabilities) const;
+        u32 SelectImageCount(VkSurfaceCapabilitiesKHR const& surfaceCapabilities) const;
         VkSurfaceFormatKHR SelectSurfaceFormat() const;
         VkPresentModeKHR SelectPresentMode() const;
     private:
         // Per-application context.
 
-        inline static std::uint32_t s_RenderContextCount = 0;
+        inline static u32 s_RenderContextCount = 0;
         inline static VkInstance s_Instance = VK_NULL_HANDLE;
 #if ENG_CONFIG_DEBUG
         inline static VkDebugUtilsMessengerEXT s_DebugUtilsMessenger = VK_NULL_HANDLE;
@@ -84,8 +85,8 @@ namespace eng
 
         VkSurfaceKHR m_Surface = VK_NULL_HANDLE;
         VkDevice m_Device = VK_NULL_HANDLE;
-        std::uint32_t m_GraphicsFamily = VK_QUEUE_FAMILY_IGNORED;
-        std::uint32_t m_PresentFamily = VK_QUEUE_FAMILY_IGNORED;
+        u32 m_GraphicsFamily = VK_QUEUE_FAMILY_IGNORED;
+        u32 m_PresentFamily = VK_QUEUE_FAMILY_IGNORED;
         VkQueue m_GraphicsQueue = VK_NULL_HANDLE;
         VkQueue m_PresentQueue = VK_NULL_HANDLE;
 
@@ -94,15 +95,15 @@ namespace eng
         VkSwapchainKHR m_Swapchain = VK_NULL_HANDLE;
         std::unique_ptr<VkImage[]> m_SwapchainImages;
         std::unique_ptr<VkImageView[]> m_SwapchainImageViews;
-        std::uint32_t m_SwapchainImageCount = 0;
+        u32 m_SwapchainImageCount = 0;
         VkExtent2D m_SwapchainExtent{0, 0};
         VkSurfaceFormatKHR m_SwapchainSurfaceFormat{};
         bool m_RecreateSwapchain = false;
         bool m_WasSwapchainRecreated = false;
 
         VkCommandPool m_CommandPool = VK_NULL_HANDLE;
-        std::uint32_t m_FrameIndex = 0;
-        std::uint32_t m_SemaphoreIndex = 0;
+        u32 m_FrameIndex = 0;
+        u32 m_SemaphoreIndex = 0;
         std::unique_ptr<VkCommandBuffer[]> m_FrameCommandBuffers;
         std::unique_ptr<VkFence[]> m_FrameInFlightFences;
         std::unique_ptr<VkSemaphore[]> m_ImageAcquiredSemaphores;

@@ -4,7 +4,7 @@
 
 namespace eng
 {
-    bool ReadFile(std::filesystem::path const& filepath, std::string& contents) noexcept
+    bool ReadFile(path const& filepath, string& contents) noexcept
     {
         try
         {
@@ -33,7 +33,7 @@ namespace eng
         }
     }
 
-    bool WriteFile(std::filesystem::path const& filepath, std::string const& contents) noexcept
+    bool WriteFile(path const& filepath, string const& contents) noexcept
     {
         try
         {
@@ -50,7 +50,7 @@ namespace eng
         }
     }
 
-    bool ReadBinaryFile(std::filesystem::path const& filepath, std::vector<std::uint8_t>& contents) noexcept
+    bool ReadBinaryFile(path const& filepath, std::vector<u8>& contents) noexcept
     {
         try
         {
@@ -66,7 +66,7 @@ namespace eng
             if (!file.seekg(0, std::ios::beg))
                 return false;
             // Allocate enough space and set contents' size.
-            contents.resize(static_cast<std::size_t>(fileSize));
+            contents.resize(static_cast<u64>(fileSize));
             // Read the entire file into contents.
             return static_cast<bool>(file.read((char*)contents.data(), fileSize));
         }
@@ -76,7 +76,7 @@ namespace eng
         }
     }
 
-    bool WriteBinaryFile(std::filesystem::path const& filepath, std::vector<std::uint8_t> const& contents) noexcept
+    bool WriteBinaryFile(path const& filepath, std::vector<u8> const& contents) noexcept
     {
         try
         {

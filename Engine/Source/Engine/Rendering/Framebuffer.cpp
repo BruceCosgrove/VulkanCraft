@@ -1,5 +1,6 @@
 #include "Framebuffer.hpp"
 #include "Engine/Core/AssertOrVerify.hpp"
+#include "Engine/Core/DataTypes.hpp"
 #include "Engine/Rendering/RenderContext.hpp"
 
 namespace eng
@@ -13,7 +14,7 @@ namespace eng
         VkFramebufferCreateInfo framebufferInfo{};
         framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
         framebufferInfo.renderPass = info.RenderPass;
-        framebufferInfo.attachmentCount = static_cast<std::uint32_t>(info.Attachments.size());
+        framebufferInfo.attachmentCount = static_cast<u32>(info.Attachments.size());
         framebufferInfo.pAttachments = info.Attachments.data();
         framebufferInfo.width = extent.width;
         framebufferInfo.height = extent.height;

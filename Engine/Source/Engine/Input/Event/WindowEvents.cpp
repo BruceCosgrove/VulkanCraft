@@ -2,7 +2,7 @@
 
 namespace eng
 {
-    WindowMoveEvent::WindowMoveEvent(std::int32_t x, std::int32_t y) noexcept
+    WindowMoveEvent::WindowMoveEvent(i32 x, i32 y) noexcept
         : Event(GetStaticType())
         , m_X(x)
         , m_Y(y)
@@ -10,19 +10,19 @@ namespace eng
 
     }
 
-    std::int32_t WindowMoveEvent::GetX() const noexcept
+    i32 WindowMoveEvent::GetX() const noexcept
     {
         return m_X;
     }
 
-    std::int32_t WindowMoveEvent::GetY() const noexcept
+    i32 WindowMoveEvent::GetY() const noexcept
     {
         return m_Y;
     }
 
 
 
-    WindowResizeEvent::WindowResizeEvent(std::uint32_t width, std::uint32_t height) noexcept
+    WindowResizeEvent::WindowResizeEvent(u32 width, u32 height) noexcept
         : Event(GetStaticType())
         , m_Width(width)
         , m_Height(height)
@@ -30,12 +30,12 @@ namespace eng
 
     }
 
-    std::uint32_t WindowResizeEvent::GetWidth() const noexcept
+    u32 WindowResizeEvent::GetWidth() const noexcept
     {
         return m_Width;
     }
 
-    std::uint32_t WindowResizeEvent::GetHeight() const noexcept
+    u32 WindowResizeEvent::GetHeight() const noexcept
     {
         return m_Height;
     }
@@ -100,7 +100,7 @@ namespace eng
 
 
 
-    WindowFramebufferResizeEvent::WindowFramebufferResizeEvent(std::uint32_t framebufferWidth, std::uint32_t framebufferHeight) noexcept
+    WindowFramebufferResizeEvent::WindowFramebufferResizeEvent(u32 framebufferWidth, u32 framebufferHeight) noexcept
         : Event(GetStaticType())
         , m_FramebufferWidth(framebufferWidth)
         , m_FramebufferHeight(framebufferHeight)
@@ -108,19 +108,19 @@ namespace eng
 
     }
 
-    std::uint32_t WindowFramebufferResizeEvent::GetFramebufferWidth() const noexcept
+    u32 WindowFramebufferResizeEvent::GetFramebufferWidth() const noexcept
     {
         return m_FramebufferWidth;
     }
 
-    std::uint32_t WindowFramebufferResizeEvent::GetFramebufferHeight() const noexcept
+    u32 WindowFramebufferResizeEvent::GetFramebufferHeight() const noexcept
     {
         return m_FramebufferHeight;
     }
 
 
 
-    WindowContentScaleEvent::WindowContentScaleEvent(float contentScaleX, float contentScaleY) noexcept
+    WindowContentScaleEvent::WindowContentScaleEvent(f32 contentScaleX, f32 contentScaleY) noexcept
         : Event(GetStaticType())
         , m_ContentScaleX(contentScaleX)
         , m_ContentScaleY(contentScaleY)
@@ -128,12 +128,12 @@ namespace eng
 
     }
 
-    float WindowContentScaleEvent::GetContentScaleX() const noexcept
+    f32 WindowContentScaleEvent::GetContentScaleX() const noexcept
     {
         return m_ContentScaleX;
     }
 
-    float WindowContentScaleEvent::GetContentScaleY() const noexcept
+    f32 WindowContentScaleEvent::GetContentScaleY() const noexcept
     {
         return m_ContentScaleY;
     }

@@ -18,9 +18,9 @@ namespace eng
         VkInstance instance = RenderContext::GetInstance();
         VkPhysicalDevice physicalDevice = RenderContext::GetPhysicalDevice();
         VkDevice device = context.GetDevice();
-        std::uint32_t graphicsFamily = context.GetGraphicsFamily();
+        u32 graphicsFamily = context.GetGraphicsFamily();
         VkQueue graphicsQueue = context.GetGraphicsQueue();
-        std::uint32_t minImageCount = 2; // TODO
+        u32 minImageCount = 2; // TODO
 
         // Create descriptor pool.
         // https://vkguide.dev/docs/chapter-4/descriptors/
@@ -43,8 +43,8 @@ namespace eng
             VkDescriptorPoolCreateInfo info{};
             info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
             info.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
-            info.maxSets = static_cast<std::uint32_t>(1000 * descriptorPoolSizes.size());
-            info.poolSizeCount = static_cast<std::uint32_t>(descriptorPoolSizes.size());
+            info.maxSets = static_cast<u32>(1000 * descriptorPoolSizes.size());
+            info.poolSizeCount = static_cast<u32>(descriptorPoolSizes.size());
             info.pPoolSizes = descriptorPoolSizes.data();
 
             result = vkCreateDescriptorPool(device, &info, nullptr, &m_DescriptorPool);
@@ -88,7 +88,7 @@ namespace eng
         }
 
         // TODO: don't call glfw here, just get it from the window or something.
-        std::int32_t width, height;
+        i32 width, height;
         glfwGetFramebufferSize(window.GetNativeWindow(), &width, &height);
 
         // TODO: this is supposed to use the presentation queue family index

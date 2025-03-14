@@ -1,12 +1,8 @@
 #include "CameraController.hpp"
-#include <Engine/Core/Attributes.hpp>
-#include <Engine/Core/Log.hpp>
-#include <glm/gtc/matrix_transform.hpp>
-#include <glm/gtx/quaternion.hpp>
 
 namespace vc
 {
-    glm::mat4 CameraController::GetViewProjection()
+    mat4 CameraController::GetViewProjection()
     {
         // Defer recalculating the matricies until requested.
         if (m_RecalculateView)
@@ -16,13 +12,13 @@ namespace vc
         return m_Projection * m_View;
     }
 
-    void CameraController::SetPosition(glm::vec3 position)
+    void CameraController::SetPosition(vec3 position)
     {
         m_Position = position;
         m_RecalculateView = true;
     }
 
-    void CameraController::SetRotation(glm::vec3 rotation)
+    void CameraController::SetRotation(vec3 rotation)
     {
         m_Rotation = rotation;
         m_RecalculateView = true;
@@ -56,18 +52,18 @@ namespace vc
         m_MouseSensitivity = mouseSensitivity;
     }
 
-    void CameraController::OnUpdate(eng::Timestep timestep)
+    void CameraController::OnUpdate(Timestep timestep)
     {
-        if (m_MovementDirection != glm::ivec3())
+        if (m_MovementDirection != ivec3())
         {
-            glm::mat4 rotation = glm::rotate(glm::mat4(1.0f), m_Rotation.y, glm::vec3(0.0f, 1.0f, 0.0f));
-            glm::vec3 movementDirection = rotation * glm::vec4(m_MovementDirection, 1.0f);
+            mat4 rotation = glm::rotate(mat4(1.0f), m_Rotation.y, vec3(0.0f, 1.0f, 0.0f));
+            vec3 movementDirection = rotation * vec4(m_MovementDirection, 1.0f);
             m_Position += movementDirection * (m_MovementSpeed * timestep);
             m_RecalculateView = true;
         }
     }
 
-    void CameraController::OnEvent(eng::Event& event)
+    void CameraController::OnEvent(Event& event)
     {
         event.Dispatch(this, &CameraController::OnKeyPressEvent);
         event.Dispatch(this, &CameraController::OnMouseButtonPressEvent);
@@ -76,27 +72,27 @@ namespace vc
         event.Dispatch(this, &CameraController::OnWindowFocusEvent);
     }
 
-    void CameraController::OnKeyPressEvent(eng::KeyPressEvent& event)
+    void CameraController::OnKeyPressEvent(KeyPressEvent& event)
     {
-        std::int32_t direction = event.IsPressed() ? 1 : -1;
+        i32 direction = event.IsPressed() ? 1 : -1;
         switch (event.GetKeycode())
         {
-            case eng::Keycode::A: // -x
+            case Keycode::A: // -x
                 direction = -direction;
                 ENG_FALLTHROUGH;
-            case eng::Keycode::D: // +x
+            case Keycode::D: // +x
                 m_MovementDirection.x += direction;
                 break;
-            case eng::Keycode::LeftControl: // -y
+            case Keycode::LeftControl: // -y
                 direction = -direction;
                 ENG_FALLTHROUGH;
-            case eng::Keycode::Space: // +y
+            case Keycode::Space: // +y
                 m_MovementDirection.y += direction;
                 break;
-            case eng::Keycode::W: // -z
+            case Keycode::W: // -z
                 direction = -direction;
                 ENG_FALLTHROUGH;
-            case eng::Keycode::S: // +z
+            case Keycode::S: // +z
                 m_MovementDirection.z += direction;
                 break;
         }
@@ -104,19 +100,19 @@ namespace vc
         //ENG_LOG_DEBUG("CameraController::m_MovementDirection = <{},{},{}>", m_MovementDirection.x, m_MovementDirection.y, m_MovementDirection.z);
     }
 
-    void CameraController::OnMouseButtonPressEvent(eng::MouseButtonPressEvent& event)
+    void CameraController::OnMouseButtonPressEvent(MouseButtonPressEvent& event)
     {
         m_EnableMouseMovement = event.IsPressed();
     }
 
-    void CameraController::OnMouseMoveEvent(eng::MouseMoveEvent& event)
+    void CameraController::OnMouseMoveEvent(MouseMoveEvent& event)
     {
-        glm::vec2 mousePosition(event.GetX(), event.GetY());
+        vec2 mousePosition(event.GetX(), event.GetY());
 
         if (m_EnableMouseMovement and !m_IgnoreLastMousePosition)
         {
-            glm::vec2 deltaMousePosition = mousePosition - m_LastMousePosition;
-            glm::vec2 deltaMouseMovement = deltaMousePosition * m_LastViewportSizeInverse * m_MouseSensitivity;
+            vec2 deltaMousePosition = mousePosition - m_LastMousePosition;
+            vec2 deltaMouseMovement = deltaMousePosition * m_LastViewportSizeInverse * m_MouseSensitivity;
             m_Rotation.y -= deltaMouseMovement.x;
             m_Rotation.x -= deltaMouseMovement.y;
             m_RecalculateView = true;
@@ -127,13 +123,13 @@ namespace vc
         m_LastMousePosition = mousePosition;
     }
 
-    void CameraController::OnWindowFramebufferResizeEvent(eng::WindowFramebufferResizeEvent& event)
+    void CameraController::OnWindowFramebufferResizeEvent(WindowFramebufferResizeEvent& event)
     {
-        m_LastViewportSizeInverse = 1.0f / glm::vec2(event.GetFramebufferWidth(), event.GetFramebufferHeight());
+        m_LastViewportSizeInverse = 1.0f / vec2(event.GetFramebufferWidth(), event.GetFramebufferHeight());
         m_RecalculateProjection = true;
     }
 
-    void CameraController::OnWindowFocusEvent(eng::WindowFocusEvent& event)
+    void CameraController::OnWindowFocusEvent(WindowFocusEvent& event)
     {
         if (!event.IsFocused())
             m_IgnoreLastMousePosition = true;
@@ -141,7 +137,7 @@ namespace vc
 
     void CameraController::RecalculateView()
     {
-        m_View = glm::inverse(glm::translate(glm::mat4(1.0f), m_Position) * glm::toMat4(glm::quat(m_Rotation)));
+        m_View = glm::inverse(glm::translate(mat4(1.0f), m_Position) * glm::toMat4(quat(m_Rotation)));
         m_RecalculateView = false;
     }
 

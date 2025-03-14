@@ -1,16 +1,16 @@
 #pragma once
 
 #if ENG_ENABLE_ASSERTS or ENG_ENABLE_VERIFYS
+    #include "Engine/Core/DataTypes.hpp"
     #include "Engine/Core/DebugBreak.hpp"
     #include "Engine/Core/Log.hpp"
-    #include <string_view>
 
     #define _ENG_ASSERT_OR_VERIFY(dobreak, which, condition, ...) \
         do \
         { \
             if (!(condition)) \
             { \
-                ENG_LOG_ERROR(#which " ({}) failed at {}:{}", #condition, ::std::string_view(__FILE__).substr(::std::string_view(__FILE__).find("VulkanCraft") + 12ull), __LINE__); \
+                ENG_LOG_ERROR(#which " ({}) failed at {}:{}", #condition, ::eng::string_view(__FILE__).substr(::eng::string_view(__FILE__).find("VulkanCraft") + 12ull), __LINE__); \
                 __VA_OPT__(ENG_LOG_ERROR(__VA_ARGS__);) \
                 dobreak \
             } \

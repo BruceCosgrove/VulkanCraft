@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Engine/Core/ClassTypes.hpp"
+#include "Engine/Core/DataTypes.hpp"
 #include "Engine/Core/Layer.hpp"
 #include <memory>
 #include <vector>
@@ -27,6 +28,6 @@ namespace eng
         void OnRender();
     private:
         std::vector<std::unique_ptr<Layer>> m_Layers;
-        std::size_t m_OverlayInsertIndex = 0;
+        u64 m_OverlayInsertIndex = 0;
     };
 }

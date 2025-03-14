@@ -1,5 +1,6 @@
 #include "RenderPass.hpp"
 #include "Engine/Core/AssertOrVerify.hpp"
+#include "Engine/Core/DataTypes.hpp"
 #include "Engine/Rendering/RenderContext.hpp"
 
 namespace eng
@@ -9,11 +10,11 @@ namespace eng
     {
         VkRenderPassCreateInfo renderPassInfo{};
         renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-        renderPassInfo.attachmentCount = static_cast<std::uint32_t>(info.Attachments.size());
+        renderPassInfo.attachmentCount = static_cast<u32>(info.Attachments.size());
         renderPassInfo.pAttachments = info.Attachments.data();
-        renderPassInfo.subpassCount = static_cast<std::uint32_t>(info.Subpasses.size());
+        renderPassInfo.subpassCount = static_cast<u32>(info.Subpasses.size());
         renderPassInfo.pSubpasses = info.Subpasses.data();
-        renderPassInfo.dependencyCount = static_cast<std::uint32_t>(info.SubpassDependencies.size());
+        renderPassInfo.dependencyCount = static_cast<u32>(info.SubpassDependencies.size());
         renderPassInfo.pDependencies = info.SubpassDependencies.data();
 
         VkResult result = vkCreateRenderPass(m_Context.GetDevice(), &renderPassInfo, nullptr, &m_RenderPass);

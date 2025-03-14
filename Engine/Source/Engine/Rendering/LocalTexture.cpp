@@ -2,8 +2,6 @@
 #include "Engine/Core/AssertOrVerify.hpp"
 #include <stb_image.h>
 
-namespace fs = std::filesystem;
-
 namespace eng
 {
     LocalTexture::LocalTexture(LocalTexture&& texture) noexcept
@@ -29,56 +27,56 @@ namespace eng
         return *this;
     }
 
-    LocalTexture::LocalTexture(fs::path const& filepath)
+    LocalTexture::LocalTexture(path const& filepath)
         : m_Depth(1)
     {
         m_PixelSize = 4; // TODO
         m_Pixels.reset(stbi_load(filepath.string().c_str(), (int*)&m_Width, (int*)&m_Height, nullptr, STBI_rgb_alpha));
     }
 
-    LocalTexture::LocalTexture(std::uint32_t width, std::uint32_t height)
+    LocalTexture::LocalTexture(u32 width, u32 height)
         : m_PixelSize(4) // TODO
         , m_Width(width)
         , m_Height(height)
         , m_Depth(1)
-        , m_Pixels(new std::uint8_t[GetSize()])
+        , m_Pixels(new u8[GetSize()])
     {
 
     }
 
-    LocalTexture::LocalTexture(std::uint32_t width, std::uint32_t height, std::uint32_t depth)
+    LocalTexture::LocalTexture(u32 width, u32 height, u32 depth)
         : m_PixelSize(4) // TODO
         , m_Width(width)
         , m_Height(height)
         , m_Depth(depth)
-        , m_Pixels(new std::uint8_t[GetSize()])
+        , m_Pixels(new u8[GetSize()])
     {
 
     }
 
-    std::uint32_t LocalTexture::GetPixelSize() const
+    u32 LocalTexture::GetPixelSize() const
     {
         return m_PixelSize;
     }
 
-    std::uint32_t LocalTexture::GetWidth() const
+    u32 LocalTexture::GetWidth() const
     {
         return m_Width;
     }
 
-    std::uint32_t LocalTexture::GetHeight() const
+    u32 LocalTexture::GetHeight() const
     {
         return m_Height;
     }
 
-    std::uint32_t LocalTexture::GetDepth() const
+    u32 LocalTexture::GetDepth() const
     {
         return m_Depth;
     }
 
-    std::uint64_t LocalTexture::GetSize() const
+    u64 LocalTexture::GetSize() const
     {
-        return static_cast<std::uint64_t>(m_Depth) * m_Height * m_Width * m_PixelSize;
+        return static_cast<u64>(m_Depth) * m_Height * m_Width * m_PixelSize;
     }
 
     auto LocalTexture::GetPixels2D() -> pixels2

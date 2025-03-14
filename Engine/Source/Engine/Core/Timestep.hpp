@@ -1,12 +1,14 @@
 #pragma once
 
+#include "Engine/Core/DataTypes.hpp"
+
 namespace eng
 {
     struct Timestep
     {
     public:
-        Timestep(float seconds = 0.0f) noexcept;
-        operator float() const noexcept;
+        Timestep(f32 seconds = 0.0f) noexcept;
+        operator f32() const noexcept;
 
         Timestep  operator+ (Timestep timestep) const noexcept;
         Timestep& operator+=(Timestep timestep) noexcept;
@@ -17,6 +19,6 @@ namespace eng
         Timestep  operator/ (Timestep timestep) const noexcept;
         Timestep& operator/=(Timestep timestep) noexcept;
     private:
-        float m_Seconds;
+        f32 m_Seconds;
     };
 }

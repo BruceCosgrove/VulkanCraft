@@ -108,12 +108,12 @@ namespace eng
         return m_Device;
     }
 
-    std::uint32_t RenderContext::GetGraphicsFamily() const
+    u32 RenderContext::GetGraphicsFamily() const
     {
         return m_GraphicsFamily;
     }
 
-    std::uint32_t RenderContext::GetPresentFamily() const
+    u32 RenderContext::GetPresentFamily() const
     {
         return m_PresentFamily;
     }
@@ -128,17 +128,17 @@ namespace eng
         return m_PresentQueue;
     }
 
-    VkImageView RenderContext::GetSwapchainImageView(std::uint32_t index) const
+    VkImageView RenderContext::GetSwapchainImageView(u32 index) const
     {
         return m_SwapchainImageViews[index];
     }
 
-    std::uint32_t RenderContext::GetSwapchainImageCount() const
+    u32 RenderContext::GetSwapchainImageCount() const
     {
         return m_SwapchainImageCount;
     }
 
-    std::uint32_t RenderContext::GetSwapchainImageIndex() const
+    u32 RenderContext::GetSwapchainImageIndex() const
     {
         return m_FrameIndex;
     }
@@ -193,14 +193,14 @@ namespace eng
 
     RenderContext::~RenderContext()
     {
-        for (std::uint32_t i = 0; i < m_SwapchainImageCount; i++)
+        for (u32 i = 0; i < m_SwapchainImageCount; i++)
         {
             vkDestroySemaphore(m_Device, m_ImageAcquiredSemaphores[i], nullptr);
             vkDestroySemaphore(m_Device, m_RenderCompleteSemaphores[i], nullptr);
             vkDestroyFence(m_Device, m_FrameInFlightFences[i], nullptr);
         }
         vkDestroyCommandPool(m_Device, m_CommandPool, nullptr);
-        for (std::uint32_t i = 0; i < m_SwapchainImageCount; i++)
+        for (u32 i = 0; i < m_SwapchainImageCount; i++)
             vkDestroyImageView(m_Device, m_SwapchainImageViews[i], nullptr);
         vkDestroySwapchainKHR(m_Device, m_Swapchain, nullptr);
         vkDestroyDevice(m_Device, nullptr);
@@ -230,7 +230,7 @@ namespace eng
         VkSemaphore imageAcquiredSemaphore = m_ImageAcquiredSemaphores[m_SemaphoreIndex];
 
         // Get the next image to render the frame to.
-        VkResult result = vkAcquireNextImageKHR(m_Device, m_Swapchain, std::numeric_limits<std::uint64_t>::max(), imageAcquiredSemaphore, nullptr, &m_FrameIndex);
+        VkResult result = vkAcquireNextImageKHR(m_Device, m_Swapchain, std::numeric_limits<u64>::max(), imageAcquiredSemaphore, nullptr, &m_FrameIndex);
         if (result == VK_ERROR_OUT_OF_DATE_KHR or result == VK_SUBOPTIMAL_KHR)
         {
             m_RecreateSwapchain = true;
@@ -242,7 +242,7 @@ namespace eng
         VkCommandBuffer frameCommandBuffer = m_FrameCommandBuffers[m_FrameIndex];
 
         // Wait for the previous frame using this image to finish rendering.
-        result = vkWaitForFences(m_Device, 1, &frameInFlightFence, VK_TRUE, std::numeric_limits<std::uint64_t>::max());
+        result = vkWaitForFences(m_Device, 1, &frameInFlightFence, VK_TRUE, std::numeric_limits<u64>::max());
         ENG_ASSERT(result == VK_SUCCESS, "Failed to wait for frame fence.");
 
         result = vkResetFences(m_Device, 1, &frameInFlightFence);
@@ -337,7 +337,7 @@ namespace eng
 #endif
         };
 
-        std::uint32_t glfwExtensionCount;
+        u32 glfwExtensionCount;
         char const** glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
         extensions.append_range(std::span<char const*>(glfwExtensions, glfwExtensionCount));
 
@@ -348,9 +348,9 @@ namespace eng
         VkInstanceCreateInfo info{};
         info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
         info.pApplicationInfo = &applicationInfo;
-        info.enabledLayerCount = static_cast<std::uint32_t>(layers.size());
+        info.enabledLayerCount = static_cast<u32>(layers.size());
         info.ppEnabledLayerNames = layers.data();
-        info.enabledExtensionCount = static_cast<std::uint32_t>(extensions.size());
+        info.enabledExtensionCount = static_cast<u32>(extensions.size());
         info.ppEnabledExtensionNames = extensions.data();
 
         VkResult result = vkCreateInstance(&info, nullptr, &s_Instance);
@@ -383,7 +383,7 @@ namespace eng
     void RenderContext::SelectPhysicalDevice()
     {
         // Get all physical devices.
-        std::uint32_t count;
+        u32 count;
         VkResult result = vkEnumeratePhysicalDevices(s_Instance, &count, nullptr);
         ENG_ASSERT(result == VK_SUCCESS, "Failed to get physical device count.");
         ENG_ASSERT(count > 0, "No physical devices available.");
@@ -392,9 +392,9 @@ namespace eng
         ENG_ASSERT(result == VK_SUCCESS, "Failed to get physical devices.");
 
         // Select the most appropriate one.
-        std::uint32_t fallbackPhysicalDeviceIndex = 0;
-        std::uint32_t selectedPhysicalDeviceIndex = count;
-        for (std::uint32_t i = 0; i < count; i++)
+        u32 fallbackPhysicalDeviceIndex = 0;
+        u32 selectedPhysicalDeviceIndex = count;
+        for (u32 i = 0; i < count; i++)
         {
             VkPhysicalDeviceProperties properties;
             vkGetPhysicalDeviceProperties(physicalDevices[i], &properties);
@@ -426,14 +426,14 @@ namespace eng
     void RenderContext::SelectQueueFamilies()
     {
         // Get all queue family properties.
-        std::uint32_t count;
+        u32 count;
         vkGetPhysicalDeviceQueueFamilyProperties(s_PhysicalDevice, &count, nullptr);
         ENG_ASSERT(count > 0, "No queue families available.");
         std::vector<VkQueueFamilyProperties> queueFamilyProperties(count);
         vkGetPhysicalDeviceQueueFamilyProperties(s_PhysicalDevice, &count, queueFamilyProperties.data());
 
-        std::optional<std::uint32_t> graphicsFamily, presentFamily;
-        for (std::uint32_t i = 0; i < count and !(graphicsFamily and presentFamily); i++)
+        std::optional<u32> graphicsFamily, presentFamily;
+        for (u32 i = 0; i < count and !(graphicsFamily and presentFamily); i++)
         {
             if (!graphicsFamily and queueFamilyProperties[i].queueFlags & VK_QUEUE_GRAPHICS_BIT)
                 graphicsFamily = i;
@@ -460,10 +460,10 @@ namespace eng
             "VK_KHR_swapchain",
         });
 
-        float priority = 1.0f;
+        f32 priority = 1.0f;
 
         VkDeviceQueueCreateInfo deviceQueueCreateInfos[2]{};
-        std::uint32_t queueCount = 1;
+        u32 queueCount = 1;
         deviceQueueCreateInfos[0].sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
         deviceQueueCreateInfos[0].queueFamilyIndex = m_GraphicsFamily;
         deviceQueueCreateInfos[0].queueCount = 1;
@@ -487,7 +487,7 @@ namespace eng
         deviceCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
         deviceCreateInfo.queueCreateInfoCount = queueCount;
         deviceCreateInfo.pQueueCreateInfos = deviceQueueCreateInfos;
-        deviceCreateInfo.enabledExtensionCount = static_cast<std::uint32_t>(extensions.size());
+        deviceCreateInfo.enabledExtensionCount = static_cast<u32>(extensions.size());
         deviceCreateInfo.ppEnabledExtensionNames = extensions.data();
         deviceCreateInfo.pEnabledFeatures = &features;
 
@@ -510,7 +510,7 @@ namespace eng
             VkSwapchainKHR oldSwapchain = m_Swapchain;
 
             // Choose swapchain properties.
-            std::uint32_t imageCount = SelectImageCount(surfaceCapabilities);
+            u32 imageCount = SelectImageCount(surfaceCapabilities);
             VkExtent2D extent = SelectExtent(surfaceCapabilities);
             VkSurfaceFormatKHR surfaceFormat = SelectSurfaceFormat();
             VkPresentModeKHR presentMode = SelectPresentMode();
@@ -559,7 +559,7 @@ namespace eng
                 result = vkQueueWaitIdle(m_GraphicsQueue);
                 ENG_ASSERT(result == VK_SUCCESS, "Failed to wait for queue to finish.");
 
-                for (std::uint32_t i = 0; i < m_SwapchainImageCount; i++)
+                for (u32 i = 0; i < m_SwapchainImageCount; i++)
                     vkDestroyImageView(m_Device, oldSwapchainImageViews[i], nullptr);
                 vkDestroySwapchainKHR(m_Device, oldSwapchain, nullptr);
             }
@@ -591,7 +591,7 @@ namespace eng
             info.subresourceRange.baseArrayLayer = 0;
             info.subresourceRange.layerCount = 1;
 
-            for (std::uint32_t i = 0; i < m_SwapchainImageCount; i++)
+            for (u32 i = 0; i < m_SwapchainImageCount; i++)
             {
                 info.image = m_SwapchainImages[i];
                 VkResult result = vkCreateImageView(m_Device, &info, nullptr, &m_SwapchainImageViews[i]);
@@ -637,7 +637,7 @@ namespace eng
             info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
             info.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 
-            for (std::uint32_t i = 0; i < m_SwapchainImageCount; i++)
+            for (u32 i = 0; i < m_SwapchainImageCount; i++)
             {
                 result = vkCreateFence(m_Device, &info, nullptr, &m_FrameInFlightFences[i]);
                 ENG_ASSERT(result == VK_SUCCESS, "Failed to create fence.");
@@ -652,7 +652,7 @@ namespace eng
             VkSemaphoreCreateInfo info{};
             info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
 
-            for (std::uint32_t i = 0; i < m_SwapchainImageCount; i++)
+            for (u32 i = 0; i < m_SwapchainImageCount; i++)
             {
                 result = vkCreateSemaphore(m_Device, &info, nullptr, &m_ImageAcquiredSemaphores[i]);
                 ENG_ASSERT(result == VK_SUCCESS, "Failed to create fence.");
@@ -664,13 +664,13 @@ namespace eng
 
     VkExtent2D RenderContext::SelectExtent(VkSurfaceCapabilitiesKHR const& surfaceCapabilities) const
     {
-        if (surfaceCapabilities.currentExtent.width != std::numeric_limits<std::uint32_t>::max())
+        if (surfaceCapabilities.currentExtent.width != std::numeric_limits<u32>::max())
             return surfaceCapabilities.currentExtent;
 
         // TODO: figure out how to get framebuffer size without glfw.
         // I guess the swapchain has to be recreated every window resize?
-        std::uint32_t width, height;
-        glfwGetFramebufferSize(m_Window, (int*)&width, (int*)&height);
+        u32 width, height;
+        glfwGetFramebufferSize(m_Window, (i32*)&width, (i32*)&height);
 
         return
         {
@@ -680,9 +680,9 @@ namespace eng
         };
     }
 
-    std::uint32_t RenderContext::SelectImageCount(VkSurfaceCapabilitiesKHR const& surfaceCapabilities) const
+    u32 RenderContext::SelectImageCount(VkSurfaceCapabilitiesKHR const& surfaceCapabilities) const
     {
-        std::uint32_t wantedImageCount = surfaceCapabilities.minImageCount + 1;
+        u32 wantedImageCount = surfaceCapabilities.minImageCount + 1;
 
         // If unlimited max images, return the wanted image count.
         if (surfaceCapabilities.maxImageCount == 0)
@@ -719,7 +719,7 @@ namespace eng
     VkPresentModeKHR RenderContext::SelectPresentMode() const
     {
         // Get present mode count.
-        std::uint32_t presentModeCount = 0;
+        u32 presentModeCount = 0;
         VkResult result = vkGetPhysicalDeviceSurfacePresentModesKHR(s_PhysicalDevice, m_Surface, &presentModeCount, nullptr);
         ENG_ASSERT(result == VK_SUCCESS, "Failed to get present mode count.");
         ENG_ASSERT(presentModeCount > 0, "No present modes available.");

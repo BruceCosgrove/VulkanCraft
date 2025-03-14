@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Engine/Core/ClassTypes.hpp"
+#include "Engine/Core/DataTypes.hpp"
 #include <vulkan/vulkan.h>
 #include <ranges>
 
@@ -33,7 +34,7 @@ namespace eng
 
         static void UnmapMemory(RenderContext& context, VkDeviceMemory deviceMemory);
 
-        static std::uint32_t SelectMemoryType(std::uint32_t memoryType, VkMemoryPropertyFlags flags);
+        static u32 SelectMemoryType(u32 memoryType, VkMemoryPropertyFlags flags);
     };
 }
 
@@ -45,8 +46,8 @@ namespace eng
         { \
             static_assert(::std::is_convertible_v<Container, ::std::span<::std::add_const_t<typename Container::value_type>>>); \
             ::std::span<::std::add_const_t<typename Container::value_type>> data = container; \
-            setDataFunc({(::std::uint8_t const*)data.data(), data.size_bytes()}); \
+            setDataFunc({(::eng::u8 const*)data.data(), data.size_bytes()}); \
         } \
         else \
-            setDataFunc({(::std::uint8_t const*)::std::addressof(container), sizeof(container)}); \
+            setDataFunc({(::eng::u8 const*)::std::addressof(container), sizeof(container)}); \
     }

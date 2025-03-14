@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Engine/Core/DataTypes.hpp"
 #include "Engine/Input/Event/Event.hpp"
 #include "Engine/Input/MouseButtons.hpp"
 #include "Engine/Input/Modifiers.hpp"
@@ -28,13 +29,13 @@ namespace eng
     {
     public:
         _ENG_EVENT_GET_STATIC_TYPE(EventType::MouseMove);
-        MouseMoveEvent(float x, float y) noexcept;
+        MouseMoveEvent(f32 x, f32 y) noexcept;
 
-        float GetX() const noexcept;
-        float GetY() const noexcept;
+        f32 GetX() const noexcept;
+        f32 GetY() const noexcept;
     private:
-        float m_X;
-        float m_Y;
+        f32 m_X;
+        f32 m_Y;
     };
     _ENG_ASSERT_EVENT_INTERFACE(MouseMoveEvent);
 
@@ -58,13 +59,13 @@ namespace eng
     {
     public:
         _ENG_EVENT_GET_STATIC_TYPE(EventType::MouseScroll);
-        MouseScrollEvent(float scrollX, float scrollY) noexcept;
+        MouseScrollEvent(f32 scrollX, f32 scrollY) noexcept;
 
-        float GetScrollX() const noexcept;
-        float GetScrollY() const noexcept;
+        f32 GetScrollX() const noexcept;
+        f32 GetScrollY() const noexcept;
     private:
-        float m_ScrollX;
-        float m_ScrollY;
+        f32 m_ScrollX;
+        f32 m_ScrollY;
     };
     _ENG_ASSERT_EVENT_INTERFACE(MouseScrollEvent);
 }

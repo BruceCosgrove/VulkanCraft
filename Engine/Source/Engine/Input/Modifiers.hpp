@@ -5,7 +5,7 @@
 namespace eng
 {
     ENG_DEFINE_MASKED_ENUM(
-        Modifiers, std::uint8_t,
+        Modifiers, u8,
 
         Shift   = 1 << 0,
         Control = 1 << 1,

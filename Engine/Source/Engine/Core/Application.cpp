@@ -1,5 +1,6 @@
 #include "Application.hpp"
 #include "Engine/Core/AssertOrVerify.hpp"
+#include "Engine/Core/DataTypes.hpp"
 #include "Engine/Input/Event/WindowEvents.hpp"
 #define GLFW_INCLUDE_NONE
 #include <glfw/glfw3.h>
@@ -33,7 +34,7 @@ namespace eng
     {
         // Send initial framebuffer resize event to initialize all client systems.
         {
-            std::uint32_t width, height;
+            u32 width, height;
             m_Window.GetFramebufferSize(width, height);
             WindowFramebufferResizeEvent event(width, height);
             m_Window.OnEvent(event);

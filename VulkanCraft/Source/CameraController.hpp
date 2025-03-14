@@ -1,10 +1,8 @@
 #pragma once
 
-#include <Engine/Core/Timestep.hpp>
-#include <Engine/Input/Event/KeyEvents.hpp>
-#include <Engine/Input/Event/MouseEvents.hpp>
-#include <Engine/Input/Event/WindowEvents.hpp>
-#include <glm/glm.hpp>
+#include <Engine.hpp>
+
+using namespace eng;
 
 namespace vc
 {
@@ -12,46 +10,46 @@ namespace vc
     class CameraController
     {
     public:
-        glm::mat4 GetViewProjection();
+        mat4 GetViewProjection();
 
-        void SetPosition(glm::vec3 position);
-        void SetRotation(glm::vec3 rotation);
+        void SetPosition(vec3 position);
+        void SetRotation(vec3 rotation);
 
-        void SetFOV(float fovRadians);
-        void SetNearPlane(float nearPlane);
-        void SetFarPlane(float farPlane);
+        void SetFOV(f32 fovRadians);
+        void SetNearPlane(f32 nearPlane);
+        void SetFarPlane(f32 farPlane);
 
-        void SetMovementSpeed(float movementSpeed);
-        void SetMouseSensitivity(float mouseSensitivity);
+        void SetMovementSpeed(f32 movementSpeed);
+        void SetMouseSensitivity(f32 mouseSensitivity);
 
-        void OnUpdate(eng::Timestep timestep);
-        void OnEvent(eng::Event& event);
+        void OnUpdate(Timestep timestep);
+        void OnEvent(Event& event);
     private:
-        void OnKeyPressEvent(eng::KeyPressEvent& event);
-        void OnMouseButtonPressEvent(eng::MouseButtonPressEvent& event);
-        void OnMouseMoveEvent(eng::MouseMoveEvent& event);
-        void OnWindowFramebufferResizeEvent(eng::WindowFramebufferResizeEvent& event);
-        void OnWindowFocusEvent(eng::WindowFocusEvent& event);
+        void OnKeyPressEvent(KeyPressEvent& event);
+        void OnMouseButtonPressEvent(MouseButtonPressEvent& event);
+        void OnMouseMoveEvent(MouseMoveEvent& event);
+        void OnWindowFramebufferResizeEvent(WindowFramebufferResizeEvent& event);
+        void OnWindowFocusEvent(WindowFocusEvent& event);
 
         void RecalculateView();
         void RecalculateProjection();
     private:
-        glm::mat4 m_View; // explicitly uninitialized
-        glm::mat4 m_Projection; // explicitly uninitialized
+        mat4 m_View; // explicitly uninitialized
+        mat4 m_Projection; // explicitly uninitialized
 
-        glm::vec3 m_Position{};
-        glm::vec3 m_Rotation{};
+        vec3 m_Position{};
+        vec3 m_Rotation{};
 
-        float m_FOV = 1.0f;
-        float m_NearPlane = 0.1f;
-        float m_FarPlane = 1.0f;
+        f32 m_FOV = 1.0f;
+        f32 m_NearPlane = 0.1f;
+        f32 m_FarPlane = 1.0f;
 
-        float m_MovementSpeed = 1.0f;
-        float m_MouseSensitivity = 1.0f;
+        f32 m_MovementSpeed = 1.0f;
+        f32 m_MouseSensitivity = 1.0f;
 
-        glm::ivec3 m_MovementDirection{};
-        glm::vec2 m_LastMousePosition; // explicitly uninitialized
-        glm::vec2 m_LastViewportSizeInverse; // explicitly uninitialized
+        ivec3 m_MovementDirection{};
+        vec2 m_LastMousePosition; // explicitly uninitialized
+        vec2 m_LastViewportSizeInverse; // explicitly uninitialized
 
         bool m_RecalculateView = true;
         bool m_RecalculateProjection = true;

@@ -28,7 +28,7 @@ namespace eng
         void* mappedMemory;
         BufferUtils::MapMemory(m_Context, m_DeviceMemory, 0, m_Size, mappedMemory);
 
-        m_MappedMemory = std::span(static_cast<std::uint8_t*>(mappedMemory), totalSize);
+        m_MappedMemory = std::span(static_cast<u8*>(mappedMemory), totalSize);
     }
 
     StorageBuffer::~StorageBuffer()
@@ -41,7 +41,7 @@ namespace eng
         vkDestroyBuffer(device, m_Buffer, nullptr);
     }
 
-    void StorageBuffer::SetData(std::span<std::uint8_t const> data)
+    void StorageBuffer::SetData(std::span<u8 const> data)
     {
         ENG_ASSERT(data.size() <= m_Size);
 

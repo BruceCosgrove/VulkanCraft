@@ -10,11 +10,9 @@
 #include <array>
 #include <ranges>
 
-namespace fs = std::filesystem;
-
 namespace eng
 {
-    static VkFormat GetVulkanFormat(spirv_cross::SPIRType::BaseType baseType, std::uint32_t count)
+    static VkFormat GetVulkanFormat(spirv_cross::SPIRType::BaseType baseType, u32 count)
     {
         ENG_ASSERT(
             baseType == spirv_cross::SPIRType::Int or
@@ -42,7 +40,7 @@ namespace eng
         auto pipelineShaderStageInfos = GetPipelineShaderStageInfos(stages);
 
         // Get vertex strides, vertex input attribute descriptions, descriptor set layout bindings, and descriptor pool sizes.
-        std::vector<std::uint32_t> strides;
+        std::vector<u32> strides;
         std::vector<VkVertexInputAttributeDescription> vertexInputAttributeDescriptions;
         std::vector<VkDescriptorSetLayoutBinding> descriptorSetLayoutBindings;
         std::vector<VkDescriptorPoolSize> descriptorPoolSizes;
@@ -91,7 +89,7 @@ namespace eng
 
     void Shader::UpdateDescriptorSet(ShaderDescriptorSetData const& data)
     {
-        std::uint32_t writeCount = static_cast<std::uint32_t>(data.UniformBuffers.size() + data.StorageBuffers.size() + data.Samplers.size());
+        u32 writeCount = static_cast<u32>(data.UniformBuffers.size() + data.StorageBuffers.size() + data.Samplers.size());
 
         if (writeCount == 0)
             return;
@@ -168,7 +166,7 @@ namespace eng
         vkUpdateDescriptorSets(m_Context.GetDevice(), writeCount, writes.data(), 0, nullptr);
     }
 
-    std::vector<std::tuple<std::vector<std::uint8_t>, VkShaderStageFlagBits>> Shader::CompileExistingSources(fs::path const& filepath)
+    std::vector<std::tuple<std::vector<u8>, VkShaderStageFlagBits>> Shader::CompileExistingSources(path const& filepath)
     {
         shaderc::Compiler compiler;
         shaderc::CompileOptions options;
@@ -192,7 +190,7 @@ namespace eng
         std::views::transform([&](auto&& stage)
         {
             return std::make_tuple(
-                fs::path(filepath).replace_extension(std::get<0>(stage)),
+                path(filepath).replace_extension(std::get<0>(stage)),
                 std::get<1>(stage),
                 std::get<2>(stage)
             );
@@ -202,13 +200,13 @@ namespace eng
         std::views::filter([&](auto&& stage)
         {
             std::error_code error;
-            return fs::exists(std::get<0>(stage), error);
+            return exists(std::get<0>(stage), error);
         }) |
 
         // Compile present source files.
         std::views::transform([&](auto&& stage)
         {
-            fs::path const& stageFilepath = std::get<0>(stage);
+            path const& stageFilepath = std::get<0>(stage);
             shaderc_shader_kind kind = std::get<1>(stage);
 
             // Read the stage's source file.
@@ -224,7 +222,7 @@ namespace eng
 
             // Return the spir-v bytecode and the vulkan stage flags.
             return std::make_tuple(
-                std::vector((std::uint8_t*)result.begin(), (std::uint8_t*)result.end()),
+                std::vector((u8*)result.begin(), (u8*)result.end()),
                 std::get<2>(stage)
             );
         }) |
@@ -233,7 +231,7 @@ namespace eng
         std::ranges::to<std::vector>();
     }
 
-    std::vector<VkPipelineShaderStageCreateInfo> Shader::GetPipelineShaderStageInfos(std::span<std::tuple<std::vector<std::uint8_t>, VkShaderStageFlagBits>> stages)
+    std::vector<VkPipelineShaderStageCreateInfo> Shader::GetPipelineShaderStageInfos(std::span<std::tuple<std::vector<u8>, VkShaderStageFlagBits>> stages)
     {
         VkDevice device = m_Context.GetDevice();
 
@@ -244,12 +242,12 @@ namespace eng
         // Create shader modules.
         std::views::transform([&](auto&& stage)
         {
-            std::vector<std::uint8_t> const& code = std::get<0>(stage);
+            std::vector<u8> const& code = std::get<0>(stage);
 
             VkShaderModuleCreateInfo info{};
             info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-            info.codeSize = static_cast<std::uint32_t>(code.size());
-            info.pCode = (std::uint32_t const*)code.data();
+            info.codeSize = static_cast<u32>(code.size());
+            info.pCode = (u32 const*)code.data();
 
             VkShaderModule shaderModule = VK_NULL_HANDLE;
             VkResult result = vkCreateShaderModule(device, &info, nullptr, &shaderModule);
@@ -275,8 +273,8 @@ namespace eng
 
     void Shader::Reflect(
         ShaderInfo const& info,
-        std::span<std::tuple<std::vector<std::uint8_t>, VkShaderStageFlagBits>> stages,
-        std::vector<std::uint32_t>& strides,
+        std::span<std::tuple<std::vector<u8>, VkShaderStageFlagBits>> stages,
+        std::vector<u32>& strides,
         std::vector<VkVertexInputAttributeDescription>& vertexInputAttributeDescriptions,
         std::vector<VkDescriptorSetLayoutBinding>& descriptorSetLayoutBindings,
         std::vector<VkDescriptorPoolSize>& descriptorPoolSizes
@@ -285,9 +283,9 @@ namespace eng
         // The first stage requires extra reflection for the
         // vertex stride and input attribute descriptions.
 
-        std::vector<std::uint8_t> const& code = std::get<0>(stages.front());
+        std::vector<u8> const& code = std::get<0>(stages.front());
         // NOTE: These two are so large that they have to be stored on the heap (~18KB combined).
-        auto reflection = std::make_unique<spirv_cross::CompilerReflection>((std::uint32_t const*)code.data(), code.size() / sizeof(std::uint32_t));
+        auto reflection = std::make_unique<spirv_cross::CompilerReflection>((u32 const*)code.data(), code.size() / sizeof(u32));
         auto resources = std::make_unique<spirv_cross::ShaderResources>(reflection->get_shader_resources());
 
         ENG_ASSERT(std::get<1>(stages.front()) != VK_SHADER_STAGE_COMPUTE_BIT, "TODO: how to support compute shaders.");
@@ -295,17 +293,17 @@ namespace eng
 
 #if ENG_ENABLE_ASSERTS
         {
-            std::size_t count = 0;
+            u64 count = 0;
             for (auto& vertexBinding : info.VertexBufferBindings)
                 count += vertexBinding.Locations.size();
             ENG_ASSERT(count == resources->stage_inputs.size(), "Shader input count mismatch; expected {}, got {}.", count, resources->stage_inputs.size());
         }
 #endif
 
-        auto findBinding = [&](std::uint32_t location) -> std::uint32_t
+        auto findBinding = [&](u32 location) -> u32
         {
-            for (std::uint32_t i = 0; i < info.VertexBufferBindings.size(); i++)
-                for (std::uint32_t requiredLocation : info.VertexBufferBindings[i].Locations)
+            for (u32 i = 0; i < info.VertexBufferBindings.size(); i++)
+                for (u32 requiredLocation : info.VertexBufferBindings[i].Locations)
                     if (requiredLocation == location)
                         return i;
             ENG_ASSERT(false, "Failed to find vertex buffer binding.");
@@ -319,12 +317,12 @@ namespace eng
         for (auto& resource : resources->stage_inputs)
         {
             auto& type = reflection->get_type_from_variable(resource.id);
-            std::uint32_t location = reflection->get_decoration(resource.id, spv::DecorationLocation);
-            std::uint32_t binding = findBinding(location);
+            u32 location = reflection->get_decoration(resource.id, spv::DecorationLocation);
+            u32 binding = findBinding(location);
             auto& offset = strides[binding];
 
-            std::uint32_t size = type.width / 8; // byte size per component
-            std::uint32_t count = type.vecsize; // component count
+            u32 size = type.width / 8; // byte size per component
+            u32 count = type.vecsize; // component count
             // NOTE: yes, this will underflow the intermediate uint32, which is well-defined behavior.
             offset += (size - offset) % size; // alignment padding between the last attribute and this one
 
@@ -347,8 +345,8 @@ namespace eng
                 for (auto& resource : resources)
                 {
                     auto& type = reflection->get_type_from_variable(resource.id);
-                    std::uint32_t binding = reflection->get_decoration(resource.id, spv::DecorationBinding);
-                    std::uint32_t count = type.array.size() == 0 ? 1 : type.array[0];
+                    u32 binding = reflection->get_decoration(resource.id, spv::DecorationBinding);
+                    u32 count = type.array.size() == 0 ? 1 : type.array[0];
 
                     // Get the descriptor set layout binding if it exists.
                     auto itBindings = std::find_if(descriptorSetLayoutBindings.begin(), descriptorSetLayoutBindings.end(),
@@ -401,12 +399,12 @@ namespace eng
 
         for (auto& stage : stages.subspan(1))
         {
-            std::vector<std::uint8_t> const& code = std::get<0>(stage);
+            std::vector<u8> const& code = std::get<0>(stage);
 
             // Recreate the reflection resources with the next stage, but using the existing memory.
             resources->~ShaderResources();
             reflection->~CompilerReflection();
-            new (reflection.get()) spirv_cross::CompilerReflection((std::uint32_t const*)code.data(), code.size() / sizeof(std::uint32_t));
+            new (reflection.get()) spirv_cross::CompilerReflection((u32 const*)code.data(), code.size() / sizeof(u32));
             new (resources.get()) spirv_cross::ShaderResources(reflection->get_shader_resources());
 
             processStage(std::get<1>(stage));
@@ -419,7 +417,7 @@ namespace eng
 
         VkDescriptorSetLayoutCreateInfo info{};
         info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-        info.bindingCount = static_cast<std::uint32_t>(descriptorSetLayoutBindings.size());
+        info.bindingCount = static_cast<u32>(descriptorSetLayoutBindings.size());
         info.pBindings = descriptorSetLayoutBindings.data();
 
         VkResult result = vkCreateDescriptorSetLayout(device, &info, nullptr, &m_DescriptorSetLayout);
@@ -429,12 +427,12 @@ namespace eng
     void Shader::CreateDescriptorPool(std::span<VkDescriptorPoolSize> descriptorPoolSizes)
     {
         VkDevice device = m_Context.GetDevice();
-        std::uint32_t swapchainImageCount = m_Context.GetSwapchainImageCount();
+        u32 swapchainImageCount = m_Context.GetSwapchainImageCount();
 
         VkDescriptorPoolCreateInfo info{};
         info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-        info.maxSets = static_cast<std::uint32_t>(descriptorPoolSizes.size() * swapchainImageCount);
-        info.poolSizeCount = static_cast<std::uint32_t>(descriptorPoolSizes.size());
+        info.maxSets = static_cast<u32>(descriptorPoolSizes.size() * swapchainImageCount);
+        info.poolSizeCount = static_cast<u32>(descriptorPoolSizes.size());
         info.pPoolSizes = descriptorPoolSizes.data();
 
         VkResult result = vkCreateDescriptorPool(device, &info, nullptr, &m_DescriptorPool);
@@ -444,7 +442,7 @@ namespace eng
     void Shader::CreateDescriptorSets()
     {
         VkDevice device = m_Context.GetDevice();
-        std::uint32_t swapchainImageCount = m_Context.GetSwapchainImageCount();
+        u32 swapchainImageCount = m_Context.GetSwapchainImageCount();
 
         std::vector<VkDescriptorSetLayout> descriptorSetLayouts(swapchainImageCount, m_DescriptorSetLayout);
         m_DescriptorSets.resize(swapchainImageCount);
@@ -452,7 +450,7 @@ namespace eng
         VkDescriptorSetAllocateInfo info{};
         info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
         info.descriptorPool = m_DescriptorPool;
-        info.descriptorSetCount = static_cast<std::uint32_t>(descriptorSetLayouts.size());
+        info.descriptorSetCount = static_cast<u32>(descriptorSetLayouts.size());
         info.pSetLayouts = descriptorSetLayouts.data();
 
         VkResult result = vkAllocateDescriptorSets(device, &info, m_DescriptorSets.data());
@@ -475,7 +473,7 @@ namespace eng
 
     void Shader::CreatePipeline(
         ShaderInfo const& info,
-        std::span<std::uint32_t> strides,
+        std::span<u32> strides,
         std::span<VkVertexInputAttributeDescription> vertexInputAttributeDescriptions,
         std::span<VkPipelineShaderStageCreateInfo> pipelineShaderStageInfos
     )
@@ -489,11 +487,11 @@ namespace eng
 
         VkPipelineDynamicStateCreateInfo dynamicStateInfo{};
         dynamicStateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
-        dynamicStateInfo.dynamicStateCount = static_cast<std::uint32_t>(dynamicStates.size());
+        dynamicStateInfo.dynamicStateCount = static_cast<u32>(dynamicStates.size());
         dynamicStateInfo.pDynamicStates = dynamicStates.data();
 
         std::vector<VkVertexInputBindingDescription> vertexInputBindingDescriptions(info.VertexBufferBindings.size());
-        for (std::size_t i = 0; i < info.VertexBufferBindings.size(); i++)
+        for (u64 i = 0; i < info.VertexBufferBindings.size(); i++)
         {
             auto& vertexBinding = info.VertexBufferBindings[i];
             auto& vertexInputBindingDescription = vertexInputBindingDescriptions[i];
@@ -504,9 +502,9 @@ namespace eng
 
         VkPipelineVertexInputStateCreateInfo vertexInputStateInfo{};
         vertexInputStateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-        vertexInputStateInfo.vertexBindingDescriptionCount = static_cast<std::uint32_t>(vertexInputBindingDescriptions.size());
+        vertexInputStateInfo.vertexBindingDescriptionCount = static_cast<u32>(vertexInputBindingDescriptions.size());
         vertexInputStateInfo.pVertexBindingDescriptions = vertexInputBindingDescriptions.data();
-        vertexInputStateInfo.vertexAttributeDescriptionCount = static_cast<std::uint32_t>(vertexInputAttributeDescriptions.size());
+        vertexInputStateInfo.vertexAttributeDescriptionCount = static_cast<u32>(vertexInputAttributeDescriptions.size());
         vertexInputStateInfo.pVertexAttributeDescriptions = vertexInputAttributeDescriptions.data();
 
         VkPipelineInputAssemblyStateCreateInfo inputAssemblyStateInfo{};
@@ -566,7 +564,7 @@ namespace eng
 
         VkGraphicsPipelineCreateInfo graphicsPipelineInfo{};
         graphicsPipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-        graphicsPipelineInfo.stageCount = static_cast<std::uint32_t>(pipelineShaderStageInfos.size());
+        graphicsPipelineInfo.stageCount = static_cast<u32>(pipelineShaderStageInfos.size());
         graphicsPipelineInfo.pStages = pipelineShaderStageInfos.data();
         graphicsPipelineInfo.pVertexInputState = &vertexInputStateInfo;
         graphicsPipelineInfo.pInputAssemblyState = &inputAssemblyStateInfo;

@@ -6,7 +6,7 @@
 namespace eng
 {
     ENG_DEFINE_BOUNDED_ENUM(
-        EventType, std::uint8_t,
+        EventType, u8,
 
         // Window Events
         WindowMove,

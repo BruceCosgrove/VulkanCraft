@@ -29,13 +29,13 @@ namespace eng
         vkDestroyBuffer(device, m_Buffer, nullptr);
     }
 
-    void VertexBuffer::SetData(std::span<std::uint8_t const> data)
+    void VertexBuffer::SetData(std::span<u8 const> data)
     {
         ENG_ASSERT(data.size() <= m_Size);
         std::memcpy(m_MappedMemory, data.data(), data.size());
     }
 
-    void VertexBuffer::Bind(VkCommandBuffer commandBuffer, std::uint32_t binding)
+    void VertexBuffer::Bind(VkCommandBuffer commandBuffer, u32 binding)
     {
         VkDeviceSize offset = 0;
         vkCmdBindVertexBuffers(commandBuffer, binding, 1, &m_Buffer, &offset);

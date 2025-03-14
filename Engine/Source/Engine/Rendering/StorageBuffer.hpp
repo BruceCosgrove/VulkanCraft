@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Engine/Core/ClassTypes.hpp"
+#include "Engine/Core/DataTypes.hpp"
 #include "Engine/Rendering/BufferUtils.hpp"
 #include <span>
 
@@ -11,7 +12,7 @@ namespace eng
     struct StorageBufferInfo
     {
         RenderContext* RenderContext = nullptr;
-        std::uint64_t Size = 0; // In bytes
+        u64 Size = 0; // In bytes
     };
 
     // NOTE: this assumes it will be updated every frame, and thus does not bother with a staging buffer.
@@ -24,7 +25,7 @@ namespace eng
         StorageBuffer(StorageBufferInfo const& info);
         ~StorageBuffer();
 
-        void SetData(std::span<std::uint8_t const> data);
+        void SetData(std::span<u8 const> data);
         _ENG_BUFFER_SET_ARBITRARY_DATA(SetData)
 
         VkDeviceSize GetOffset() const;
@@ -35,6 +36,6 @@ namespace eng
         VkDeviceSize m_Size = 0;
         VkBuffer m_Buffer = VK_NULL_HANDLE;
         VkDeviceMemory m_DeviceMemory = VK_NULL_HANDLE;
-        std::span<std::uint8_t> m_MappedMemory;
+        std::span<u8> m_MappedMemory;
     };
 }

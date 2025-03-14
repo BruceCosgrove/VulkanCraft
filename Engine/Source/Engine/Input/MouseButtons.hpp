@@ -5,7 +5,7 @@
 namespace eng
 {
     ENG_DEFINE_BOUNDED_ENUM(
-		MouseButton, std::uint8_t,
+		MouseButton, u8,
 
 		One   = 1, Left     = One,
 		Two   = 2, Right    = Two,

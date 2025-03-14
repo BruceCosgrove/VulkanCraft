@@ -5,21 +5,23 @@
 #include <Engine.hpp>
 #include <memory>
 
+using namespace eng;
+
 namespace vc
 {
-    class VulkanCraftLayer : public eng::Layer
+    class VulkanCraftLayer : public Layer
     {
     public:
         ENG_IMMOVABLE_UNCOPYABLE_DEFAULTABLE_CLASS(VulkanCraftLayer);
 
         virtual void OnAttach() override;
         virtual void OnDetach() override;
-        virtual void OnEvent(eng::Event& event) override;
-        virtual void OnUpdate(eng::Timestep timestep) override;
+        virtual void OnEvent(Event& event) override;
+        virtual void OnUpdate(Timestep timestep) override;
         virtual void OnRender() override;
         void OnImGuiRender();
     private:
-        void OnWindowCloseEvent(eng::WindowCloseEvent& event);
+        void OnWindowCloseEvent(WindowCloseEvent& event);
 
         void CreateOrRecreateFramebuffers();
     private:
@@ -28,13 +30,13 @@ namespace vc
         // It would have a section for temp allocations too? like scope-wise temp allocations.
         // long-term storage vs temp storage
 
-        std::shared_ptr<eng::RenderPass> m_RenderPass;
-        std::vector<std::shared_ptr<eng::Image>> m_FramebufferDepthAttachments;
-        std::vector<std::shared_ptr<eng::Framebuffer>> m_Framebuffers;
-        std::shared_ptr<eng::VertexBuffer> m_VertexBuffer;
-        std::shared_ptr<eng::UniformBuffer> m_UniformBuffer;
-        std::shared_ptr<eng::StorageBuffer> m_StorageBuffer;
-        std::shared_ptr<eng::Shader> m_Shader;
+        std::shared_ptr<RenderPass> m_RenderPass;
+        std::vector<std::shared_ptr<Image>> m_FramebufferDepthAttachments;
+        std::vector<std::shared_ptr<Framebuffer>> m_Framebuffers;
+        std::shared_ptr<VertexBuffer> m_VertexBuffer;
+        std::shared_ptr<UniformBuffer> m_UniformBuffer;
+        std::shared_ptr<StorageBuffer> m_StorageBuffer;
+        std::shared_ptr<Shader> m_Shader;
 
         CameraController m_CameraController;
         std::unique_ptr<TextureAtlas> m_BlockTextureAtlas;

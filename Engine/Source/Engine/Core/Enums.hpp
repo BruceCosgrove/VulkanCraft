@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Engine/Core/AssertOrVerify.hpp"
+#include "Engine/Core/DataTypes.hpp"
 #include <bit>
 #include <concepts>
 
@@ -112,7 +113,7 @@ namespace eng
         _End, \
         _Begin = None + 1, \
         _Count = _End - _Begin, \
-        _BitCount = std::bit_width(_Count) \
+        _BitCount = ::std::bit_width(_Count) \
     }
 
 #define _ENG_DEFINE_MASKED_ENUM_IMPL(clazz, enumName, underlyingType, ...) \
@@ -122,7 +123,7 @@ namespace eng
         _End, \
         _Begin = 1 << 0, \
         _Mask = (_End << 1) - 3, \
-        _Count = std::countr_one(_Mask), \
+        _Count = ::std::countr_one(_Mask), \
         _BitCount = _Count \
     }
 

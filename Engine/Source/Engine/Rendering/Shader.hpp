@@ -1,8 +1,8 @@
 #pragma once
 
 #include "Engine/Core/ClassTypes.hpp"
+#include "Engine/Core/DataTypes.hpp"
 #include <vulkan/vulkan.h>
-#include <filesystem>
 #include <memory>
 #include <span>
 #include <vector>
@@ -15,26 +15,26 @@ namespace eng
 
     struct ShaderVertexBufferBinding
     {
-        std::uint32_t Binding = 0;
+        u32 Binding = 0;
         VkVertexInputRate InputRate = VK_VERTEX_INPUT_RATE_VERTEX;
-        std::vector<std::uint32_t> Locations;
+        std::vector<u32> Locations;
     };
 
     struct ShaderUniformBufferBinding
     {
-        std::uint32_t Binding = 0;
+        u32 Binding = 0;
         std::shared_ptr<UniformBuffer> Descriptor;
     };
 
     struct ShaderStorageBufferBinding
     {
-        std::uint32_t Binding = 0;
+        u32 Binding = 0;
         std::shared_ptr<StorageBuffer> Descriptor;
     };
 
     struct ShaderSamplerBinding
     {
-        std::uint32_t Binding = 0;
+        u32 Binding = 0;
         VkSampler Sampler = VK_NULL_HANDLE;
         VkImageView ImageView = VK_NULL_HANDLE;
     };
@@ -49,7 +49,7 @@ namespace eng
     struct ShaderInfo
     {
         RenderContext* RenderContext = nullptr;
-        std::filesystem::path Filepath;
+        path Filepath;
         std::span<ShaderVertexBufferBinding> VertexBufferBindings;
         VkPrimitiveTopology Topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
         VkRenderPass RenderPass = VK_NULL_HANDLE;
@@ -68,18 +68,16 @@ namespace eng
         void Bind(VkCommandBuffer commandBuffer);
         void UpdateDescriptorSet(ShaderDescriptorSetData const& data);
     private:
-        std::vector<std::tuple<std::vector<std::uint8_t>, VkShaderStageFlagBits>> CompileExistingSources(
-            std::filesystem::path const& filepath
-        );
+        std::vector<std::tuple<std::vector<u8>, VkShaderStageFlagBits>> CompileExistingSources(path const& filepath);
 
         std::vector<VkPipelineShaderStageCreateInfo> GetPipelineShaderStageInfos(
-            std::span<std::tuple<std::vector<std::uint8_t>, VkShaderStageFlagBits>> stages
+            std::span<std::tuple<std::vector<u8>, VkShaderStageFlagBits>> stages
         );
 
         void Reflect(
             ShaderInfo const& info,
-            std::span<std::tuple<std::vector<std::uint8_t>, VkShaderStageFlagBits>> stages,
-            std::vector<std::uint32_t>& strides,
+            std::span<std::tuple<std::vector<u8>, VkShaderStageFlagBits>> stages,
+            std::vector<u32>& strides,
             std::vector<VkVertexInputAttributeDescription>& vertexInputAttributeDescriptions,
             std::vector<VkDescriptorSetLayoutBinding>& descriptorSetLayoutBindings,
             std::vector<VkDescriptorPoolSize>& descriptorPoolSizes
@@ -92,7 +90,7 @@ namespace eng
 
         void CreatePipeline(
             ShaderInfo const& info,
-            std::span<std::uint32_t> strides,
+            std::span<u32> strides,
             std::span<VkVertexInputAttributeDescription> vertexInputAttributeDescriptions,
             std::span<VkPipelineShaderStageCreateInfo> pipelineShaderStageInfos
         );

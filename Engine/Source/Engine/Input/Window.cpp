@@ -43,8 +43,8 @@ namespace eng
         // TODO: separate update/render threads, and only pass the time to the update thread.
         // TODO: think about implementing FixedUpdate.
 
-        double currentTime = glfwGetTime();
-        Timestep timestep = static_cast<float>(currentTime - m_LastTime);
+        f64 currentTime = glfwGetTime();
+        Timestep timestep = static_cast<f32>(currentTime - m_LastTime);
         m_LastTime = currentTime;
 
         m_LayerStack.OnUpdate(timestep);
@@ -62,9 +62,9 @@ namespace eng
         }
     }
 
-    void Window::GetFramebufferSize(std::uint32_t& width, std::uint32_t& height) const
+    void Window::GetFramebufferSize(u32& width, u32& height) const
     {
-        glfwGetFramebufferSize(m_NativeWindow.Handle, (int*)&width, (int*)&height);
+        glfwGetFramebufferSize(m_NativeWindow.Handle, (i32*)&width, (i32*)&height);
     }
 
     void Window::OnWindowMinimizeEvent(WindowMinimizeEvent& event)
@@ -86,7 +86,7 @@ namespace eng
         // If this is the first window created, initialize GLFW.
         if (s_WindowCount++ == 0)
         {
-            glfwSetErrorCallback([](int error, char const* description)
+            glfwSetErrorCallback([](i32 error, char const* description)
             {
                 ENG_LOG_ERROR("GLFW Error ({}): {}", error, description);
             });
@@ -102,7 +102,7 @@ namespace eng
         glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API); // Vulkan
         glfwWindowHint(GLFW_VISIBLE, false); // Make the window invisible while still initializing it.
 
-        Handle = glfwCreateWindow((int)info.Width, (int)info.Height, info.Title.c_str(), nullptr, nullptr);
+        Handle = glfwCreateWindow(static_cast<i32>(info.Width), static_cast<i32>(info.Height), info.Title.c_str(), nullptr, nullptr);
         ENG_ASSERT(Handle != nullptr, "Failed to create window.");
 
         // Set the user pointer to this window to use in event callbacks.
@@ -110,19 +110,19 @@ namespace eng
 
         // Add all event callbacks.
 
-        glfwSetWindowPosCallback(Handle, [](GLFWwindow* handle, int xpos, int ypos)
+        glfwSetWindowPosCallback(Handle, [](GLFWwindow* handle, i32 xpos, i32 ypos)
         {
             Window& window = *static_cast<Window*>(glfwGetWindowUserPointer(handle));
 
-            WindowMoveEvent event(static_cast<std::int32_t>(xpos), static_cast<std::int32_t>(ypos));
+            WindowMoveEvent event(static_cast<i32>(xpos), static_cast<i32>(ypos));
             window.m_LayerStack.OnEvent(event);
         });
 
-        glfwSetWindowSizeCallback(Handle, [](GLFWwindow* handle, int width, int height)
+        glfwSetWindowSizeCallback(Handle, [](GLFWwindow* handle, i32 width, i32 height)
         {
             Window& window = *static_cast<Window*>(glfwGetWindowUserPointer(handle));
 
-            WindowResizeEvent event(static_cast<std::uint32_t>(width), static_cast<std::uint32_t>(height));
+            WindowResizeEvent event(static_cast<u32>(width), static_cast<u32>(height));
             window.m_LayerStack.OnEvent(event);
         });
 
@@ -142,7 +142,7 @@ namespace eng
             window.m_LayerStack.OnEvent(event);
         });
 
-        glfwSetWindowFocusCallback(Handle, [](GLFWwindow* handle, int focused)
+        glfwSetWindowFocusCallback(Handle, [](GLFWwindow* handle, i32 focused)
         {
             Window& window = *static_cast<Window*>(glfwGetWindowUserPointer(handle));
 
@@ -150,7 +150,7 @@ namespace eng
             window.m_LayerStack.OnEvent(event);
         });
 
-        glfwSetWindowIconifyCallback(Handle, [](GLFWwindow* handle, int iconified)
+        glfwSetWindowIconifyCallback(Handle, [](GLFWwindow* handle, i32 iconified)
         {
             Window& window = *static_cast<Window*>(glfwGetWindowUserPointer(handle));
 
@@ -159,7 +159,7 @@ namespace eng
             window.m_LayerStack.OnEvent(event);
         });
 
-        glfwSetWindowMaximizeCallback(Handle, [](GLFWwindow* handle, int maximized)
+        glfwSetWindowMaximizeCallback(Handle, [](GLFWwindow* handle, i32 maximized)
         {
             Window& window = *static_cast<Window*>(glfwGetWindowUserPointer(handle));
 
@@ -167,16 +167,16 @@ namespace eng
             window.m_LayerStack.OnEvent(event);
         });
 
-        glfwSetFramebufferSizeCallback(Handle, [](GLFWwindow* handle, int width, int height)
+        glfwSetFramebufferSizeCallback(Handle, [](GLFWwindow* handle, i32 width, i32 height)
         {
             Window& window = *static_cast<Window*>(glfwGetWindowUserPointer(handle));
 
-            WindowFramebufferResizeEvent event(static_cast<std::uint32_t>(width), static_cast<std::uint32_t>(height));
+            WindowFramebufferResizeEvent event(static_cast<u32>(width), static_cast<u32>(height));
             window.OnWindowFramebufferResizeEvent(event);
             window.m_LayerStack.OnEvent(event);
         });
 
-        glfwSetWindowContentScaleCallback(Handle, [](GLFWwindow* handle, float xscale, float yscale)
+        glfwSetWindowContentScaleCallback(Handle, [](GLFWwindow* handle, f32 xscale, f32 yscale)
         {
             Window& window = *static_cast<Window*>(glfwGetWindowUserPointer(handle));
 
@@ -184,15 +184,15 @@ namespace eng
             window.m_LayerStack.OnEvent(event);
         });
 
-        glfwSetDropCallback(Handle, [](GLFWwindow* handle, int path_count, char const* paths[])
+        glfwSetDropCallback(Handle, [](GLFWwindow* handle, i32 path_count, char const* paths[])
         {
             Window& window = *static_cast<Window*>(glfwGetWindowUserPointer(handle));
 
-            WindowPathDropEvent event({paths, static_cast<std::size_t>(path_count)});
+            WindowPathDropEvent event({paths, static_cast<u64>(path_count)});
             window.m_LayerStack.OnEvent(event);
         });
 
-        glfwSetMouseButtonCallback(Handle, [](GLFWwindow* handle, int button, int action, int mods)
+        glfwSetMouseButtonCallback(Handle, [](GLFWwindow* handle, i32 button, i32 action, i32 mods)
         {
             Window& window = *static_cast<Window*>(glfwGetWindowUserPointer(handle));
 
@@ -208,15 +208,15 @@ namespace eng
             }
         });
 
-        glfwSetCursorPosCallback(Handle, [](GLFWwindow* handle, double xpos, double ypos)
+        glfwSetCursorPosCallback(Handle, [](GLFWwindow* handle, f64 xpos, f64 ypos)
         {
             Window& window = *static_cast<Window*>(glfwGetWindowUserPointer(handle));
 
-            MouseMoveEvent event(static_cast<float>(xpos), static_cast<float>(ypos));
+            MouseMoveEvent event(static_cast<f32>(xpos), static_cast<f32>(ypos));
             window.m_LayerStack.OnEvent(event);
         });
 
-        glfwSetCursorEnterCallback(Handle, [](GLFWwindow* handle, int entered)
+        glfwSetCursorEnterCallback(Handle, [](GLFWwindow* handle, i32 entered)
         {
             Window& window = *static_cast<Window*>(glfwGetWindowUserPointer(handle));
 
@@ -224,15 +224,15 @@ namespace eng
             window.m_LayerStack.OnEvent(event);
         });
 
-        glfwSetScrollCallback(Handle, [](GLFWwindow* handle, double xoffset, double yoffset)
+        glfwSetScrollCallback(Handle, [](GLFWwindow* handle, f64 xoffset, f64 yoffset)
         {
             Window& window = *static_cast<Window*>(glfwGetWindowUserPointer(handle));
 
-            MouseScrollEvent event(static_cast<float>(xoffset), static_cast<float>(yoffset));
+            MouseScrollEvent event(static_cast<f32>(xoffset), static_cast<f32>(yoffset));
             window.m_LayerStack.OnEvent(event);
         });
 
-        glfwSetKeyCallback(Handle, [](GLFWwindow* handle, int key, int scancode, int action, int mods)
+        glfwSetKeyCallback(Handle, [](GLFWwindow* handle, i32 key, i32 scancode, i32 action, i32 mods)
         {
             Window& window = *static_cast<Window*>(glfwGetWindowUserPointer(handle));
 
@@ -250,11 +250,11 @@ namespace eng
             }
         });
 
-        glfwSetCharCallback(Handle, [](GLFWwindow* handle, unsigned int codepoint)
+        glfwSetCharCallback(Handle, [](GLFWwindow* handle, u32 codepoint)
         {
             Window& window = *static_cast<Window*>(glfwGetWindowUserPointer(handle));
 
-            KeyCharTypeEvent event(static_cast<std::uint32_t>(codepoint));
+            KeyCharTypeEvent event(static_cast<u32>(codepoint));
             window.m_LayerStack.OnEvent(event);
         });
     }

@@ -28,7 +28,7 @@ namespace eng
 
 
 
-    MouseMoveEvent::MouseMoveEvent(float x, float y) noexcept
+    MouseMoveEvent::MouseMoveEvent(f32 x, f32 y) noexcept
         : Event(GetStaticType())
         , m_X(x)
         , m_Y(y)
@@ -36,12 +36,12 @@ namespace eng
 
     }
 
-    float MouseMoveEvent::GetX() const noexcept
+    f32 MouseMoveEvent::GetX() const noexcept
     {
         return m_X;
     }
 
-    float MouseMoveEvent::GetY() const noexcept
+    f32 MouseMoveEvent::GetY() const noexcept
     {
         return m_Y;
     }
@@ -62,7 +62,7 @@ namespace eng
 
 
 
-    MouseScrollEvent::MouseScrollEvent(float scrollX, float scrollY) noexcept
+    MouseScrollEvent::MouseScrollEvent(f32 scrollX, f32 scrollY) noexcept
         : Event(GetStaticType())
         , m_ScrollX(scrollX)
         , m_ScrollY(scrollY)
@@ -70,12 +70,12 @@ namespace eng
 
     }
 
-    float MouseScrollEvent::GetScrollX() const noexcept
+    f32 MouseScrollEvent::GetScrollX() const noexcept
     {
         return m_ScrollX;
     }
 
-    float MouseScrollEvent::GetScrollY() const noexcept
+    f32 MouseScrollEvent::GetScrollY() const noexcept
     {
         return m_ScrollY;
     }

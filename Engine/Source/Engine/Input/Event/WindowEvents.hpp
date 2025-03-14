@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Engine/Core/DataTypes.hpp"
 #include "Engine/Input/Event/Event.hpp"
 #include <span>
 
@@ -9,13 +10,13 @@ namespace eng
     {
     public:
         _ENG_EVENT_GET_STATIC_TYPE(EventType::WindowMove);
-        WindowMoveEvent(std::int32_t x, std::int32_t y) noexcept;
+        WindowMoveEvent(i32 x, i32 y) noexcept;
 
-        std::int32_t GetX() const noexcept;
-        std::int32_t GetY() const noexcept;
+        i32 GetX() const noexcept;
+        i32 GetY() const noexcept;
     private:
-        std::int32_t m_X;
-        std::int32_t m_Y;
+        i32 m_X;
+        i32 m_Y;
     };
     _ENG_ASSERT_EVENT_INTERFACE(WindowMoveEvent);
     
@@ -25,13 +26,13 @@ namespace eng
     {
     public:
         _ENG_EVENT_GET_STATIC_TYPE(EventType::WindowResize);
-        WindowResizeEvent(std::uint32_t width, std::uint32_t height) noexcept;
+        WindowResizeEvent(u32 width, u32 height) noexcept;
 
-        std::uint32_t GetWidth() const noexcept;
-        std::uint32_t GetHeight() const noexcept;
+        u32 GetWidth() const noexcept;
+        u32 GetHeight() const noexcept;
     private:
-        std::uint32_t m_Width;
-        std::uint32_t m_Height;
+        u32 m_Width;
+        u32 m_Height;
     };
     _ENG_ASSERT_EVENT_INTERFACE(WindowResizeEvent);
 
@@ -103,13 +104,13 @@ namespace eng
     {
     public:
         _ENG_EVENT_GET_STATIC_TYPE(EventType::WindowFramebufferResize);
-        WindowFramebufferResizeEvent(std::uint32_t framebufferWidth, std::uint32_t framebufferHeight) noexcept;
+        WindowFramebufferResizeEvent(u32 framebufferWidth, u32 framebufferHeight) noexcept;
 
-        std::uint32_t GetFramebufferWidth() const noexcept;
-        std::uint32_t GetFramebufferHeight() const noexcept;
+        u32 GetFramebufferWidth() const noexcept;
+        u32 GetFramebufferHeight() const noexcept;
     private:
-        std::uint32_t m_FramebufferWidth;
-        std::uint32_t m_FramebufferHeight;
+        u32 m_FramebufferWidth;
+        u32 m_FramebufferHeight;
     };
     _ENG_ASSERT_EVENT_INTERFACE(WindowFramebufferResizeEvent);
 
@@ -119,13 +120,13 @@ namespace eng
     {
     public:
         _ENG_EVENT_GET_STATIC_TYPE(EventType::WindowContentScale);
-        WindowContentScaleEvent(float contentScaleX, float contentScaleY) noexcept;
+        WindowContentScaleEvent(f32 contentScaleX, f32 contentScaleY) noexcept;
 
-        float GetContentScaleX() const noexcept;
-        float GetContentScaleY() const noexcept;
+        f32 GetContentScaleX() const noexcept;
+        f32 GetContentScaleY() const noexcept;
     private:
-        float m_ContentScaleX;
-        float m_ContentScaleY;
+        f32 m_ContentScaleX;
+        f32 m_ContentScaleY;
     };
     _ENG_ASSERT_EVENT_INTERFACE(WindowContentScaleEvent);
 

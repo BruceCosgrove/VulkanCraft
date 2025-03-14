@@ -16,6 +16,7 @@ project "imgui"
     includedirs {
         "include",
         "%{IncludeDirs.engine}",
+        "%{IncludeDirs.glm}",
         "%{IncludeDirs.spdlog}",
     }
 

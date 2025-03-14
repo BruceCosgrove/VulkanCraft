@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Engine/Core/ClassTypes.hpp"
+#include "Engine/Core/DataTypes.hpp"
 #include "Engine/Core/LayerStack.hpp"
 #include "Engine/Rendering/RenderContext.hpp"
 #include <string>
@@ -14,9 +15,9 @@ namespace eng
 
     struct WindowInfo
     {
-        std::string Title = "TODO: Window Title";
-        std::uint32_t Width = 1280;
-        std::uint32_t Height = 720;
+        string Title = "TODO: Window Title";
+        u32 Width = 1280;
+        u32 Height = 720;
         bool Resizable = true;
     };
 
@@ -36,7 +37,7 @@ namespace eng
         void OnRender();
 
         // TODO: refactor this
-        void GetFramebufferSize(std::uint32_t& width, std::uint32_t& height) const;
+        void GetFramebufferSize(u32& width, u32& height) const;
     private:
         void OnWindowMinimizeEvent(WindowMinimizeEvent& event);
         void OnWindowFramebufferResizeEvent(WindowFramebufferResizeEvent& event);
@@ -49,7 +50,7 @@ namespace eng
 
             GLFWwindow* Handle;
         private:
-            inline static std::uint32_t s_WindowCount = 0;
+            inline static u32 s_WindowCount = 0;
         };
     private:
         // IMPORTANT: The order of these members is critical for initialization and shutdown.
@@ -58,7 +59,7 @@ namespace eng
         RenderContext m_RenderContext;
         LayerStack m_LayerStack;
 
-        double m_LastTime = 0.0;
+        f64 m_LastTime = 0.0;
         bool m_Minimized = false;
         bool m_ZeroSize = false;
     };

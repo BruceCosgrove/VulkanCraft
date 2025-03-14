@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Engine/Core/ClassTypes.hpp"
+#include "Engine/Core/DataTypes.hpp"
 #include "Engine/Rendering/BufferUtils.hpp"
 #include <span>
 
@@ -9,7 +10,7 @@ namespace eng
     struct VertexBufferInfo
     {
         RenderContext* RenderContext = nullptr;
-        std::uint64_t Size = 0; // In bytes
+        u64 Size = 0; // In bytes
     };
 
     // NOTE: this assumes it will be updated every frame, and thus does not bother with a staging buffer.
@@ -21,10 +22,10 @@ namespace eng
         VertexBuffer(VertexBufferInfo const& info);
         ~VertexBuffer();
 
-        void SetData(std::span<std::uint8_t const> data);
+        void SetData(std::span<u8 const> data);
         _ENG_BUFFER_SET_ARBITRARY_DATA(SetData)
 
-        void Bind(VkCommandBuffer commandBuffer, std::uint32_t binding = 0);
+        void Bind(VkCommandBuffer commandBuffer, u32 binding = 0);
     private:
         RenderContext& m_Context; // non-owning
         VkDeviceSize m_Size = 0;

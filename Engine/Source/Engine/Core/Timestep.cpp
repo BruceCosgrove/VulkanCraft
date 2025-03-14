@@ -2,13 +2,13 @@
 
 namespace eng
 {
-    Timestep::Timestep(float seconds) noexcept
+    Timestep::Timestep(f32 seconds) noexcept
         : m_Seconds(seconds)
     {
 
     }
 
-    Timestep::operator float() const noexcept
+    Timestep::operator f32() const noexcept
     {
         return m_Seconds;
     }

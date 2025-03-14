@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Engine/Core/ClassTypes.hpp"
+#include "Engine/Core/DataTypes.hpp"
 #include <spdlog/spdlog.h>
 #include <memory>
 #include <string>
@@ -11,7 +12,7 @@ namespace eng
     {
         spdlog::level::level_enum EngineLoggingLevel = spdlog::level::trace;
         spdlog::level::level_enum ClientLoggingLevel = spdlog::level::trace;
-        std::string LogFileName = "Engine.log";
+        string LogFileName = "Engine.log";
     };
 
     class Log

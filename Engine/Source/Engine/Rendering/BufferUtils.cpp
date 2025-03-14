@@ -44,7 +44,13 @@ namespace eng
         ENG_ASSERT(result == VK_SUCCESS, "Failed to bind buffer memory.");
     }
 
-    void BufferUtils::MapMemory(RenderContext& context, VkDeviceMemory deviceMemory, VkDeviceSize offset, VkDeviceSize size, void*& mappedMemory)
+    void BufferUtils::MapMemory(
+        RenderContext& context,
+        VkDeviceMemory deviceMemory,
+        VkDeviceSize offset,
+        VkDeviceSize size, 
+        void*& mappedMemory
+    )
     {
         VkResult result = vkMapMemory(context.GetDevice(), deviceMemory, offset, size, 0, &mappedMemory);
         ENG_ASSERT(result == VK_SUCCESS, "Failed to map buffer memory.");
@@ -55,14 +61,14 @@ namespace eng
         vkUnmapMemory(context.GetDevice(), deviceMemory);
     }
 
-    std::uint32_t BufferUtils::SelectMemoryType(std::uint32_t memoryType, VkMemoryPropertyFlags flags)
+    u32 BufferUtils::SelectMemoryType(u32 memoryType, VkMemoryPropertyFlags flags)
     {
         VkPhysicalDevice physicalDevice = RenderContext::GetPhysicalDevice();
 
         VkPhysicalDeviceMemoryProperties properties;
         vkGetPhysicalDeviceMemoryProperties(physicalDevice, &properties);
 
-        for (std::uint32_t i = 0; i < properties.memoryTypeCount; i++)
+        for (u32 i = 0; i < properties.memoryTypeCount; i++)
             if ((memoryType & (1 << i)) and (properties.memoryTypes[i].propertyFlags & flags) == flags)
                 return i;
 

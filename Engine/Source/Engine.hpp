@@ -6,6 +6,7 @@
 #include "Engine/Core/AssertOrVerify.hpp"
 #include "Engine/Core/Attributes.hpp"
 #include "Engine/Core/ClassTypes.hpp"
+#include "Engine/Core/DataTypes.hpp"
 #include "Engine/Core/DebugBreak.hpp"
 #include "Engine/Core/Enums.hpp"
 #include "Engine/Core/FunctionBindings.hpp"

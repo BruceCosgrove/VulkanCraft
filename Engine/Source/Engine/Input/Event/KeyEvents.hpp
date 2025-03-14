@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Engine/Core/DataTypes.hpp"
 #include "Engine/Input/Event/Event.hpp"
 #include "Engine/Input/Modifiers.hpp"
 #include "Engine/Input/Keycode.hpp"
@@ -28,11 +29,11 @@ namespace eng
     {
     public:
         _ENG_EVENT_GET_STATIC_TYPE(EventType::KeyCharType);
-        KeyCharTypeEvent(std::uint32_t codepoint) noexcept;
+        KeyCharTypeEvent(u32 codepoint) noexcept;
 
-        std::uint32_t GetCodepoint() const noexcept;
+        u32 GetCodepoint() const noexcept;
     private:
-        std::uint32_t m_Codepoint;
+        u32 m_Codepoint;
     };
     _ENG_ASSERT_EVENT_INTERFACE(KeyCharTypeEvent);
 }

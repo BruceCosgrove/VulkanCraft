@@ -7,7 +7,7 @@ namespace eng
 	// Taken from glfw3.h and modified.
 
 	ENG_DEFINE_BOUNDED_ENUM(
-		Keycode, std::uint16_t,
+		Keycode, u16,
 
 		/* Printable keys */
 		Space          =  32,

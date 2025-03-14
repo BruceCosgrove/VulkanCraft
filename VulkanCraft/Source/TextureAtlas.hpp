@@ -2,6 +2,8 @@
 
 #include <Engine.hpp>
 
+using namespace eng;
+
 namespace vc
 {
     class TextureAtlas
@@ -10,32 +12,32 @@ namespace vc
         ENG_IMMOVABLE_UNCOPYABLE_CLASS(TextureAtlas);
 
         TextureAtlas(
-            eng::RenderContext& context,
-            std::uint32_t textureSize,
-            std::span<eng::LocalTexture> textures
+            RenderContext& context,
+            u32 textureSize,
+            std::span<LocalTexture> textures
         );
         ~TextureAtlas();
 
         VkSampler GetSampler() const;
-        std::shared_ptr<eng::Texture2DArray> const& GetTexture() const;
-        glm::uvec2 GetTextureCount() const;
-        glm::vec2 GetTextureScale() const;
-        std::uint32_t GetTexturesPerLayer() const;
+        std::shared_ptr<Texture2DArray> const& GetTexture() const;
+        uvec2 GetTextureCount() const;
+        vec2 GetTextureScale() const;
+        u32 GetTexturesPerLayer() const;
         float GetTextureThreshold() const;
 
     private:
-        void Stitch(std::span<eng::LocalTexture> textures);
+        void Stitch(std::span<LocalTexture> textures);
         void CreateSampler();
     private:
-        eng::RenderContext& m_Context; // non-owning
+        RenderContext& m_Context; // non-owning
 
         VkSampler m_Sampler = VK_NULL_HANDLE;
-        std::shared_ptr<eng::Texture2DArray> m_TextureAtlas;
+        std::shared_ptr<Texture2DArray> m_TextureAtlas;
 
-        std::uint32_t m_TextureSize;
-        glm::uvec2 m_TextureCount;
-        glm::vec2 m_TextureScale;
-        std::uint32_t m_TexturesPerLayer;
-        float m_TextureThreshold;
+        u32 m_TextureSize;
+        uvec2 m_TextureCount;
+        vec2 m_TextureScale;
+        u32 m_TexturesPerLayer;
+        f32 m_TextureThreshold;
     };
 }
