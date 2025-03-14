@@ -10,6 +10,7 @@ namespace eng
         ImageUtils::CreateImage(
             m_Context,
             VK_IMAGE_TYPE_2D,
+            VK_IMAGE_VIEW_TYPE_2D,
             info.Format,
             {info.Extent.width, info.Extent.height, 1},
             info.Usage,

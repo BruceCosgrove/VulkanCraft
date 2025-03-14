@@ -5,14 +5,18 @@ layout(location = 0) in uvec2 i_PackedFaceData;
 
 layout(location = 0) out vec2 o_TexCoord;
 layout(location = 1) out flat vec2 o_TexTopLeft;
-layout(location = 2) out flat vec2 o_TexScale;
-layout(location = 3) out flat float o_TexLayer;
+layout(location = 2) out flat float o_TexLayer;
 
 // Frame data; uniform buffer; may change up to once per frame.
+struct TextureAtlas {
+    uvec2 TextureCount;     // Count, in number of textures, of the texture atlas.
+    vec2 TextureScale;      // 1.0 / TextureCount
+    uint TexturesPerLayer;  // TextureCount.x * TextureCount.y
+    float TextureThreshold; // 0.5 / (size of a single texture in pixels); Texture bleeding removal. NOTE: not the usual texture bleeding. The stuff this fixes is caused by modulated texture coordinates in the fragment shader, namely mod(1.0, 1.0), resulting in a texture coordinate of 0.0.
+};
 layout(std140, binding = 0) uniform _FrameData {
     mat4 ViewProjection;
-    
-    uvec2 BlockTextureAtlasBlockSize; // Always a power of 2. Size, in number of block textures, of the block texture atlas.
+    TextureAtlas BlockTextureAtlas;
 } FrameData;
 
 // Chunk data; storage buffer; changes every time the player moves between two chunks, or changes render distance.
@@ -26,15 +30,17 @@ void UnpackFaceData(
     const uvec2 packedFaceData,
     out uvec3 localPosition,    // 0..15
     out uvec2 size,             // 1..16
-    out uint textureID          // only 16 bits
+    out uint textureID,         // only 16 bits
+    out uint chunkIndex         // only 16 bits
 ) {
     //                   packedFaceData.y                 packedFaceData.x
     // 64  60  56  52  48  44  40  36  32   28  24  20  16  12   8   4   0
-    //   ----------------------------hhhh wwwwzzzzyyyyxxxxtttttttttttttttt
+    //   ------------hhhhwwwwzzzzyyyyxxxx cccccccccccccccctttttttttttttttt
     // x = local x, y = local y, z = local z, w = width, h = height
-    localPosition = 0xF & uvec3(packedFaceData.x >> 16, packedFaceData.x >> 20, packedFaceData.x >> 24);
-    size = 1 + (0xF & uvec2(packedFaceData.x >> 28, packedFaceData.y));
+    localPosition = 0xF & uvec3(packedFaceData.x, packedFaceData.x >> 4, packedFaceData.x >> 8);
+    size = 1 + (0xF & uvec2(packedFaceData.y >> 12, packedFaceData.y >> 16));
     textureID = 0xFFFF & packedFaceData.x;
+    chunkIndex = packedFaceData.x >> 16;
 }
 
 void UnpackChunkData(
@@ -46,7 +52,7 @@ void UnpackChunkData(
     // 64  60  56  52  48  44  40  36  32   28  24  20  16  12   8   4   0
     //   -------------fffzzzzzzzzzzzzzzzz yyyyyyyyyyyyyyyyxxxxxxxxxxxxxxxx
     // x = chunk x, y = chunk y, z = chunk z, f = face
-    relativeChunkPosition = 0xFFFF & ivec3(packedChunkData.x, packedChunkData.x >> 16, packedChunkData.y);
+    relativeChunkPosition = (0xFFFF & ivec3(packedChunkData.x, packedChunkData.x >> 16, packedChunkData.y)) << 16 >> 16;
     face = 0x7 & (packedChunkData.y >> 16);
 }
 
@@ -114,21 +120,18 @@ void main() {
     uvec3 localPosition;
     uvec2 size;
     uint textureID;
+    uint chunkIndex;
     ivec3 chunkPosition;
     uint face;
 
-    UnpackFaceData(i_PackedFaceData, localPosition, size, textureID);
-    UnpackChunkData(ChunkData.PackedChunkData[gl_DrawID], chunkPosition, face);
+    UnpackFaceData(i_PackedFaceData, localPosition, size, textureID, chunkIndex);
+    UnpackChunkData(ChunkData.PackedChunkData[chunkIndex], chunkPosition, face);
 
     // Calculate texture coordinates based on the textureID.
 
-    // TODO: precompute these two out of the shader and send them here via FrameData.
-    const vec2 textureScale = 1.0 / vec2(FrameData.BlockTextureAtlasBlockSize);
-    const uint texturesPerAtlasLayer = FrameData.BlockTextureAtlasBlockSize.x * FrameData.BlockTextureAtlasBlockSize.y;
-
-    const uint textureX = textureID % FrameData.BlockTextureAtlasBlockSize.x;
-    const uint textureY = (textureID % texturesPerAtlasLayer) / FrameData.BlockTextureAtlasBlockSize.y;
-    const uint textureZ = textureID / texturesPerAtlasLayer;
+    const uint textureX = textureID % FrameData.BlockTextureAtlas.TextureCount.x;
+    const uint textureY = (textureID % FrameData.BlockTextureAtlas.TexturesPerLayer) / FrameData.BlockTextureAtlas.TextureCount.y;
+    const uint textureZ = textureID / FrameData.BlockTextureAtlas.TexturesPerLayer;
 
     // Change which axes get scaled depending on the face direction.
     const uvec3 sizes[3] = {
@@ -143,13 +146,11 @@ void main() {
 
     const vec3 position = s_InstancePositions[face][index] * size3 + vec3(localPosition) + chunkPosition * 16;
     const vec2 texCoord = s_InstanceTexCoords[index] * size;
-    const vec2 texTopLeft = vec2(textureX, textureY) * textureScale;
-    const vec2 texScale = textureScale;
+    const vec2 texTopLeft = vec2(textureX, textureY) * FrameData.BlockTextureAtlas.TextureScale;
     const float texLayer = float(textureZ);
 
     o_TexCoord = texCoord;
     o_TexTopLeft = texTopLeft;
-    o_TexScale = texScale;
     o_TexLayer = texLayer;
     gl_Position = FrameData.ViewProjection * vec4(position, 1);
 }

@@ -16,6 +16,7 @@ namespace eng
         static void CreateImage(
             RenderContext& context,
             VkImageType type,
+            VkImageViewType viewType,
             VkFormat format,
             VkExtent3D extent,
             VkImageUsageFlags usage,

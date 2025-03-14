@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CameraController.hpp"
+#include "TextureAtlas.hpp"
 #include <Engine.hpp>
 #include <memory>
 
@@ -30,10 +31,10 @@ namespace vc
         std::vector<std::shared_ptr<eng::Framebuffer>> m_Framebuffers;
         std::shared_ptr<eng::VertexBuffer> m_VertexBuffer;
         std::shared_ptr<eng::UniformBuffer> m_UniformBuffer;
+        std::shared_ptr<eng::StorageBuffer> m_StorageBuffer;
         std::shared_ptr<eng::Shader> m_Shader;
-        VkSampler m_Sampler = VK_NULL_HANDLE;
-        std::shared_ptr<eng::Texture2D> m_Texture;
 
         CameraController m_CameraController;
+        std::unique_ptr<TextureAtlas> m_BlockTextureAtlas;
     };
 }

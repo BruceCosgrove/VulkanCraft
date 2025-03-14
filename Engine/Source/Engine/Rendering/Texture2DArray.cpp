@@ -1,4 +1,4 @@
-#include "Texture2D.hpp"
+#include "Texture2DArray.hpp"
 #include "Engine/Core/AssertOrVerify.hpp"
 #include "Engine/Rendering/BufferUtils.hpp"
 #include "Engine/Rendering/ImageUtils.hpp"
@@ -6,7 +6,7 @@
 
 namespace eng
 {
-    Texture2D::Texture2D(Texture2DInfo const& info)
+    Texture2DArray::Texture2DArray(Texture2DArrayInfo const& info)
         : Image(info.RenderContext)
     {
         // Create the staging buffer.
@@ -26,16 +26,16 @@ namespace eng
         // Copy the texture data to the staging buffer.
         void* mappedMemory;
         BufferUtils::MapMemory(m_Context, stagingDeviceMemory, 0, stagingSize, mappedMemory);
-        std::memcpy(mappedMemory, info.LocalTexture->GetPixels2D().data_handle(), stagingSize);
+        std::memcpy(mappedMemory, info.LocalTexture->GetPixels3D().data_handle(), stagingSize);
         BufferUtils::UnmapMemory(m_Context, stagingDeviceMemory);
 
         // Create the image.
-        VkExtent3D extent = {info.LocalTexture->GetWidth(), info.LocalTexture->GetHeight(), 1};
+        VkExtent3D extent = {info.LocalTexture->GetWidth(), info.LocalTexture->GetHeight(), info.LocalTexture->GetDepth()};
 
         ImageUtils::CreateImage(
             m_Context,
-            VK_IMAGE_TYPE_2D,
-            VK_IMAGE_VIEW_TYPE_2D,
+            VK_IMAGE_TYPE_3D,
+            VK_IMAGE_VIEW_TYPE_2D_ARRAY,
             info.Format,
             extent,
             VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,

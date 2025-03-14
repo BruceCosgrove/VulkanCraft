@@ -458,7 +458,6 @@ namespace eng
         auto extensions = std::to_array<char const*>
         ({
             "VK_KHR_swapchain",
-            "VK_KHR_imageless_framebuffer",
         });
 
         float priority = 1.0f;
@@ -479,22 +478,18 @@ namespace eng
             deviceQueueCreateInfos[1].pQueuePriorities = &priority;
         }
 
-        VkPhysicalDeviceImagelessFramebufferFeatures imagelessFramebufferFeatures{};
-        imagelessFramebufferFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_IMAGELESS_FRAMEBUFFER_FEATURES;
-        imagelessFramebufferFeatures.imagelessFramebuffer = VK_TRUE;
-
-        VkPhysicalDeviceFeatures2 features{};
-        features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
-        features.pNext = &imagelessFramebufferFeatures;
-        features.features.samplerAnisotropy = VK_TRUE; // TODO
+        VkPhysicalDeviceFeatures features{};
+        features.samplerAnisotropy = VK_TRUE; // TODO
+        features.multiDrawIndirect = VK_TRUE; // TODO
+        features.drawIndirectFirstInstance = VK_TRUE; // TODO
 
         VkDeviceCreateInfo deviceCreateInfo{};
         deviceCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
-        deviceCreateInfo.pNext = &features;
         deviceCreateInfo.queueCreateInfoCount = queueCount;
         deviceCreateInfo.pQueueCreateInfos = deviceQueueCreateInfos;
         deviceCreateInfo.enabledExtensionCount = static_cast<std::uint32_t>(extensions.size());
         deviceCreateInfo.ppEnabledExtensionNames = extensions.data();
+        deviceCreateInfo.pEnabledFeatures = &features;
 
         VkResult result = vkCreateDevice(s_PhysicalDevice, &deviceCreateInfo, nullptr, &m_Device);
         ENG_ASSERT(result == VK_SUCCESS, "Failed to create logical device.");

@@ -8,6 +8,7 @@ namespace eng
     void ImageUtils::CreateImage(
         RenderContext& context,
         VkImageType type,
+        VkImageViewType viewType,
         VkFormat format,
         VkExtent3D extent,
         VkImageUsageFlags usage,
@@ -58,7 +59,7 @@ namespace eng
         VkImageViewCreateInfo imageViewInfo{};
         imageViewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
         imageViewInfo.image = image;
-        imageViewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+        imageViewInfo.viewType = viewType;
         imageViewInfo.format = format;
         //imageViewInfo.components = // TODO
         imageViewInfo.subresourceRange.aspectMask = aspect;

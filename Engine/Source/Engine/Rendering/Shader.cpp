@@ -100,9 +100,9 @@ namespace eng
         std::vector<VkWriteDescriptorSet> writes;
         writes.reserve(writeCount);
         std::vector<VkDescriptorBufferInfo> bufferInfos;
-        writes.reserve(data.UniformBuffers.size() + data.StorageBuffers.size());
+        bufferInfos.reserve(data.UniformBuffers.size() + data.StorageBuffers.size());
         std::vector<VkDescriptorImageInfo> imageInfos;
-        writes.reserve(data.Samplers.size());
+        imageInfos.reserve(data.Samplers.size());
 
         // Get the data for this frame.
         VkDescriptorSet descriptorSet = m_DescriptorSets[m_Context.GetSwapchainImageIndex()];

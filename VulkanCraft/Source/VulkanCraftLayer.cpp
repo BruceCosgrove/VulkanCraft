@@ -7,6 +7,14 @@ namespace vc
     struct LocalUniformBuffer
     {
         alignas(16) glm::mat4 ViewProjection;
+
+        struct alignas(16)
+        {
+            alignas(8) glm::uvec2 TextureCount;
+            alignas(8) glm::vec2 TextureScale;         // 1.0f / TextureCount
+            alignas(4) std::uint32_t TexturesPerLayer; // TextureCount.x * TextureCount.y
+            alignas(4) float TextureThreshold;         // 0.5f / (size of a single texture in pixels)
+        } BlockTextureAtlas;
     };
 
     void VulkanCraftLayer::OnAttach()
@@ -74,26 +82,6 @@ namespace vc
             info.RenderContext = &context;
             info.Size = 1024; // 1 KiB for now, nothing fancy
             m_VertexBuffer = std::make_shared<eng::VertexBuffer>(info);
-
-            // NOTE: Assets/Shaders/Chunk uses packed data and instanced rendering,
-            // so there's no need for index buffers, hence these vertices are duplicated.
-            constexpr auto data = std::to_array
-            ({
-                -0.5f, -0.5f,  0.0f,  1.0f, 0.0f, 0.0f,  0.0f, 1.0f, // 0
-                +0.5f, -0.5f,  0.0f,  0.0f, 1.0f, 0.0f,  1.0f, 1.0f, // 1
-                +0.5f, +0.5f,  0.0f,  0.0f, 0.0f, 1.0f,  1.0f, 0.0f, // 2
-                +0.5f, +0.5f,  0.0f,  0.0f, 0.0f, 1.0f,  1.0f, 0.0f, // 2
-                -0.5f, +0.5f,  0.0f,  1.0f, 1.0f, 1.0f,  0.0f, 0.0f, // 3
-                -0.5f, -0.5f,  0.0f,  1.0f, 0.0f, 0.0f,  0.0f, 1.0f, // 0
-
-                 0.0f,  0.0f, -1.0f,  1.0f, 0.0f, 0.0f,  0.0f, 1.0f, // 4
-                +2.0f,  0.0f, -1.0f,  0.0f, 1.0f, 0.0f,  1.0f, 1.0f, // 5
-                +2.0f, +2.0f, -1.0f,  0.0f, 0.0f, 1.0f,  1.0f, 0.0f, // 6
-                +2.0f, +2.0f, -1.0f,  0.0f, 0.0f, 1.0f,  1.0f, 0.0f, // 6
-                 0.0f, +2.0f, -1.0f,  1.0f, 1.0f, 1.0f,  0.0f, 0.0f, // 7
-                 0.0f,  0.0f, -1.0f,  1.0f, 0.0f, 0.0f,  0.0f, 1.0f, // 4
-            });
-            m_VertexBuffer->SetData(data);
         }
 
         {
@@ -104,12 +92,19 @@ namespace vc
         }
 
         {
+            eng::StorageBufferInfo info;
+            info.RenderContext = &context;
+            info.Size = 1024; // 1 KiB for now, nothing fancy
+            m_StorageBuffer = std::make_shared<eng::StorageBuffer>(info);
+        }
+
+        {
             eng::ShaderInfo info;
             info.RenderContext = &context;
-            info.Filepath = "Assets/Shaders/Basic";
+            info.Filepath = "Assets/Shaders/Chunk";
             info.VertexBufferBindings =
             {
-                {0, VK_VERTEX_INPUT_RATE_VERTEX, {0, 1, 2}},
+                {0, VK_VERTEX_INPUT_RATE_VERTEX, {0}},
             };
             info.Topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
             info.RenderPass = m_RenderPass->GetRenderPass();
@@ -117,35 +112,18 @@ namespace vc
         }
 
         {
-            VkSamplerCreateInfo info{};
-            info.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
-            info.magFilter = VK_FILTER_NEAREST;
-            info.minFilter = VK_FILTER_LINEAR;
-            info.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
-            info.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-            info.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-            info.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-            info.anisotropyEnable = VK_TRUE; // TODO: slider for performance, 0 (off) -> max
-            info.maxAnisotropy = eng::RenderContext::GetPhysicalDeviceProperties().limits.maxSamplerAnisotropy;
-            info.compareEnable = VK_FALSE;
-            info.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
-            info.unnormalizedCoordinates = VK_FALSE;
-
-            VkResult result = vkCreateSampler(context.GetDevice(), &info, nullptr, &m_Sampler);
-            ENG_ASSERT(result == VK_SUCCESS, "Failed to create sampler.");
-        }
-
-        {
 #define VC_TEXTURE(x) R"(D:\Dorkspace\Programming\Archive\VanillaDefault-Resource-Pack-16x-1.21\assets\minecraft\textures\)" x
-            eng::LocalTexture2D texture(VC_TEXTURE("block/ancient_debris_side.png"));
-
-            eng::Texture2DInfo info;
-            info.RenderContext = &context;
-            info.LocalTexture = &texture;
-            m_Texture = std::make_shared<eng::Texture2D>(info);
+            std::vector<eng::LocalTexture> textures;
+            textures.reserve(4);
+            textures.emplace_back(VC_TEXTURE("block/amethyst_block.png"));
+            textures.emplace_back(VC_TEXTURE("block/ancient_debris_side.png"));
+            textures.emplace_back(VC_TEXTURE("block/ancient_debris_top.png"));
+            textures.emplace_back(VC_TEXTURE("block/andesite.png"));
+            m_BlockTextureAtlas = std::make_unique<TextureAtlas>(context, 16, textures);
         }
 
-        m_CameraController.SetPosition(glm::vec3(0.0f, 0.0f, 1.0f));
+        m_CameraController.SetPosition(glm::vec3(0.0f, 0.0f, -1.0f));
+        m_CameraController.SetRotation(glm::vec3(0.0f, glm::radians(180.0f), 0.0f));
         m_CameraController.SetFOV(glm::radians(90.0f));
         m_CameraController.SetNearPlane(0.001f);
         m_CameraController.SetFarPlane(1000.0f);
@@ -158,10 +136,10 @@ namespace vc
         auto& context = eng::Application::Get().GetWindow().GetRenderContext();
         VkDevice device = context.GetDevice();
 
-        m_Texture.reset();
-        vkDestroySampler(device, m_Sampler, nullptr);
+        m_BlockTextureAtlas.reset();
 
         m_Shader.reset();
+        m_StorageBuffer.reset();
         m_UniformBuffer.reset();
         m_VertexBuffer.reset();
         m_Framebuffers.clear();
@@ -214,17 +192,38 @@ namespace vc
 
         // Set all the necessary data.
         {
+            m_VertexBuffer->SetData(std::to_array<glm::uvec2>
+            ({
+                {0, 0},
+            }));
+
             LocalUniformBuffer localUniformBuffer;
             localUniformBuffer.ViewProjection = m_CameraController.GetViewProjection();
+            localUniformBuffer.BlockTextureAtlas.TextureCount = m_BlockTextureAtlas->GetTextureCount();
+            localUniformBuffer.BlockTextureAtlas.TextureScale = m_BlockTextureAtlas->GetTextureScale();
+            localUniformBuffer.BlockTextureAtlas.TexturesPerLayer = m_BlockTextureAtlas->GetTexturesPerLayer();
+            localUniformBuffer.BlockTextureAtlas.TextureThreshold = m_BlockTextureAtlas->GetTextureThreshold();
             m_UniformBuffer->SetData(localUniformBuffer);
 
-            eng::ShaderUniformBufferBinding binding0(0, m_UniformBuffer);
-            eng::ShaderSamplerBinding binding1(1, m_Sampler, m_Texture->GetImageView());
+            m_StorageBuffer->SetData(std::to_array<glm::uvec2>
+            ({
+                {0, 4 << 16}, // back face
+            }));
 
-            auto uniformBuffers = std::to_array({binding0});
-            auto samplers = std::to_array({binding1});
+            auto uniformBuffers = std::to_array<eng::ShaderUniformBufferBinding>
+            ({
+                {0, m_UniformBuffer},
+            });
+            auto storageBuffers = std::to_array<eng::ShaderStorageBufferBinding>
+            ({
+                {1, m_StorageBuffer},
+            });
+            auto samplers = std::to_array<eng::ShaderSamplerBinding>
+            ({
+                {2, m_BlockTextureAtlas->GetSampler(), m_BlockTextureAtlas->GetTexture()->GetImageView()},
+            });
 
-            m_Shader->UpdateDescriptorSet({uniformBuffers, {}, samplers});
+            m_Shader->UpdateDescriptorSet({uniformBuffers, storageBuffers, samplers});
         }
 
         // Bind everything.
