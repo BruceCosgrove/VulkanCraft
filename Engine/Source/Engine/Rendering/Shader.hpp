@@ -78,6 +78,7 @@ namespace eng
             ShaderInfo const& info,
             std::span<std::tuple<std::vector<u8>, VkShaderStageFlagBits>> stages,
             std::vector<u32>& strides,
+            std::vector<VkVertexInputBindingDescription>& vertexInputBindingDescriptions,
             std::vector<VkVertexInputAttributeDescription>& vertexInputAttributeDescriptions,
             std::vector<VkDescriptorSetLayoutBinding>& descriptorSetLayoutBindings,
             std::vector<VkDescriptorPoolSize>& descriptorPoolSizes
@@ -89,8 +90,10 @@ namespace eng
         void CreatePipelineLayout();
 
         void CreatePipeline(
-            ShaderInfo const& info,
+            VkPrimitiveTopology topology,
+            VkRenderPass renderPass,
             std::span<u32> strides,
+            std::span<VkVertexInputBindingDescription> vertexInputBindingDescriptions,
             std::span<VkVertexInputAttributeDescription> vertexInputAttributeDescriptions,
             std::span<VkPipelineShaderStageCreateInfo> pipelineShaderStageInfos
         );

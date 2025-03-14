@@ -41,16 +41,17 @@ namespace eng
 
         // Get vertex strides, vertex input attribute descriptions, descriptor set layout bindings, and descriptor pool sizes.
         std::vector<u32> strides;
+        std::vector<VkVertexInputBindingDescription> vertexInputBindingDescriptions;
         std::vector<VkVertexInputAttributeDescription> vertexInputAttributeDescriptions;
         std::vector<VkDescriptorSetLayoutBinding> descriptorSetLayoutBindings;
         std::vector<VkDescriptorPoolSize> descriptorPoolSizes;
-        Reflect(info, stages, strides, vertexInputAttributeDescriptions, descriptorSetLayoutBindings, descriptorPoolSizes);
+        Reflect(info, stages, strides, vertexInputBindingDescriptions, vertexInputAttributeDescriptions, descriptorSetLayoutBindings, descriptorPoolSizes);
 
         CreateDescriptorSetLayout(descriptorSetLayoutBindings);
         CreateDescriptorPool(descriptorPoolSizes);
         CreateDescriptorSets();
         CreatePipelineLayout();
-        CreatePipeline(info, strides, vertexInputAttributeDescriptions, pipelineShaderStageInfos);
+        CreatePipeline(info.Topology, info.RenderPass, strides, vertexInputBindingDescriptions, vertexInputAttributeDescriptions, pipelineShaderStageInfos);
 
         // Destroy the temporary modules.
         for (auto& pipelineShaderStageInfo : pipelineShaderStageInfos)
@@ -275,6 +276,7 @@ namespace eng
         ShaderInfo const& info,
         std::span<std::tuple<std::vector<u8>, VkShaderStageFlagBits>> stages,
         std::vector<u32>& strides,
+        std::vector<VkVertexInputBindingDescription>& vertexInputBindingDescriptions,
         std::vector<VkVertexInputAttributeDescription>& vertexInputAttributeDescriptions,
         std::vector<VkDescriptorSetLayoutBinding>& descriptorSetLayoutBindings,
         std::vector<VkDescriptorPoolSize>& descriptorPoolSizes
@@ -397,6 +399,7 @@ namespace eng
         // process the rest of it before processing the other stages.
         processStage(std::get<1>(stages.front()));
 
+        // Process the remaining stages.
         for (auto& stage : stages.subspan(1))
         {
             std::vector<u8> const& code = std::get<0>(stage);
@@ -408,6 +411,16 @@ namespace eng
             new (resources.get()) spirv_cross::ShaderResources(reflection->get_shader_resources());
 
             processStage(std::get<1>(stage));
+        }
+
+        // Fill out the vertex input binding descriptions, now that the strides are known.
+        for (u64 i = 0; i < info.VertexBufferBindings.size(); i++)
+        {
+            auto& vertexBinding = info.VertexBufferBindings[i];
+            auto& vertexInputBindingDescription = vertexInputBindingDescriptions.emplace_back();
+            vertexInputBindingDescription.binding = vertexBinding.Binding;
+            vertexInputBindingDescription.stride = strides[i];
+            vertexInputBindingDescription.inputRate = vertexBinding.InputRate;
         }
     }
 
@@ -472,8 +485,10 @@ namespace eng
     }
 
     void Shader::CreatePipeline(
-        ShaderInfo const& info,
+        VkPrimitiveTopology topology,
+        VkRenderPass renderPass,
         std::span<u32> strides,
+        std::span<VkVertexInputBindingDescription> vertexInputBindingDescriptions,
         std::span<VkVertexInputAttributeDescription> vertexInputAttributeDescriptions,
         std::span<VkPipelineShaderStageCreateInfo> pipelineShaderStageInfos
     )
@@ -490,16 +505,6 @@ namespace eng
         dynamicStateInfo.dynamicStateCount = static_cast<u32>(dynamicStates.size());
         dynamicStateInfo.pDynamicStates = dynamicStates.data();
 
-        std::vector<VkVertexInputBindingDescription> vertexInputBindingDescriptions(info.VertexBufferBindings.size());
-        for (u64 i = 0; i < info.VertexBufferBindings.size(); i++)
-        {
-            auto& vertexBinding = info.VertexBufferBindings[i];
-            auto& vertexInputBindingDescription = vertexInputBindingDescriptions[i];
-            vertexInputBindingDescription.binding = vertexBinding.Binding;
-            vertexInputBindingDescription.stride = strides[i];
-            vertexInputBindingDescription.inputRate = vertexBinding.InputRate;
-        }
-
         VkPipelineVertexInputStateCreateInfo vertexInputStateInfo{};
         vertexInputStateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
         vertexInputStateInfo.vertexBindingDescriptionCount = static_cast<u32>(vertexInputBindingDescriptions.size());
@@ -509,7 +514,7 @@ namespace eng
 
         VkPipelineInputAssemblyStateCreateInfo inputAssemblyStateInfo{};
         inputAssemblyStateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
-        inputAssemblyStateInfo.topology = info.Topology;
+        inputAssemblyStateInfo.topology = topology;
         inputAssemblyStateInfo.primitiveRestartEnable = VK_FALSE; // TODO: what does this do exactly?
 
         VkPipelineViewportStateCreateInfo pipelineViewportStateInfo{};
@@ -576,7 +581,7 @@ namespace eng
         graphicsPipelineInfo.pColorBlendState = &colorBlendStateInfo;
         graphicsPipelineInfo.pDynamicState = &dynamicStateInfo;
         graphicsPipelineInfo.layout = m_PipelineLayout;
-        graphicsPipelineInfo.renderPass = info.RenderPass;
+        graphicsPipelineInfo.renderPass = renderPass;
         graphicsPipelineInfo.subpass = 0;
 
         VkResult result = vkCreateGraphicsPipelines(device, nullptr, 1, &graphicsPipelineInfo, nullptr, &m_Pipeline);
