@@ -19,8 +19,7 @@ namespace vc
 
     void VulkanCraftLayer::OnAttach()
     {
-        // TODO: context retrieval needs to be reworked with multiple windows.
-        auto& context = Application::Get().GetWindow().GetRenderContext();
+        auto& context = Layer::GetWindow().GetRenderContext();
 
         {
             std::array<VkAttachmentDescription, 2> attachments{};
@@ -135,7 +134,7 @@ namespace vc
 
     void VulkanCraftLayer::OnDetach()
     {
-        auto& context = Application::Get().GetWindow().GetRenderContext();
+        auto& context = Layer::GetWindow().GetRenderContext();
         VkDevice device = context.GetDevice();
 
         m_BlockTextureAtlas.reset();
@@ -166,9 +165,7 @@ namespace vc
 
     void VulkanCraftLayer::OnRender()
     {
-        // TODO: Store a window's render context as a pointer in each
-        // layer with a "RenderContext& Layer::GetRenderContext()"?
-        auto& context = Application::Get().GetWindow().GetRenderContext();
+        auto& context = Layer::GetWindow().GetRenderContext();
         VkExtent2D extent = context.GetSwapchainExtent();
         VkCommandBuffer commandBuffer = context.GetActiveCommandBuffer();
         u32 swapchainImageIndex = context.GetSwapchainImageIndex();
@@ -270,7 +267,7 @@ namespace vc
 
     void VulkanCraftLayer::CreateOrRecreateFramebuffers()
     {
-        auto& context = Application::Get().GetWindow().GetRenderContext();
+        auto& context = Layer::GetWindow().GetRenderContext();
         VkExtent2D swapchainExtent = context.GetSwapchainExtent();
         VkFormat swapchainFormat = context.GetSwapchainFormat();
         u32 swapchainImageCount = context.GetSwapchainImageCount();

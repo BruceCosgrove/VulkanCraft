@@ -13,12 +13,31 @@ namespace eng
     class WindowMinimizeEvent;
     class WindowFramebufferResizeEvent;
 
+    // Simplify Client layer adding syntax.
+    namespace detail
+    {
+        class WindowLayersInfo
+        {
+        public:
+            template <class T>
+            requires(std::is_base_of_v<Layer, T>)
+            void Add()
+            {
+                m_LayersProducers.push_back([]() -> std::unique_ptr<Layer> { return std::make_unique<T>(); });
+            }
+        private:
+            friend class Window;
+            std::vector<std::unique_ptr<Layer>(*)()> m_LayersProducers;
+        };
+    }
+
     struct WindowInfo
     {
         string Title = "TODO: Window Title";
         u32 Width = 1280;
         u32 Height = 720;
         bool Resizable = true;
+        detail::WindowLayersInfo Layers;
     };
 
     class Window
@@ -28,10 +47,18 @@ namespace eng
 
         GLFWwindow* GetNativeWindow();
         RenderContext& GetRenderContext();
-        LayerStack& GetLayerStack();
+
+        void PushLayer(std::unique_ptr<Layer>&& layer);
+        std::unique_ptr<Layer> PopLayer();
+
+        void PushOverlay(std::unique_ptr<Layer>&& overlay);
+        std::unique_ptr<Layer> PopOverlay();
     private:
         friend class Application;
+
         Window(WindowInfo const& info);
+        ~Window();
+
         void OnEvent(Event& event);
         void OnUpdate();
         void OnRender();

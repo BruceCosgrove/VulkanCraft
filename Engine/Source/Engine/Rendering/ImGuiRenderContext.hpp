@@ -11,9 +11,6 @@ namespace eng
     class ImGuiRenderContext
     {
     public:
-
-    private:
-        friend class Application;
         ImGuiRenderContext(Window& window);
         ~ImGuiRenderContext();
     private:

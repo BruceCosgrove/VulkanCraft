@@ -6,15 +6,22 @@
 
 namespace eng
 {
+    class Window;
+
     class Layer
     {
     public:
         ENG_IMMOVABLE_UNCOPYABLE_INHERITABLE_CLASS(Layer);
 
-        virtual void OnAttach() {}
-        virtual void OnDetach() {}
-        virtual void OnEvent(Event& event) {}
-        virtual void OnUpdate(Timestep timestep) {}
-        virtual void OnRender() {}
+        virtual void OnAttach();
+        virtual void OnDetach();
+        virtual void OnEvent(Event& event);
+        virtual void OnUpdate(Timestep timestep);
+        virtual void OnRender();
+
+        Window& GetWindow();
+    private:
+        friend class LayerStack;
+        Window* m_Window = nullptr; // non-owning
     };
 }

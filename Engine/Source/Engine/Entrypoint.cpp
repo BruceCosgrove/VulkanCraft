@@ -13,15 +13,18 @@ namespace eng
 
     static int Main(int argc, char** argv)
     {
-        EngineInfo engineInfo = ProvideEngineInfo(argc, argv);
-        Log::Initialize(engineInfo.LogInfo);
+        // Deallocate engineInfo once it's no longer needed.
+        {
+            EngineInfo engineInfo = ProvideEngineInfo(argc, argv);
+            Log::Initialize(engineInfo.LogInfo);
 
-        // Create the application.
-        ENG_ASSERT(s_Application == nullptr, "Tried to create another application.");
-        s_Application = new Application(engineInfo.ApplicationInfo);
-
-        if (engineInfo.OnEngineInitialized)
-            engineInfo.OnEngineInitialized(*s_Application);
+            // Create the application.
+            ENG_ASSERT(s_Application == nullptr, "Tried to create another application.");
+            // Allocate the memory first so s_Application is set before the Application constructor.
+            s_Application = (Application*)::operator new(sizeof(Application));
+            // Construct the application in the newly allocated memory.
+            new(s_Application) Application(engineInfo.ApplicationInfo);
+        }
 
         s_Application->Run();
 

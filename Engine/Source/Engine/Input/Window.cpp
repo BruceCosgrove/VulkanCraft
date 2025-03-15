@@ -19,17 +19,39 @@ namespace eng
         return m_RenderContext;
     }
 
-    LayerStack& Window::GetLayerStack()
+    void Window::PushLayer(std::unique_ptr<Layer>&& layer)
     {
-        return m_LayerStack;
+        m_LayerStack.PushLayer(std::move(layer), this);
+    }
+
+    std::unique_ptr<Layer> Window::PopLayer()
+    {
+        return m_LayerStack.PopLayer();
+    }
+
+    void Window::PushOverlay(std::unique_ptr<Layer>&& overlay)
+    {
+        m_LayerStack.PushOverlay(std::move(overlay), this);
+    }
+
+    std::unique_ptr<Layer> Window::PopOverlay()
+    {
+        return m_LayerStack.PopOverlay();
     }
 
     Window::Window(WindowInfo const& info)
         : m_NativeWindow(info, this)
         , m_RenderContext(m_NativeWindow.Handle)
+        , m_LayerStack(info.Layers.m_LayersProducers, this)
     {
         // Now that the window is fully initialized, show it.
         glfwShowWindow(m_NativeWindow.Handle);
+    }
+
+    Window::~Window()
+    {
+        VkResult result = vkDeviceWaitIdle(m_RenderContext.GetDevice());
+        ENG_ASSERT(result == VK_SUCCESS, "Failed to wait for the device to stop working. This really shouldn't happen.");
     }
 
     void Window::OnEvent(Event& event)

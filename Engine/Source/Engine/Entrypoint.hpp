@@ -5,13 +5,10 @@
 
 namespace eng
 {
-    using EngineInitializedCallback = void(*)(Application&);
-
     struct EngineInfo
     {
         ApplicationInfo ApplicationInfo;
         LogInfo LogInfo;
-        EngineInitializedCallback OnEngineInitialized = nullptr;
     };
 }
 

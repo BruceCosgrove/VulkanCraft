@@ -23,15 +23,13 @@ namespace eng
 
         // Shuts down the application gracefully.
         void Terminate();
-
-        Window& GetWindow();
     private:
-        Window m_Window;
         bool m_Running = true;
+        Window m_Window;
     private:
         friend int Main(int argc, char** argv);
         Application(ApplicationInfo const& info);
-        ~Application();
+        ~Application() = default;
         void Run();
     };
 }

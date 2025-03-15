@@ -96,8 +96,23 @@ namespace eng
 
 
 
-        // TODO: render
-        //ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), frame.CommandBuffer);
+        // TODO: if any non-imgui windows are visible,
+        // do this, and only call OnRender and
+        // OnImGuiRender for the visible windows.
+        // 
+        // Render a frame if it's visible.
+
+        //ImGui_ImplVulkan_NewFrame();
+        //ImGui_ImplGlfw_NewFrame();
+        //ImGui::NewFrame();
+
+        //// Do the Client's ImGui rendering.
+        //if (rendering)
+        //    ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), frame.CommandBuffer);
+
+        //ImGui::Render(); // Calls ImGui::EndFrame();
+        //ImGui::UpdatePlatformWindows();
+        //ImGui::RenderPlatformWindowsDefault();
     }
 
     ImGuiRenderContext::~ImGuiRenderContext()

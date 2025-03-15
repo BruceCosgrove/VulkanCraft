@@ -11,7 +11,6 @@
 #include "Engine/Core/Enums.hpp"
 #include "Engine/Core/FunctionBindings.hpp"
 #include "Engine/Core/Layer.hpp"
-#include "Engine/Core/LayerStack.hpp"
 #include "Engine/Core/Log.hpp"
 #include "Engine/Core/Timestep.hpp"
 #include "Engine/Input/Keycode.hpp"
