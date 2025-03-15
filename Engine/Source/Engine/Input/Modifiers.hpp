@@ -13,6 +13,6 @@ namespace eng
         Super   = 1 << 3,
     );
 
-    constexpr bool HasModifiers(Modifiers modifiers, Modifiers has) noexcept { return static_cast<bool>(modifiers & has); }
-    constexpr bool AreModifiers(Modifiers modifiers, Modifiers are) noexcept { return (modifiers & are) == are; }
+    constexpr bool HasAnyModifiers(Modifiers modifiers, Modifiers any) noexcept { return static_cast<bool>(modifiers & any); }
+    constexpr bool HasAllModifiers(Modifiers modifiers, Modifiers all) noexcept { return (modifiers & all) == all; }
 }

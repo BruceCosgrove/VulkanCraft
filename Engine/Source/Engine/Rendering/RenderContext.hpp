@@ -18,11 +18,19 @@ namespace eng
 
     class RenderContext
     {
+    private:
+        struct FreeRAII
+        {
+            ~FreeRAII() { FreeFunction(); }
+            std::function<void()> FreeFunction;
+        };
     public:
         ENG_IMMOVABLE_UNCOPYABLE_CLASS(RenderContext);
 
         VkCommandBuffer BeginOneTimeCommandBuffer();
         void EndOneTimeCommandBuffer(VkCommandBuffer commandBuffer);
+
+        void DeferFree(std::function<void()>&& freeFunction);
 
         static VkInstance GetInstance();
         static VkPhysicalDevice GetPhysicalDevice();
@@ -108,5 +116,6 @@ namespace eng
         std::unique_ptr<VkFence[]> m_FrameInFlightFences;
         std::unique_ptr<VkSemaphore[]> m_ImageAcquiredSemaphores;
         std::unique_ptr<VkSemaphore[]> m_RenderCompleteSemaphores;
+        std::vector<std::vector<FreeRAII>> m_FrameFreeQueues;
     };
 }

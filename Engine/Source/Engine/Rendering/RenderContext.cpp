@@ -88,6 +88,11 @@ namespace eng
         vkFreeCommandBuffers(m_Device, m_CommandPool, 1, &commandBuffer);
     }
 
+    void RenderContext::DeferFree(std::function<void()>&& freeFunction)
+    {
+        m_FrameFreeQueues[m_FrameIndex].emplace_back(std::move(freeFunction));
+    }
+
     VkInstance RenderContext::GetInstance()
     {
         return s_Instance;
@@ -247,6 +252,9 @@ namespace eng
 
         result = vkResetFences(m_Device, 1, &frameInFlightFence);
         ENG_ASSERT(result == VK_SUCCESS, "Failed to reset frame fence.");
+
+        // Once the frame is finished, its resources can be free'd.
+        m_FrameFreeQueues[m_FrameIndex].clear();
 
         // Reset the frame's command buffer.
         result = vkResetCommandBuffer(frameCommandBuffer, 0);
@@ -598,6 +606,8 @@ namespace eng
                 ENG_ASSERT(result == VK_SUCCESS, "Failed to create swapchain image view {}/{}.", i + 1, m_SwapchainImageCount);
             }
         }
+
+        m_FrameFreeQueues.resize(m_SwapchainImageCount);
     }
 
     void RenderContext::CreateCommandPool()

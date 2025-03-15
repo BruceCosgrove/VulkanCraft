@@ -22,8 +22,10 @@ namespace vc
         void OnImGuiRender();
     private:
         void OnWindowCloseEvent(WindowCloseEvent& event);
+        void OnKeyPressEvent(KeyPressEvent& event);
 
         void CreateOrRecreateFramebuffers();
+        void LoadShader();
     private:
         // TODO: there really needs to be some kind of allocator/ref system so new isn't
         // called that frequently (also increases cache performance).
@@ -40,5 +42,7 @@ namespace vc
 
         CameraController m_CameraController;
         std::unique_ptr<TextureAtlas> m_BlockTextureAtlas;
+
+        bool m_ReloadShader = false;
     };
 }

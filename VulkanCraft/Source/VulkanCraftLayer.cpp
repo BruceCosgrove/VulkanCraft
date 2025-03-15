@@ -97,20 +97,7 @@ namespace vc
             m_StorageBuffer = std::make_shared<StorageBuffer>(info);
         }
 
-        {
-            auto bindings = std::to_array<ShaderVertexBufferBinding>
-            ({
-                {0, VK_VERTEX_INPUT_RATE_VERTEX, {0}},
-            });
-
-            ShaderInfo info;
-            info.RenderContext = &context;
-            info.Filepath = "Assets/Shaders/Chunk";
-            info.VertexBufferBindings = bindings;
-            info.Topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
-            info.RenderPass = m_RenderPass->GetRenderPass();
-            m_Shader = std::make_shared<Shader>(info);
-        }
+        LoadShader();
 
         {
 #define VC_TEXTURE(x) R"(D:\Dorkspace\Programming\Archive\VanillaDefault-Resource-Pack-16x-1.21\assets\minecraft\textures\)" x
@@ -153,6 +140,7 @@ namespace vc
         // TODO: remove
         //ENG_LOG_DEBUG("VulkanCraftLayer::OnEvent(TODO: event logging)");
         event.Dispatch(this, &VulkanCraftLayer::OnWindowCloseEvent);
+        event.Dispatch(this, &VulkanCraftLayer::OnKeyPressEvent);
         event.Dispatch(&m_CameraController, &CameraController::OnEvent);
     }
 
@@ -173,6 +161,14 @@ namespace vc
         // Recreate the framebuffer if necessary.
         if (context.WasSwapchainRecreated())
             CreateOrRecreateFramebuffers();
+
+        // Reload the shader if necessary.
+        if (m_ReloadShader)
+        {
+            m_ReloadShader = false;
+            context.DeferFree([shader = m_Shader] {});
+            LoadShader();
+        }
 
         std::array<VkClearValue, 2> clearValues{};
         clearValues[0].color = {(std::cosf(angle) + 1.0f) * 0.5f, 0.0f, (std::sinf(angle) + 1.0f) * 0.5f, 1.0f};
@@ -265,6 +261,12 @@ namespace vc
         Application::Get().Terminate();
     }
 
+    void VulkanCraftLayer::OnKeyPressEvent(KeyPressEvent& event)
+    {
+        if (event.IsPressed() and event.GetKeycode() == Keycode::R and event.GetModifiers() == Modifiers::Control)
+            m_ReloadShader = true;
+    }
+
     void VulkanCraftLayer::CreateOrRecreateFramebuffers()
     {
         auto& context = Layer::GetWindow().GetRenderContext();
@@ -308,5 +310,25 @@ namespace vc
                 m_Framebuffers.push_back(std::make_shared<Framebuffer>(info));
             }
         }
+    }
+    void VulkanCraftLayer::LoadShader()
+    {
+        auto& context = Layer::GetWindow().GetRenderContext();
+
+        auto bindings = std::to_array<ShaderVertexBufferBinding>
+        ({
+            {0, VK_VERTEX_INPUT_RATE_VERTEX, {0}},
+        });
+
+        ShaderInfo info;
+        info.RenderContext = &context;
+        info.Filepath = "Assets/Shaders/Chunk";
+        info.VertexBufferBindings = bindings;
+        info.Topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+        info.RenderPass = m_RenderPass->GetRenderPass();
+
+        ENG_LOG_INFO("Loading shader \"{}\"...", info.Filepath.string());
+        // TODO: async
+        m_Shader = std::make_shared<Shader>(info);
     }
 }
