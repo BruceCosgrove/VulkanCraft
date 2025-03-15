@@ -29,8 +29,7 @@ namespace eng
 
         // Key Events
         KeyPress,
-        KeyRelease,
-        KeyCharType,
+        KeyType,
     );
 
     class Event;

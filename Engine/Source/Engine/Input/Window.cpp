@@ -223,7 +223,7 @@ namespace eng
                 case GLFW_PRESS:
                 case GLFW_RELEASE:
                 {
-                    MouseButtonPressEvent event(static_cast<MouseButton>(button), static_cast<Modifiers>(mods), action == GLFW_PRESS);
+                    MouseButtonPressEvent event(static_cast<MouseButton>(button + 1), static_cast<Modifiers>(mods), action == GLFW_PRESS);
                     window.m_LayerStack.OnEvent(event);
                     break;
                 }
@@ -276,7 +276,7 @@ namespace eng
         {
             Window& window = *static_cast<Window*>(glfwGetWindowUserPointer(handle));
 
-            KeyCharTypeEvent event(static_cast<u32>(codepoint));
+            KeyTypeEvent event(static_cast<u32>(codepoint));
             window.m_LayerStack.OnEvent(event);
         });
     }

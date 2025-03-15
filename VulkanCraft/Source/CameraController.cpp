@@ -102,7 +102,7 @@ namespace vc
 
     void CameraController::OnMouseButtonPressEvent(MouseButtonPressEvent& event)
     {
-        m_EnableMouseMovement = event.IsPressed();
+        m_EnableMouseMovement = event.IsPressed() and event.GetButton() == MouseButton::Left;
     }
 
     void CameraController::OnMouseMoveEvent(MouseMoveEvent& event)

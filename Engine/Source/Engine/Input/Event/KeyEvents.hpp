@@ -25,15 +25,15 @@ namespace eng
 
 
 
-    class KeyCharTypeEvent : public Event
+    class KeyTypeEvent : public Event
     {
     public:
-        _ENG_EVENT_GET_STATIC_TYPE(EventType::KeyCharType);
-        KeyCharTypeEvent(u32 codepoint) noexcept;
+        _ENG_EVENT_GET_STATIC_TYPE(EventType::KeyType);
+        KeyTypeEvent(u32 codepoint) noexcept;
 
         u32 GetCodepoint() const noexcept;
     private:
         u32 m_Codepoint;
     };
-    _ENG_ASSERT_EVENT_INTERFACE(KeyCharTypeEvent);
+    _ENG_ASSERT_EVENT_INTERFACE(KeyTypeEvent);
 }

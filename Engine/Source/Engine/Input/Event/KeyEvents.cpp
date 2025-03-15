@@ -28,14 +28,14 @@ namespace eng
 
 
 
-    KeyCharTypeEvent::KeyCharTypeEvent(u32 codepoint) noexcept
+    KeyTypeEvent::KeyTypeEvent(u32 codepoint) noexcept
         : Event(GetStaticType())
         , m_Codepoint(codepoint)
     {
 
     }
 
-    u32 KeyCharTypeEvent::GetCodepoint() const noexcept
+    u32 KeyTypeEvent::GetCodepoint() const noexcept
     {
         return m_Codepoint;
     }

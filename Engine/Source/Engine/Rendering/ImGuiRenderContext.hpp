@@ -1,8 +1,8 @@
 #pragma once
 
-// TODO: don't include these here, just in the cpp.
-#include <backends/imgui_impl_glfw.h>
-#include <backends/imgui_impl_vulkan.h>
+#include "Engine/Core/ClassTypes.hpp"
+#include "Engine/Input/Event/Event.hpp"
+#include <vulkan/vulkan.h>
 
 namespace eng
 {
@@ -11,13 +11,15 @@ namespace eng
     class ImGuiRenderContext
     {
     public:
-        ImGuiRenderContext(Window& window);
-        ~ImGuiRenderContext();
-    private:
-        Window& m_Window; // non-owning
-        // TODO: replace with own implementation, sooner rather than later.
-        ImGui_ImplVulkanH_Window m_MainWindow{};
+        ENG_IMMOVABLE_UNCOPYABLE_CLASS(ImGuiRenderContext);
 
-        VkDescriptorPool m_DescriptorPool = VK_NULL_HANDLE;
+        ImGuiRenderContext(Window& window, VkRenderPass renderPass);
+        ~ImGuiRenderContext();
+
+        void BeginFrame();
+        void EndFrame(VkCommandBuffer commandBuffer);
+        void RenderMultiViewportWindows();
+
+        void OnEvent(Event& event);
     };
 }
