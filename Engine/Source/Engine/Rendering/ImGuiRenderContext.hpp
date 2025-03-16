@@ -18,7 +18,6 @@ namespace eng
 
         void BeginFrame();
         void EndFrame(VkCommandBuffer commandBuffer);
-        void RenderMultiViewportWindows();
 
         void OnEvent(Event& event);
     };

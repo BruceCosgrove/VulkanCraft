@@ -709,6 +709,7 @@ bool ImGui_ImplVulkan_CreateFontsTexture()
     int width, height;
     io.Fonts->GetTexDataAsRGBA32(&pixels, &width, &height);
     size_t upload_size = width * height * 4 * sizeof(char);
+    VkFormat format = io.ConfigFlags & ImGuiConfigFlags_IsSRGB ? VK_FORMAT_R8G8B8A8_SRGB : VK_FORMAT_R8G8B8A8_UNORM;
 
     // Create the Image:
     ImGui_ImplVulkan_Texture* backend_tex = &bd->FontTexture;
@@ -716,7 +717,7 @@ bool ImGui_ImplVulkan_CreateFontsTexture()
         VkImageCreateInfo info = {};
         info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
         info.imageType = VK_IMAGE_TYPE_2D;
-        info.format = VK_FORMAT_R8G8B8A8_UNORM;
+        info.format = format;
         info.extent.width = width;
         info.extent.height = height;
         info.extent.depth = 1;
@@ -747,7 +748,7 @@ bool ImGui_ImplVulkan_CreateFontsTexture()
         info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
         info.image = backend_tex->Image;
         info.viewType = VK_IMAGE_VIEW_TYPE_2D;
-        info.format = VK_FORMAT_R8G8B8A8_UNORM;
+        info.format = format;
         info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
         info.subresourceRange.levelCount = 1;
         info.subresourceRange.layerCount = 1;
@@ -1757,9 +1758,12 @@ static void ImGui_ImplVulkan_CreateWindow(ImGuiViewport* viewport)
     for (uint32_t n = 0; n < v->PipelineRenderingCreateInfo.colorAttachmentCount; n++)
         requestSurfaceImageFormats.push_back(v->PipelineRenderingCreateInfo.pColorAttachmentFormats[n]);
 #endif
-    const VkFormat defaultFormats[] = { VK_FORMAT_B8G8R8A8_UNORM, VK_FORMAT_R8G8B8A8_UNORM, VK_FORMAT_B8G8R8_UNORM, VK_FORMAT_R8G8B8_UNORM };
-    for (VkFormat format : defaultFormats)
-        requestSurfaceImageFormats.push_back(format);
+    const int formatCount = 4;
+    const VkFormat defaultFormatsSRGB[formatCount] = { VK_FORMAT_B8G8R8A8_SRGB, VK_FORMAT_R8G8B8A8_SRGB, VK_FORMAT_B8G8R8_SRGB, VK_FORMAT_R8G8B8_SRGB };
+    const VkFormat defaultFormats[formatCount] = { VK_FORMAT_B8G8R8A8_UNORM, VK_FORMAT_R8G8B8A8_UNORM, VK_FORMAT_B8G8R8_UNORM, VK_FORMAT_R8G8B8_UNORM };
+    const VkFormat* formats = ImGui::GetIO().ConfigFlags & ImGuiConfigFlags_IsSRGB ? defaultFormatsSRGB : defaultFormats;
+    for (int i = 0; i < formatCount; i++)
+        requestSurfaceImageFormats.push_back(formats[i]);
 
     const VkColorSpaceKHR requestSurfaceColorSpace = VK_COLORSPACE_SRGB_NONLINEAR_KHR;
     wd->SurfaceFormat = ImGui_ImplVulkanH_SelectSurfaceFormat(v->PhysicalDevice, wd->Surface, requestSurfaceImageFormats.Data, (size_t)requestSurfaceImageFormats.Size, requestSurfaceColorSpace);
