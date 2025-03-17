@@ -97,8 +97,8 @@ namespace eng
     {
         ImGuiIO& io = ImGui::GetIO();
 
-        if ((io.WantCaptureMouse and +(event.GetCategories() & EventCategory::Mouse)) or 
-            (io.WantCaptureKeyboard and +(event.GetCategories() & EventCategory::Key)))
+        if ((io.WantCaptureMouse and event.GetCategories().HasAll(EventCategory::Mouse)) or
+            (io.WantCaptureKeyboard and event.GetCategories().HasAll(EventCategory::Key)))
         {
             event.Handle();
         }
