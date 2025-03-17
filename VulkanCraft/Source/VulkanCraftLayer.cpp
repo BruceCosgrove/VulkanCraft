@@ -264,15 +264,6 @@ namespace vc
         vkCmdEndRenderPass(commandBuffer);
     }
 
-    void VulkanCraftLayer::OnImGuiRender()
-    {
-        ImGui::ShowDemoWindow();
-
-        ImGui::Begin("test window");
-        ImGui::Button("test button");
-        ImGui::End();
-    }
-
     void VulkanCraftLayer::OnWindowCloseEvent(WindowCloseEvent& event)
     {
         Application::Get().Terminate();
@@ -280,8 +271,17 @@ namespace vc
 
     void VulkanCraftLayer::OnKeyPressEvent(KeyPressEvent& event)
     {
-        if (event.IsPressed() and event.GetKeycode() == Keycode::R and event.GetModifiers() == Modifiers::Control)
+        if (event.IsPressed() and event.GetKeycode() == Keycode::R and event.GetModifiers().HasOnly(Modifiers::Control))
             m_ReloadShader = true;
+    }
+
+    void VulkanCraftLayer::OnImGuiRender()
+    {
+        ImGui::ShowDemoWindow();
+
+        ImGui::Begin("test window");
+        ImGui::Button("test button");
+        ImGui::End();
     }
 
     void VulkanCraftLayer::CreateOrRecreateFramebuffers()

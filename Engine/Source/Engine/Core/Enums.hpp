@@ -145,6 +145,7 @@ namespace eng::detail
         friend constexpr enumName& operator|=(enumName& lhs, enumName rhs) noexcept { lhs.m_Value |= rhs.m_Value; return lhs; } \
         constexpr bool HasAny(enumName bits) const noexcept { return (m_Value & bits) != 0; } \
         constexpr bool HasAll(enumName bits) const noexcept { return (m_Value & bits) == bits; } \
+        constexpr bool HasOnly(enumName bits) const noexcept { return m_Value == bits; } \
     private: \
         underlyingType m_Value = None; \
     }; \

@@ -19,10 +19,11 @@ namespace vc
         virtual void OnEvent(Event& event) override;
         virtual void OnUpdate(Timestep timestep) override;
         virtual void OnRender() override;
-        void OnImGuiRender();
     private:
         void OnWindowCloseEvent(WindowCloseEvent& event);
         void OnKeyPressEvent(KeyPressEvent& event);
+
+        void OnImGuiRender();
 
         void CreateOrRecreateFramebuffers();
         void LoadShader();
