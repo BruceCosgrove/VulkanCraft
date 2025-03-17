@@ -35,7 +35,7 @@ namespace eng
 
         ImageUtils::CreateImage(
             m_Context,
-            VK_IMAGE_TYPE_3D,
+            VK_IMAGE_TYPE_2D,
             VK_IMAGE_VIEW_TYPE_2D_ARRAY,
             info.Format,
             extent,

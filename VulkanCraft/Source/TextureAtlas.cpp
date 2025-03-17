@@ -57,39 +57,41 @@ namespace vc
         u32 maxSize = properties.limits.maxImageDimension2D;
         u32 maxLayers = properties.limits.maxImageArrayLayers;
 
-        u32 maxSize2 = maxSize * maxSize;
-        u32 textureSize2 = m_TextureSize * m_TextureSize;
-        u32 maxTexturesPerLayer = maxSize2 / textureSize2;
-
         u32 textureCount = static_cast<u32>(textures.size());
-        u32 atlasDepth = (textureCount + (maxTexturesPerLayer - 1)) / maxTexturesPerLayer;
 
-        // TODO: to save memory with larger and/or more textures,
-        // when textureCount > maxTexturesPerLayer, instead of allocating a new max size layer,
-        // reduce the size of each layer and increase the number of layers.
-        // e.g. maxSize * maxSize * 2 > maxSize * maxsize/2 * 3
-        // 
-        // Minimum allocation alignment size should be considered only when
-        // sizeof(pixel in texture) * textureSize < min allocation alignment
+        // Grow into the layers first, one at a time.
+        // When all layers are used, double the texture size,
+        // preferring x expansion, half the layer count,
+        // then keep adding layers.
+        // NOTE: since the texture size was doubled, it will
+        // take twice as many textures to increase the layer
+        // count as the previous texture size.
 
-        // textureCount tier cx cy
-        // 1            0     1x 1
-        // 2            1     2x 1
-        // 3..4         2     2x 2
-        // 5..8         3     4x 2
-        // 9..16        4     4x 4
-        // 17..32       5     8x 4
-        // 33..64       6     8x 8
-        // 65..128      7    16x 8
-        // 129..256     8    16x16
-        u32 atlasTier = std::countr_zero(std::bit_ceil(std::min(textureCount, maxTexturesPerLayer)));
-        u32 textureCountX = (1 << (atlasTier >> 1)) * ((atlasTier & 1) + 1);
+        // L = max Layers, C = texture Count, T = atlas Tier
+        // C =  0L+1..  1L =>  1 x 1 x ceil(C/  1), T = 0
+        // C =  1L+1..  2L =>  2 x 1 x ceil(C/  2), T = 1
+        // C =  2L+1..  4L =>  2 x 2 x ceil(C/  4), T = 2
+        // C =  4L+1..  8L =>  4 x 2 x ceil(C/  8), T = 3
+        // C =  8L+1.. 16L =>  4 x 4 x ceil(C/ 16), T = 4
+        // C = 16L+1.. 32L =>  8 x 4 x ceil(C/ 32), T = 5
+        // C = 32L+1.. 64L =>  8 x 8 x ceil(C/ 64), T = 6
+        // C = 64L+1..128L => 16 x 8 x ceil(C/128), T = 7
+
+        // How many 1x1xL atlases would be needed to store all textures.
+        u32 multiplesOfMaxlayer = (textureCount + maxLayers - 1) / maxLayers;
+        // Describes the width and height of the atlas as per the table above.
+        u32 atlasTier = std::countr_zero(std::bit_ceil(multiplesOfMaxlayer));
+
+        u32 textureCountX = (1 << (atlasTier >> 1)) << (atlasTier & 1);
         u32 textureCountY = (1 << (atlasTier >> 1));
+        u32 texturesPerLayer = textureCountX * textureCountY;
+        u32 textureCountZ = (textureCount + texturesPerLayer - 1) / texturesPerLayer;
 
         u32 atlasWidth = textureCountX * m_TextureSize;
         u32 atlasHeight = textureCountY * m_TextureSize;
-        u32 texturesPerLayer = textureCountX * textureCountY;
+        u32 atlasDepth = textureCountZ;
 
+        ENG_ASSERT(atlasWidth < maxSize and atlasHeight < maxSize, "Too many textures to store in atlas.");
         ENG_LOG_INFO("Creating texture atlas of size {}x{}x{}.", atlasWidth, atlasHeight, atlasDepth);
 
         LocalTexture atlas(atlasWidth, atlasHeight, atlasDepth);

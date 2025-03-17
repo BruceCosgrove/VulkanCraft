@@ -96,30 +96,32 @@ namespace eng
         VkPipelineStageFlags srcStage;
         VkPipelineStageFlags dstStage;
 
-        // RenderContext needs to transition images from color attachment to shader read only.
-        // Guaranteed to happen every frame.
-        if (oldLayout == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL and newLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
-        {
-            // TODO: no idea if this is correct, but it seems to work.
-            barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-            barrier.srcAccessMask = 0;
-            barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-            srcStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-            dstStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
-        }
-        // RenderContext needs to transition images from shader read only to color attachment.
-        // Guaranteed to happen every frame.
-        else if (oldLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL and newLayout == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
-        {
-            // TODO: no idea if this is correct, but it seems to work.
-            barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-            barrier.srcAccessMask = VK_ACCESS_SHADER_READ_BIT;
-            barrier.dstAccessMask = 0;
-            srcStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
-            dstStage = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
-        }
+        //// RenderContext needs to transition images from color attachment to shader read only.
+        //// Guaranteed to happen every frame.
+        //if (oldLayout == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL and newLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
+        //{
+        //    // TODO: no idea if this is correct, but it seems to work.
+        //    barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        //    barrier.srcAccessMask = 0;
+        //    barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+        //    srcStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+        //    dstStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+        //}
+        //// RenderContext needs to transition images from shader read only to color attachment.
+        //// Guaranteed to happen every frame.
+        //else if (oldLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL and newLayout == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
+        //{
+        //    // TODO: no idea if this is correct, but it seems to work.
+        //    barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        //    barrier.srcAccessMask = VK_ACCESS_SHADER_READ_BIT;
+        //    barrier.dstAccessMask = 0;
+        //    srcStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+        //    dstStage = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+        //}
+        //else
+
         // Might happen every frame.
-        else if (oldLayout == VK_IMAGE_LAYOUT_UNDEFINED and newLayout == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
+        if (oldLayout == VK_IMAGE_LAYOUT_UNDEFINED and newLayout == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
         {
             // TODO: fairly sure this is correct because it follows the depth buffer
             // example directly below from https://vulkan-tutorial.com/en/Depth_buffering.
