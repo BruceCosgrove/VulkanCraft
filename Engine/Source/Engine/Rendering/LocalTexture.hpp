@@ -10,10 +10,10 @@ namespace eng
     class LocalTexture
     {
     public:
-        using pixels2 = std::mdspan<std::uint8_t, std::dextents<u32, 3>>;
-        using const_pixels2 = std::mdspan<std::uint8_t const, std::dextents<u32, 3>>;
-        using pixels3 = std::mdspan<std::uint8_t, std::dextents<u32, 4>>;
-        using const_pixels3 = std::mdspan<std::uint8_t const, std::dextents<u32, 4>>;
+        using pixels2 = std::mdspan<u8, std::dextents<u32, 3>>;
+        using const_pixels2 = std::mdspan<u8 const, std::dextents<u32, 3>>;
+        using pixels3 = std::mdspan<u8, std::dextents<u32, 4>>;
+        using const_pixels3 = std::mdspan<u8 const, std::dextents<u32, 4>>;
 
         LocalTexture() = default;
         LocalTexture(LocalTexture&& texture) noexcept;

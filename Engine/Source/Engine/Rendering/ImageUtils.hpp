@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Engine/Core/ClassTypes.hpp"
+#include "Engine/Core/DataTypes.hpp"
 #include <vulkan/vulkan.h>
 
 namespace eng
@@ -19,6 +20,7 @@ namespace eng
             VkImageViewType viewType,
             VkFormat format,
             VkExtent3D extent,
+            u32 layerCount,
             VkImageUsageFlags usage,
             VkMemoryPropertyFlags flags,
             VkImageAspectFlags aspect,
@@ -31,14 +33,16 @@ namespace eng
             VkCommandBuffer commandBuffer,
             VkImage image,
             VkImageLayout oldLayout,
-            VkImageLayout newLayout
+            VkImageLayout newLayout,
+            u32 layerCount
         );
 
         static void CopyBufferToImage(
             VkCommandBuffer commandBuffer,
             VkBuffer buffer,
             VkImage image,
-            VkExtent3D extent
+            VkExtent3D extent,
+            u32 layerCount
         );
     };
 }

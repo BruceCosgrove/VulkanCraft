@@ -30,14 +30,16 @@ namespace eng
         BufferUtils::UnmapMemory(m_Context, stagingDeviceMemory);
 
         // Create the image.
-        VkExtent3D extent = {info.LocalTexture->GetWidth(), info.LocalTexture->GetHeight(), info.LocalTexture->GetDepth()};
+        VkExtent3D extent = {info.LocalTexture->GetWidth(), info.LocalTexture->GetHeight(), 1};
+        u32 layerCount = info.LocalTexture->GetDepth();
 
         ImageUtils::CreateImage(
             m_Context,
-            VK_IMAGE_TYPE_3D,
+            VK_IMAGE_TYPE_2D,
             VK_IMAGE_VIEW_TYPE_2D_ARRAY,
             info.Format,
             extent,
+            layerCount,
             VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
             VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
             VK_IMAGE_ASPECT_COLOR_BIT,
@@ -48,11 +50,11 @@ namespace eng
 
         VkCommandBuffer commandBuffer = m_Context.BeginOneTimeCommandBuffer();
         // Transition the image layout to be written to.
-        ImageUtils::TransitionImageLayout(commandBuffer, m_Image, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+        ImageUtils::TransitionImageLayout(commandBuffer, m_Image, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, layerCount);
         // Copy the texture from the staging buffer to the image.
-        ImageUtils::CopyBufferToImage(commandBuffer, stagingBuffer, m_Image, extent);
+        ImageUtils::CopyBufferToImage(commandBuffer, stagingBuffer, m_Image, extent, layerCount);
         // Transition the image layout to be read from shaders.
-        ImageUtils::TransitionImageLayout(commandBuffer, m_Image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+        ImageUtils::TransitionImageLayout(commandBuffer, m_Image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, layerCount);
         m_Context.EndOneTimeCommandBuffer(commandBuffer);
 
         // Destroy the staging buffer and free its memory.

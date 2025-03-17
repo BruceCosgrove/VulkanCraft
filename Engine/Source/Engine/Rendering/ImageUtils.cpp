@@ -11,6 +11,7 @@ namespace eng
         VkImageViewType viewType,
         VkFormat format,
         VkExtent3D extent,
+        u32 layerCount,
         VkImageUsageFlags usage,
         VkMemoryPropertyFlags flags,
         VkImageAspectFlags aspect,
@@ -28,7 +29,7 @@ namespace eng
         imageInfo.format = format;
         imageInfo.extent = extent;
         imageInfo.mipLevels = 1; // TODO
-        imageInfo.arrayLayers = 1; // TODO
+        imageInfo.arrayLayers = layerCount;
         imageInfo.samples = VK_SAMPLE_COUNT_1_BIT; // TODO
         imageInfo.tiling = VK_IMAGE_TILING_OPTIMAL; // TODO
         imageInfo.usage = usage;
@@ -66,7 +67,7 @@ namespace eng
         imageViewInfo.subresourceRange.baseMipLevel = 0; // TODO
         imageViewInfo.subresourceRange.levelCount = 1; // TODO
         imageViewInfo.subresourceRange.baseArrayLayer = 0; // TODO
-        imageViewInfo.subresourceRange.layerCount = 1; // TODO
+        imageViewInfo.subresourceRange.layerCount = layerCount;
 
         result = vkCreateImageView(device, &imageViewInfo, nullptr, &imageView);
         ENG_ASSERT(result == VK_SUCCESS, "Failed to create image view.");
@@ -76,7 +77,8 @@ namespace eng
         VkCommandBuffer commandBuffer,
         VkImage image,
         VkImageLayout oldLayout,
-        VkImageLayout newLayout
+        VkImageLayout newLayout,
+        u32 layerCount
     )
     {
         VkImageMemoryBarrier barrier{};
@@ -89,35 +91,37 @@ namespace eng
         barrier.subresourceRange.baseMipLevel = 0; // TODO
         barrier.subresourceRange.levelCount = 1; // TODO
         barrier.subresourceRange.baseArrayLayer = 0; // TODO
-        barrier.subresourceRange.layerCount = 1; // TODO
+        barrier.subresourceRange.layerCount = layerCount;
 
         VkPipelineStageFlags srcStage;
         VkPipelineStageFlags dstStage;
 
-        // RenderContext needs to transition images from color attachment to shader read only.
-        // Guaranteed to happen every frame.
-        if (oldLayout == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL and newLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
-        {
-            // TODO: no idea if this is correct, but it seems to work.
-            barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-            barrier.srcAccessMask = 0;
-            barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-            srcStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-            dstStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
-        }
-        // RenderContext needs to transition images from shader read only to color attachment.
-        // Guaranteed to happen every frame.
-        else if (oldLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL and newLayout == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
-        {
-            // TODO: no idea if this is correct, but it seems to work.
-            barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-            barrier.srcAccessMask = VK_ACCESS_SHADER_READ_BIT;
-            barrier.dstAccessMask = 0;
-            srcStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
-            dstStage = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
-        }
+        //// RenderContext needs to transition images from color attachment to shader read only.
+        //// Guaranteed to happen every frame.
+        //if (oldLayout == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL and newLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
+        //{
+        //    // TODO: no idea if this is correct, but it seems to work.
+        //    barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        //    barrier.srcAccessMask = 0;
+        //    barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+        //    srcStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+        //    dstStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+        //}
+        //// RenderContext needs to transition images from shader read only to color attachment.
+        //// Guaranteed to happen every frame.
+        //else if (oldLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL and newLayout == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
+        //{
+        //    // TODO: no idea if this is correct, but it seems to work.
+        //    barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        //    barrier.srcAccessMask = VK_ACCESS_SHADER_READ_BIT;
+        //    barrier.dstAccessMask = 0;
+        //    srcStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+        //    dstStage = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+        //}
+        //else
+
         // Might happen every frame.
-        else if (oldLayout == VK_IMAGE_LAYOUT_UNDEFINED and newLayout == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
+        if (oldLayout == VK_IMAGE_LAYOUT_UNDEFINED and newLayout == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
         {
             // TODO: fairly sure this is correct because it follows the depth buffer
             // example directly below from https://vulkan-tutorial.com/en/Depth_buffering.
@@ -174,7 +178,8 @@ namespace eng
         VkCommandBuffer commandBuffer,
         VkBuffer buffer,
         VkImage image,
-        VkExtent3D extent
+        VkExtent3D extent,
+        u32 layerCount
     )
     {
         VkBufferImageCopy region{};
@@ -184,7 +189,7 @@ namespace eng
         region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT; // TODO
         region.imageSubresource.mipLevel = 0; // TODO
         region.imageSubresource.baseArrayLayer = 0; // TODO
-        region.imageSubresource.layerCount = 1; // TODO
+        region.imageSubresource.layerCount = layerCount;
         region.imageOffset = {0, 0, 0};
         region.imageExtent = extent;
 
