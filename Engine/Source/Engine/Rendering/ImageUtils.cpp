@@ -11,6 +11,7 @@ namespace eng
         VkImageViewType viewType,
         VkFormat format,
         VkExtent3D extent,
+        u32 layerCount,
         VkImageUsageFlags usage,
         VkMemoryPropertyFlags flags,
         VkImageAspectFlags aspect,
@@ -28,7 +29,7 @@ namespace eng
         imageInfo.format = format;
         imageInfo.extent = extent;
         imageInfo.mipLevels = 1; // TODO
-        imageInfo.arrayLayers = 1; // TODO
+        imageInfo.arrayLayers = layerCount;
         imageInfo.samples = VK_SAMPLE_COUNT_1_BIT; // TODO
         imageInfo.tiling = VK_IMAGE_TILING_OPTIMAL; // TODO
         imageInfo.usage = usage;
@@ -66,7 +67,7 @@ namespace eng
         imageViewInfo.subresourceRange.baseMipLevel = 0; // TODO
         imageViewInfo.subresourceRange.levelCount = 1; // TODO
         imageViewInfo.subresourceRange.baseArrayLayer = 0; // TODO
-        imageViewInfo.subresourceRange.layerCount = 1; // TODO
+        imageViewInfo.subresourceRange.layerCount = layerCount;
 
         result = vkCreateImageView(device, &imageViewInfo, nullptr, &imageView);
         ENG_ASSERT(result == VK_SUCCESS, "Failed to create image view.");
@@ -76,7 +77,8 @@ namespace eng
         VkCommandBuffer commandBuffer,
         VkImage image,
         VkImageLayout oldLayout,
-        VkImageLayout newLayout
+        VkImageLayout newLayout,
+        u32 layerCount
     )
     {
         VkImageMemoryBarrier barrier{};
@@ -89,7 +91,7 @@ namespace eng
         barrier.subresourceRange.baseMipLevel = 0; // TODO
         barrier.subresourceRange.levelCount = 1; // TODO
         barrier.subresourceRange.baseArrayLayer = 0; // TODO
-        barrier.subresourceRange.layerCount = 1; // TODO
+        barrier.subresourceRange.layerCount = layerCount;
 
         VkPipelineStageFlags srcStage;
         VkPipelineStageFlags dstStage;
@@ -174,7 +176,8 @@ namespace eng
         VkCommandBuffer commandBuffer,
         VkBuffer buffer,
         VkImage image,
-        VkExtent3D extent
+        VkExtent3D extent,
+        u32 layerCount
     )
     {
         VkBufferImageCopy region{};
@@ -184,7 +187,7 @@ namespace eng
         region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT; // TODO
         region.imageSubresource.mipLevel = 0; // TODO
         region.imageSubresource.baseArrayLayer = 0; // TODO
-        region.imageSubresource.layerCount = 1; // TODO
+        region.imageSubresource.layerCount = layerCount;
         region.imageOffset = {0, 0, 0};
         region.imageExtent = extent;
 

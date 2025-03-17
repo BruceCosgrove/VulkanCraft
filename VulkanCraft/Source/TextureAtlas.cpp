@@ -113,8 +113,7 @@ namespace vc
 
                     if (textureIndex >= textures.size())
                         goto noMoreTextures;
-                    auto& texture = textures[textureIndex];
-                    u8 const* texturePixels = texture.GetPixels2D().data_handle();
+                    u8 const* texturePixels = textures[textureIndex].GetPixels2D().data_handle();
 
                     u8* atlasPixels = atlas.GetPixels3D().data_handle() + atlasLayer + atlasTop + atlasLeft;
 
