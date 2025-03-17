@@ -10,7 +10,7 @@ namespace eng
     class KeyPressEvent : public Event
     {
     public:
-        _ENG_EVENT_GET_STATIC_TYPE(EventType::KeyPress);
+        _ENG_EVENT_GET_STATIC_FUNCS(EventType::KeyPress, EventCategory::Key);
         KeyPressEvent(Keycode keycode, Modifiers modifiers, bool pressed) noexcept;
 
         Keycode GetKeycode() const noexcept;
@@ -28,7 +28,7 @@ namespace eng
     class KeyTypeEvent : public Event
     {
     public:
-        _ENG_EVENT_GET_STATIC_TYPE(EventType::KeyType);
+        _ENG_EVENT_GET_STATIC_FUNCS(EventType::KeyType, EventCategory::Key);
         KeyTypeEvent(u32 codepoint) noexcept;
 
         u32 GetCodepoint() const noexcept;
@@ -37,3 +37,13 @@ namespace eng
     };
     _ENG_ASSERT_EVENT_INTERFACE(KeyTypeEvent);
 }
+
+_ENG_EVENT_FORMAT(eng::KeyPressEvent,
+    "KeyPressEvent(Keycode={}, Modifiers={}, Pressed={})",
+    event.GetKeycode(), event.GetModifiers(), event.IsPressed()
+);
+
+_ENG_EVENT_FORMAT(eng::KeyTypeEvent,
+    "KeyTypeEvent(Codepoint={})",
+    event.GetCodepoint()
+);

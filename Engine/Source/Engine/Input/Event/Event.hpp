@@ -1,7 +1,9 @@
 #pragma once
 
 #include "Engine/Core/Enums.hpp"
+#include <spdlog/fmt/bundled/format.h>
 #include <concepts>
+#include <format>
 
 namespace eng
 {
@@ -22,7 +24,6 @@ namespace eng
 
         // Mouse Events
         MouseButtonPress,
-        MouseButtonRelease,
         MouseMove,
         MouseEnter,
         MouseScroll,
@@ -32,23 +33,41 @@ namespace eng
         KeyType,
     );
 
+    ENG_DEFINE_MASKED_ENUM(
+        EventCategory, u8,
+
+        // Window Events
+        Window,
+
+        // Mouse Events
+        Mouse,
+
+        // Key Events
+        Key,
+    );
+
     class Event;
 
-    // Interface for all event types to conform to.
-    template <class EventT>
-    concept EventI =
-        std::is_base_of_v<Event, EventT> &&
-        requires(EventT& event)
-        {
-            { EventT::GetStaticType() } noexcept -> std::same_as<EventType>;
-        };
+    namespace detail
+    {
+        // Interface for all event types to conform to.
+        template <class EventT>
+        concept EventI =
+            std::derived_from<EventT, Event> &&
+            requires(EventT& event)
+            {
+                { EventT::GetStaticType() } noexcept -> std::same_as<EventType>;
+                { EventT::GetStaticCategories() } noexcept -> std::same_as<EventCategory>;
+            };
+    }
 
     class Event
     {
     public:
-        Event(EventType type) noexcept;
+        Event(EventType type, EventCategory category) noexcept;
 
         EventType GetType() const noexcept;
+        EventCategory GetCategories() const noexcept;
         bool IsHandled() const noexcept;
         void Handle() noexcept;
     public:
@@ -60,7 +79,7 @@ namespace eng
                 callback(*this, std::forward<Args>(args)...);
         }
 
-        template <EventI EventT, typename... Args>
+        template <detail::EventI EventT, typename... Args>
         void Dispatch(void(*callback)(EventT&, Args...), Args&&... args)
         noexcept(noexcept(callback(static_cast<EventT&>(*this), std::forward<Args>(args)...)))
         {
@@ -76,7 +95,7 @@ namespace eng
                 (object->*callback)(*this, std::forward<Args>(args)...);
         }
 
-        template <class Class, EventI EventT, typename... Args>
+        template <class Class, detail::EventI EventT, typename... Args>
         void Dispatch(Class* object, void(Class::*callback)(EventT&, Args...), Args&&... args)
         noexcept(noexcept((object->*callback)(static_cast<EventT&>(*this), std::forward<Args>(args)...)))
         {
@@ -85,12 +104,27 @@ namespace eng
         }
     private:
         EventType m_Type;
+        EventCategory m_Categories;
         bool m_Handled = false;
     };
 }
 
-#define _ENG_EVENT_GET_STATIC_TYPE(type) \
-    static ::eng::EventType GetStaticType() noexcept { return type; }
+#define _ENG_EVENT_GET_STATIC_FUNCS(type, categories) \
+    static ::eng::EventType GetStaticType() noexcept { return type; } \
+    static ::eng::EventCategory GetStaticCategories() noexcept { return categories; }
 
-#define _ENG_ASSERT_EVENT_INTERFACE(type) \
-    static_assert(::eng::EventI<type>, #type " must satisfy the event interface concept.")
+#define _ENG_ASSERT_EVENT_INTERFACE(event) \
+    static_assert(::eng::detail::EventI<event>, #event " must satisfy the event interface concept.")
+
+#define _ENG_EVENT_FORMAT(e, format_, ...) \
+    template <> struct fmt::formatter<e> { \
+        constexpr auto parse(format_parse_context& context) { return context.end(); } \
+        auto format(e event, fmt::format_context& context) const { \
+            return fmt::format_to(context.out(), format_ __VA_OPT__(,) __VA_ARGS__); \
+        } \
+    }
+
+_ENG_EVENT_FORMAT(eng::Event,
+    "Event(Type={}, Categories={}, Handled={})",
+    event.GetType(), event.GetCategories(), event.IsHandled()
+);

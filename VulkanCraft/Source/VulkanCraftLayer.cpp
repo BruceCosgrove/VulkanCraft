@@ -150,8 +150,6 @@ namespace vc
 
     void VulkanCraftLayer::OnEvent(Event& event)
     {
-        // TODO: remove
-        //ENG_LOG_DEBUG("VulkanCraftLayer::OnEvent(TODO: event logging)");
         event.Dispatch(m_ImGuiRenderContext.get(), &ImGuiRenderContext::OnEvent);
         event.Dispatch(this, &VulkanCraftLayer::OnWindowCloseEvent);
         event.Dispatch(this, &VulkanCraftLayer::OnKeyPressEvent);

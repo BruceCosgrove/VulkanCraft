@@ -9,7 +9,7 @@ namespace eng
     class WindowMoveEvent : public Event
     {
     public:
-        _ENG_EVENT_GET_STATIC_TYPE(EventType::WindowMove);
+        _ENG_EVENT_GET_STATIC_FUNCS(EventType::WindowMove, EventCategory::Window);
         WindowMoveEvent(i32 x, i32 y) noexcept;
 
         i32 GetX() const noexcept;
@@ -25,7 +25,7 @@ namespace eng
     class WindowResizeEvent : public Event
     {
     public:
-        _ENG_EVENT_GET_STATIC_TYPE(EventType::WindowResize);
+        _ENG_EVENT_GET_STATIC_FUNCS(EventType::WindowResize, EventCategory::Window);
         WindowResizeEvent(u32 width, u32 height) noexcept;
 
         u32 GetWidth() const noexcept;
@@ -41,7 +41,7 @@ namespace eng
     class WindowCloseEvent : public Event
     {
     public:
-        _ENG_EVENT_GET_STATIC_TYPE(EventType::WindowClose);
+        _ENG_EVENT_GET_STATIC_FUNCS(EventType::WindowClose, EventCategory::Window);
         WindowCloseEvent() noexcept;
     };
     _ENG_ASSERT_EVENT_INTERFACE(WindowCloseEvent);
@@ -51,7 +51,7 @@ namespace eng
     class WindowRefreshEvent : public Event
     {
     public:
-        _ENG_EVENT_GET_STATIC_TYPE(EventType::WindowRefresh);
+        _ENG_EVENT_GET_STATIC_FUNCS(EventType::WindowRefresh, EventCategory::Window);
         WindowRefreshEvent() noexcept;
     };
     _ENG_ASSERT_EVENT_INTERFACE(WindowRefreshEvent);
@@ -61,7 +61,7 @@ namespace eng
     class WindowFocusEvent : public Event
     {
     public:
-        _ENG_EVENT_GET_STATIC_TYPE(EventType::WindowFocus);
+        _ENG_EVENT_GET_STATIC_FUNCS(EventType::WindowFocus, EventCategory::Window);
         WindowFocusEvent(bool focused) noexcept;
 
         bool IsFocused() const noexcept;
@@ -75,7 +75,7 @@ namespace eng
     class WindowMinimizeEvent : public Event
     {
     public:
-        _ENG_EVENT_GET_STATIC_TYPE(EventType::WindowMinimize);
+        _ENG_EVENT_GET_STATIC_FUNCS(EventType::WindowMinimize, EventCategory::Window);
         WindowMinimizeEvent(bool minimized) noexcept;
 
         bool IsMinimized() const noexcept;
@@ -89,7 +89,7 @@ namespace eng
     class WindowMaximizeEvent : public Event
     {
     public:
-        _ENG_EVENT_GET_STATIC_TYPE(EventType::WindowMaximize);
+        _ENG_EVENT_GET_STATIC_FUNCS(EventType::WindowMaximize, EventCategory::Window);
         WindowMaximizeEvent(bool maximized) noexcept;
 
         bool IsMaximized() const noexcept;
@@ -103,7 +103,7 @@ namespace eng
     class WindowFramebufferResizeEvent : public Event
     {
     public:
-        _ENG_EVENT_GET_STATIC_TYPE(EventType::WindowFramebufferResize);
+        _ENG_EVENT_GET_STATIC_FUNCS(EventType::WindowFramebufferResize, EventCategory::Window);
         WindowFramebufferResizeEvent(u32 framebufferWidth, u32 framebufferHeight) noexcept;
 
         u32 GetFramebufferWidth() const noexcept;
@@ -119,7 +119,7 @@ namespace eng
     class WindowContentScaleEvent : public Event
     {
     public:
-        _ENG_EVENT_GET_STATIC_TYPE(EventType::WindowContentScale);
+        _ENG_EVENT_GET_STATIC_FUNCS(EventType::WindowContentScale, EventCategory::Window);
         WindowContentScaleEvent(f32 contentScaleX, f32 contentScaleY) noexcept;
 
         f32 GetContentScaleX() const noexcept;
@@ -135,7 +135,7 @@ namespace eng
     class WindowPathDropEvent : public Event
     {
     public:
-        _ENG_EVENT_GET_STATIC_TYPE(EventType::WindowPathDrop);
+        _ENG_EVENT_GET_STATIC_FUNCS(EventType::WindowPathDrop, EventCategory::Window);
         WindowPathDropEvent(std::span<char const*> paths) noexcept;
 
         std::span<char const* const> GetPaths() const noexcept;
@@ -144,3 +144,51 @@ namespace eng
     };
     _ENG_ASSERT_EVENT_INTERFACE(WindowPathDropEvent);
 }
+
+_ENG_EVENT_FORMAT(eng::WindowMoveEvent,
+    "WindowMoveEvent(X={}, Y={})",
+    event.GetX(), event.GetY()
+);
+
+_ENG_EVENT_FORMAT(eng::WindowResizeEvent,
+    "WindowResizeEvent(Width={}, Height={})",
+    event.GetWidth(), event.GetHeight()
+);
+
+_ENG_EVENT_FORMAT(eng::WindowCloseEvent,
+    "WindowCloseEvent"
+);
+
+_ENG_EVENT_FORMAT(eng::WindowRefreshEvent,
+    "WindowRefreshEvent",
+);
+
+_ENG_EVENT_FORMAT(eng::WindowFocusEvent,
+    "WindowFocusEvent(Focused={})",
+    event.IsFocused()
+);
+
+_ENG_EVENT_FORMAT(eng::WindowMinimizeEvent,
+    "WindowMinimizeEvent(Minimized={})",
+    event.IsMinimized()
+);
+
+_ENG_EVENT_FORMAT(eng::WindowMaximizeEvent,
+    "WindowMaximizeEvent(Maximized={})",
+    event.IsMaximized()
+);
+
+_ENG_EVENT_FORMAT(eng::WindowFramebufferResizeEvent,
+    "WindowFramebufferResizeEvent(FramebufferWidth={}, FramebufferHeight={})",
+    event.GetFramebufferWidth(), event.GetFramebufferHeight()
+);
+
+_ENG_EVENT_FORMAT(eng::WindowContentScaleEvent,
+    "WindowContentScaleEvent(ContentScaleX={}, ContentScaleX={})",
+    event.GetContentScaleX(), event.GetContentScaleY()
+);
+
+_ENG_EVENT_FORMAT(eng::WindowPathDropEvent,
+    "WindowPathDropEvent(PathCount={})",
+    event.GetPaths().size()
+);

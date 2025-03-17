@@ -10,7 +10,7 @@ namespace eng
     class MouseButtonPressEvent : public Event
     {
     public:
-        _ENG_EVENT_GET_STATIC_TYPE(EventType::MouseButtonPress);
+        _ENG_EVENT_GET_STATIC_FUNCS(EventType::MouseButtonPress, EventCategory::Mouse);
         MouseButtonPressEvent(MouseButton button, Modifiers modifiers, bool pressed) noexcept;
 
         MouseButton GetButton() const noexcept;
@@ -28,7 +28,7 @@ namespace eng
     class MouseMoveEvent : public Event
     {
     public:
-        _ENG_EVENT_GET_STATIC_TYPE(EventType::MouseMove);
+        _ENG_EVENT_GET_STATIC_FUNCS(EventType::MouseMove, EventCategory::Mouse);
         MouseMoveEvent(f32 x, f32 y) noexcept;
 
         f32 GetX() const noexcept;
@@ -44,7 +44,7 @@ namespace eng
     class MouseEnterEvent : public Event
     {
     public:
-        _ENG_EVENT_GET_STATIC_TYPE(EventType::MouseEnter);
+        _ENG_EVENT_GET_STATIC_FUNCS(EventType::MouseEnter, EventCategory::Mouse);
         MouseEnterEvent(bool entered) noexcept;
 
         bool IsEntered() const noexcept;
@@ -58,7 +58,7 @@ namespace eng
     class MouseScrollEvent : public Event
     {
     public:
-        _ENG_EVENT_GET_STATIC_TYPE(EventType::MouseScroll);
+        _ENG_EVENT_GET_STATIC_FUNCS(EventType::MouseScroll, EventCategory::Mouse);
         MouseScrollEvent(f32 scrollX, f32 scrollY) noexcept;
 
         f32 GetScrollX() const noexcept;
@@ -69,3 +69,23 @@ namespace eng
     };
     _ENG_ASSERT_EVENT_INTERFACE(MouseScrollEvent);
 }
+
+_ENG_EVENT_FORMAT(eng::MouseButtonPressEvent,
+    "MouseButtonPressEvent(Button={}, Modifiers={}, Pressed={})",
+    event.GetButton(), event.GetModifiers(), event.IsPressed()
+);
+
+_ENG_EVENT_FORMAT(eng::MouseMoveEvent,
+    "MouseMoveEvent(X={}, Y={})",
+    event.GetX(), event.GetY()
+);
+
+_ENG_EVENT_FORMAT(eng::MouseEnterEvent,
+    "MouseEnterEvent(Entered={})",
+    event.IsEntered()
+);
+
+_ENG_EVENT_FORMAT(eng::MouseScrollEvent,
+    "MouseScrollEvent(ScrollX={}, ScrollY={})",
+    event.GetScrollX(), event.GetScrollY()
+);

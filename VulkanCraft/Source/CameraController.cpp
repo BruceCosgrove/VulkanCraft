@@ -75,7 +75,7 @@ namespace vc
     void CameraController::OnKeyPressEvent(KeyPressEvent& event)
     {
         i32 direction = event.IsPressed() ? 1 : -1;
-        switch (event.GetKeycode())
+        switch (+event.GetKeycode())
         {
             case Keycode::A: // -x
                 direction = -direction;

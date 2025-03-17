@@ -2,177 +2,195 @@
 
 #include "Engine/Core/AssertOrVerify.hpp"
 #include "Engine/Core/DataTypes.hpp"
+#include "Engine/Core/ForEach.hpp"
+#include <spdlog/fmt/bundled/format.h>
+#include <array>
 #include <bit>
 #include <concepts>
+#include <compare>
 
-namespace eng
+namespace eng::detail
 {
-    template <typename BoundedEnumT, typename UT = std::underlying_type_t<BoundedEnumT>>
-    concept BoundedEnumImplI =
-        // UT is effectively a using declaration. Also enforces that MaskedEnumT is an enum.
-        std::is_same_v<UT, std::underlying_type_t<BoundedEnumT>> &&
-        static_cast<UT>(BoundedEnumT::None) == 0 &&
-        static_cast<UT>(BoundedEnumT::_Begin) == static_cast<UT>(BoundedEnumT::None) + 1 &&
-        static_cast<UT>(BoundedEnumT::_Count) == BoundedEnumT::_End - BoundedEnumT::_Begin &&
-        static_cast<UT>(BoundedEnumT::_BitCount) == std::bit_width(static_cast<UT>(BoundedEnumT::_Count)) &&
-        static_cast<UT>(BoundedEnumT::_Count) > 0;
-    
-    template <typename MaskedEnumT, typename UT = std::underlying_type_t<MaskedEnumT>>
-    concept MaskedEnumImplI =
-        // UT is effectively a using declaration. Also enforces that MaskedEnumT is an enum.
-        std::is_same_v<UT, std::underlying_type_t<MaskedEnumT>> &&
-        static_cast<UT>(MaskedEnumT::None) == 0 &&
-        static_cast<UT>(MaskedEnumT::_Begin) == (1 << 0) &&
-        static_cast<UT>(MaskedEnumT::_Mask) == (static_cast<UT>(MaskedEnumT::_End) << 1) - 3 &&
-        static_cast<UT>(MaskedEnumT::_Count) == std::countr_one(static_cast<UT>(MaskedEnumT::_Mask)) &&
-        MaskedEnumT::_BitCount == MaskedEnumT::_Count &&
-        static_cast<UT>(MaskedEnumT::_Count) > 0;
-
     template <typename BoundedEnumT>
     concept BoundedEnumI =
-        BoundedEnumImplI<BoundedEnumT> &&
-        std::is_scoped_enum_v<BoundedEnumT> &&
+        std::is_class_v<BoundedEnumT> and
+        std::is_enum_v<decltype(BoundedEnumT::None)> and
+        !std::is_scoped_enum_v<decltype(BoundedEnumT::None)> and
+        std::is_unsigned_v<std::underlying_type_t<decltype(BoundedEnumT::None)>> and
+        BoundedEnumT::None == 0 and
+        BoundedEnumT::_Begin == BoundedEnumT::None + 1 and
+        BoundedEnumT::_Count == BoundedEnumT::_End - BoundedEnumT::_Begin and
+        BoundedEnumT::_BitCount == std::bit_width<std::underlying_type_t<decltype(BoundedEnumT::None)>>(BoundedEnumT::_Count) and
+        BoundedEnumT::_Count > 0 and
         requires(BoundedEnumT e)
         {
-            { e - e } -> std::same_as<std::underlying_type_t<BoundedEnumT>>;
-            { +e } -> std::same_as<std::underlying_type_t<BoundedEnumT>>;
+            { +e } -> std::same_as<std::underlying_type_t<decltype(BoundedEnumT::None)>>;
             { !e } -> std::same_as<bool>;
+            { e == e } -> std::same_as<bool>;
+            { e <=> e } -> std::same_as<std::strong_ordering>;
         };
-
+    
     template <typename MaskedEnumT>
     concept MaskedEnumI =
-        MaskedEnumImplI<MaskedEnumT> &&
-        std::is_scoped_enum_v<MaskedEnumT> &&
-        std::is_unsigned_v<std::underlying_type_t<MaskedEnumT>> &&
+        std::is_class_v<MaskedEnumT> and
+        std::is_enum_v<decltype(MaskedEnumT::None)> and
+        !std::is_scoped_enum_v<decltype(MaskedEnumT::None)> and
+        std::is_unsigned_v<std::underlying_type_t<decltype(MaskedEnumT::None)>> and
+        MaskedEnumT::None == 0 and
+        MaskedEnumT::_Begin == 1 << 0 and
+        MaskedEnumT::_Mask == (MaskedEnumT::_End << 1) - 3 and
+        MaskedEnumT::_Count == std::countr_one<std::underlying_type_t<decltype(MaskedEnumT::None)>>(MaskedEnumT::_Mask) and
+        MaskedEnumT::_BitCount == MaskedEnumT::_Count and
+        MaskedEnumT::_Count > 0 and
         requires(MaskedEnumT e)
         {
-            { +e } -> std::same_as<std::underlying_type_t<MaskedEnumT>>;
+            { +e } -> std::same_as<std::underlying_type_t<decltype(MaskedEnumT::None)>>;
+            { !e } -> std::same_as<bool>;
+            { e == e } -> std::same_as<bool>;
+            { e <=> e } -> std::same_as<std::strong_ordering>;
             { ~e } -> std::same_as<MaskedEnumT>;
             { e & e } -> std::same_as<MaskedEnumT>;
             { e ^ e } -> std::same_as<MaskedEnumT>;
             { e | e } -> std::same_as<MaskedEnumT>;
-            { !e } -> std::same_as<bool>;
+            { e &= e } -> std::same_as<MaskedEnumT&>;
+            { e ^= e } -> std::same_as<MaskedEnumT&>;
+            { e |= e } -> std::same_as<MaskedEnumT&>;
         };
 
-    template <typename BoundedClassEnumT, class ClassT>
-    concept BoundedClassEnumI =
-        BoundedEnumImplI<BoundedClassEnumT> &&
-        !std::is_scoped_enum_v<BoundedClassEnumT> &&
-        std::is_same_v<typename ClassT::Type, BoundedClassEnumT>&&
-        std::is_class_v<ClassT>;
+#define _ENG_ENUM_TO_STRING_IMPL(e) \
+    #e,
+#define _ENG_ENUM_BIT_IMPL(e) \
+    _##e##Bit,
+#define _ENG_ENUM_VALUE_IMPL(e) \
+    e = 1 << _##e##Bit,
+#define _ENG_ENUM_MAX_NAME_LENGTH_IMPL(enumName, e) \
+    sizeof(#e) +
+}
 
-    template <typename MaskedClassEnumT, class ClassT>
-    concept MaskedClassEnumI =
-        MaskedEnumImplI<MaskedClassEnumT> &&
-        !std::is_scoped_enum_v<MaskedClassEnumT> &&
-        std::is_unsigned_v<std::underlying_type_t<MaskedClassEnumT>> &&
-        std::is_same_v<typename ClassT::Type, MaskedClassEnumT> &&
-        std::is_class_v<ClassT>;
+// Use this to define a bounded enum.
+#define ENG_DEFINE_BOUNDED_ENUM(enumName, underlyingType, ...) \
+    struct enumName { \
+        enum : underlyingType { \
+            None = 0, \
+            __VA_ARGS__ /* Requires trailing comma. */ \
+            _End, \
+            _Begin = None + 1, \
+            _Count = _End - _Begin, \
+            _BitCount = ::std::bit_width(_Count) \
+        }; \
+        static constexpr ::eng::string_view Name = #enumName; \
+        static constexpr auto Names = ::std::to_array<::eng::string_view const>({ \
+            ENG_FOR_EACH(_ENG_ENUM_TO_STRING_IMPL, __VA_ARGS__) \
+        }); \
+        constexpr string_view ToString() const noexcept { return Names.at(m_Value - _Begin); } \
+        constexpr enumName() noexcept = default; \
+        constexpr enumName(underlyingType value) noexcept : m_Value(value) {} \
+        constexpr underlyingType operator+() noexcept { return m_Value; } \
+        constexpr explicit operator bool() const noexcept { return m_Value; } \
+        constexpr bool operator!() const noexcept { return !m_Value; } \
+        friend constexpr bool operator==(enumName lhs, enumName rhs) noexcept { return lhs.m_Value == rhs.m_Value; } \
+        friend constexpr ::std::strong_ordering operator<=>(enumName lhs, enumName rhs) noexcept { return lhs.m_Value <=> rhs.m_Value; } \
+    private: \
+        underlyingType m_Value = enumName::None; \
+    }; \
+    static_assert(::eng::detail::BoundedEnumI<enumName>, #enumName " does not satisfy BoundedEnumI's constraints.")
 
-    template <BoundedEnumI BoundedEnumT>
+// Use this to define a masked enum.
+#define ENG_DEFINE_MASKED_ENUM(enumName, underlyingType, ...) \
+    struct enumName { \
+        enum : underlyingType { \
+            ENG_FOR_EACH(_ENG_ENUM_BIT_IMPL, __VA_ARGS__) \
+            _Count, \
+            None = 0, \
+            ENG_FOR_EACH(_ENG_ENUM_VALUE_IMPL, __VA_ARGS__) \
+            _End, \
+            _Begin = 1 << 0, \
+            _Mask = (_End << 1) - 3, \
+            _BitCount = _Count \
+        }; \
+        static constexpr ::eng::string_view Name = #enumName; \
+        static constexpr auto Names = ::std::to_array<::eng::string_view const>({ \
+            ENG_FOR_EACH(_ENG_ENUM_TO_STRING_IMPL, __VA_ARGS__) \
+        }); \
+        constexpr ::eng::string ToString() { \
+            if (m_Value == None) \
+                return "None"; \
+            \
+            string mask; \
+            mask.reserve(MaxNameLength); \
+            \
+            underlyingType index = std::countr_zero(m_Value); \
+            mask += Names.at(index); \
+            \
+            auto next = [&] { index += std::countr_zero<underlyingType>(m_Value >> (index + 1)) + 1; }; \
+            \
+            for (next(); index < +_Count; next()) \
+                (mask += '|') += Names.at(index); \
+            return mask; \
+        } \
+        static constexpr ::eng::u64 MaxNameLength = ENG_FOR_EACH_ZIP1(_ENG_ENUM_MAX_NAME_LENGTH_IMPL, enumName, __VA_ARGS__) -1; \
+        constexpr enumName() noexcept = default; \
+        constexpr enumName(underlyingType value) noexcept : m_Value(value & _Mask) {} \
+        constexpr underlyingType operator+() noexcept { return m_Value; } \
+        constexpr explicit operator bool() const noexcept { return m_Value; } \
+        constexpr bool operator!() const noexcept { return !m_Value; } \
+        friend constexpr bool operator==(enumName lhs, enumName rhs) noexcept { return lhs.m_Value == rhs.m_Value; } \
+        friend constexpr ::std::strong_ordering operator<=>(enumName lhs, enumName rhs) noexcept { return lhs.m_Value <=> rhs.m_Value; } \
+        constexpr enumName operator~() noexcept { return ~m_Value & _Mask; } \
+        friend constexpr enumName operator&(enumName lhs, enumName rhs) noexcept { return lhs.m_Value & rhs.m_Value; } \
+        friend constexpr enumName operator^(enumName lhs, enumName rhs) noexcept { return lhs.m_Value ^ rhs.m_Value; } \
+        friend constexpr enumName operator|(enumName lhs, enumName rhs) noexcept { return lhs.m_Value | rhs.m_Value; } \
+        friend constexpr enumName& operator&=(enumName& lhs, enumName rhs) noexcept { lhs.m_Value &= rhs.m_Value; return lhs; } \
+        friend constexpr enumName& operator^=(enumName& lhs, enumName rhs) noexcept { lhs.m_Value ^= rhs.m_Value; return lhs; } \
+        friend constexpr enumName& operator|=(enumName& lhs, enumName rhs) noexcept { lhs.m_Value |= rhs.m_Value; return lhs; } \
+    private: \
+        underlyingType m_Value = None; \
+    }; \
+    static_assert(::eng::detail::MaskedEnumI<enumName>, #enumName " does not satisfy MaskedEnumI's constraints.")
+
+// Validity checks
+namespace eng
+{
+    template <detail::BoundedEnumI BoundedEnumT>
     constexpr bool IsBoundedEnumValid(BoundedEnumT e) noexcept
     {
-        return BoundedEnumT::_Begin <= e and e < BoundedEnumT::_End;
+        return BoundedEnumT::_Begin <= +e and +e < BoundedEnumT::_End;
     }
 
-    template <MaskedEnumI MaskedEnumT>
+    template <detail::MaskedEnumI MaskedEnumT>
     constexpr bool IsMaskedEnumValid(MaskedEnumT e) noexcept
     {
         return (MaskedEnumT::_Mask & e) == e;
     }
 
-    template <class ClassT, BoundedClassEnumI<ClassT> BoundedClassEnumT>
-    constexpr bool IsBoundedClassEnumValid(BoundedClassEnumT e) noexcept
-    {
-        return ClassT::_Begin <= e and e < ClassT::_End;
-    }
-
-    template <class ClassT, MaskedClassEnumI<ClassT> MaskedClassEnumT>
-    constexpr bool IsMaskedClassEnumValid(MaskedClassEnumT e) noexcept
-    {
-        return (ClassT::_Mask & e) == e;
-    }
-    
-    template <auto BitIn, auto BitOut>
-    requires(eng::IsMaskedEnumValid(BitIn) and std::is_unsigned_v<decltype(BitOut)>)
-    constexpr decltype(BitOut) TranslateMaskedEnum(decltype(BitIn) value) noexcept
-    {
-        using CT = std::common_type_t<decltype(+BitIn), decltype(BitOut)>;
-        constexpr int bitShift = std::countr_zero(BitOut) - std::countr_zero(+BitIn);
-        if constexpr (bitShift >= 0)
-            return static_cast<decltype(BitOut)>(static_cast<CT>(value & BitIn) << bitShift);
-        else /*if constexpr (bitShift < 0)*/
-            return static_cast<decltype(BitOut)>(static_cast<CT>(value & BitIn) >> -bitShift);
-    }
-}
-
-#define _ENG_DEFINE_BOUNDED_ENUM_IMPL(clazz, enumName, underlyingType, ...) \
-    enum clazz enumName : underlyingType { \
-        None = 0, \
-        __VA_ARGS__ /* Requires trailing comma. */ \
-        _End, \
-        _Begin = None + 1, \
-        _Count = _End - _Begin, \
-        _BitCount = ::std::bit_width(_Count) \
-    }
-
-#define _ENG_DEFINE_MASKED_ENUM_IMPL(clazz, enumName, underlyingType, ...) \
-    enum clazz enumName : underlyingType { \
-        None = 0, \
-        __VA_ARGS__ /* Requires trailing comma. */ \
-        _End, \
-        _Begin = 1 << 0, \
-        _Mask = (_End << 1) - 3, \
-        _Count = ::std::countr_one(_Mask), \
-        _BitCount = _Count \
-    }
-
-#define ENG_DEFINE_BOUNDED_ENUM(enumName, underlyingType, ...) \
-    _ENG_DEFINE_BOUNDED_ENUM_IMPL(class, enumName, underlyingType, __VA_ARGS__); \
-    constexpr underlyingType operator-(enumName e1, enumName e2) noexcept \
-    { return static_cast<underlyingType>(e1) - static_cast<underlyingType>(e2); } \
-    constexpr underlyingType operator+(enumName e) noexcept \
-    { return static_cast<underlyingType>(e); } \
-    constexpr bool operator!(enumName e) noexcept \
-    { return static_cast<underlyingType>(e) == static_cast<underlyingType>(enumName::None); } \
-    static_assert(::eng::BoundedEnumI<enumName>, #enumName " does not satisfy BoundedEnumI's constraints.")
-
-#define ENG_DEFINE_MASKED_ENUM(enumName, underlyingType, ...) \
-    _ENG_DEFINE_MASKED_ENUM_IMPL(class, enumName, underlyingType, __VA_ARGS__); \
-    constexpr underlyingType operator+(enumName e) noexcept \
-    { return static_cast<underlyingType>(e); } \
-    constexpr enumName operator~(enumName e) noexcept \
-    { return static_cast<enumName>(~static_cast<underlyingType>(e) & static_cast<underlyingType>(enumName::_Mask)); } \
-    constexpr enumName operator&(enumName e1, enumName e2) noexcept \
-    { return static_cast<enumName>(static_cast<underlyingType>(e1) & static_cast<underlyingType>(e2)); } \
-    constexpr enumName operator^(enumName e1, enumName e2) noexcept \
-    { return static_cast<enumName>(static_cast<underlyingType>(e1) ^ static_cast<underlyingType>(e2)); } \
-    constexpr enumName operator|(enumName e1, enumName e2) noexcept \
-    { return static_cast<enumName>(static_cast<underlyingType>(e1) | static_cast<underlyingType>(e2)); } \
-    constexpr enumName operator&=(enumName& e1, enumName e2) noexcept { return e1 = e1 & e2; } \
-    constexpr enumName operator^=(enumName& e1, enumName e2) noexcept { return e1 = e1 ^ e2; } \
-    constexpr enumName operator|=(enumName& e1, enumName e2) noexcept { return e1 = e1 | e2; } \
-    constexpr bool operator!(enumName e) noexcept \
-    { return static_cast<underlyingType>(e) == static_cast<underlyingType>(enumName::None); } \
-    static_assert(::eng::MaskedEnumI<enumName>, #enumName " does not satisfy MaskedEnumI's constraints.")
-
-// NOTE: Not an enum class. This is an unscoped enum designed to be nested in a class.
-#define ENG_DEFINE_BOUNDED_CLASS_ENUM(className, underlyingType, ...) \
-    _ENG_DEFINE_BOUNDED_ENUM_IMPL(, Type, underlyingType, __VA_ARGS__); \
-    static_assert(::eng::BoundedClassEnumI<className::Type, className>, #className " does not satisfy BoundedClassEnumI's constraints.")
-
-// NOTE: Not an enum class. This is an unscoped enum designed to be nested in a class.
-#define ENG_DEFINE_MASKED_CLASS_ENUM(className, underlyingType, ...) \
-    _ENG_DEFINE_MASKED_ENUM_IMPL(, Type, underlyingType, __VA_ARGS__); \
-    static_assert(::eng::MaskedClassEnumI<className::Type, className>, #className " does not satisfy MaskedClassEnumI's constraints.")
-
-// Common assert use case.
+    // Common assert use cases.
 
 #define ENG_ASSERT_BOUNDED_ENUM_VALID(enumName, value) \
-    ENG_ASSERT(::eng::IsBoundedEnumValid(value), "Unknown " #enumName ".");
-#define ENG_ASSERT_BOUNDED_CLASS_ENUM_VALID(classEnumName, value) \
-    ENG_ASSERT(::eng::IsBoundedClassEnumValid<classEnumName>(value), "Unknown " #classEnumName ".");
+    ENG_ASSERT(::eng::IsBoundedEnumValid(value), "Unknown {}.", (enumName))
 #define ENG_ASSERT_MASKED_ENUM_VALID(enumName, value) \
-    ENG_ASSERT(::eng::IsMaskedEnumValid(value), "Unknown " #enumName ".");
-#define ENG_ASSERT_MASKED_CLASS_ENUM_VALID(classEnumName, value) \
-    ENG_ASSERT(::eng::IsMaskedClassEnumValid<classEnumName>(value), "Unknown " #classEnumName ".");
+    ENG_ASSERT(::eng::IsMaskedEnumValid(value), "Unknown {}.", (enumName))
+}
+
+// Formatting
+
+template <eng::detail::BoundedEnumI BoundedEnumT>
+struct fmt::formatter<BoundedEnumT>
+{
+    constexpr auto parse(format_parse_context& context) { return context.end(); }
+
+    auto format(BoundedEnumT e, fmt::format_context& context) const
+    {
+        return fmt::format_to(context.out(), "{}", e.ToString());
+    }
+};
+
+template <eng::detail::MaskedEnumI MaskedEnumT>
+struct fmt::formatter<MaskedEnumT>
+{
+    constexpr auto parse(format_parse_context& context) { return context.end(); }
+
+    auto format(MaskedEnumT e, fmt::format_context& context) const
+    {
+        return fmt::format_to(context.out(), "{}", e.ToString());
+    }
+};

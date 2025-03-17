@@ -3,7 +3,7 @@
 namespace eng
 {
     MouseButtonPressEvent::MouseButtonPressEvent(MouseButton button, Modifiers modifiers, bool pressed) noexcept
-        : Event(GetStaticType())
+        : Event(GetStaticType(), GetStaticCategories())
         , m_Button(button)
         , m_Modifiers(modifiers)
         , m_Pressed(pressed)
@@ -29,7 +29,7 @@ namespace eng
 
 
     MouseMoveEvent::MouseMoveEvent(f32 x, f32 y) noexcept
-        : Event(GetStaticType())
+        : Event(GetStaticType(), GetStaticCategories())
         , m_X(x)
         , m_Y(y)
     {
@@ -49,7 +49,7 @@ namespace eng
 
 
     MouseEnterEvent::MouseEnterEvent(bool entered) noexcept
-        : Event(GetStaticType())
+        : Event(GetStaticType(), GetStaticCategories())
         , m_Entered(entered)
     {
 
@@ -63,7 +63,7 @@ namespace eng
 
 
     MouseScrollEvent::MouseScrollEvent(f32 scrollX, f32 scrollY) noexcept
-        : Event(GetStaticType())
+        : Event(GetStaticType(), GetStaticCategories())
         , m_ScrollX(scrollX)
         , m_ScrollY(scrollY)
     {
