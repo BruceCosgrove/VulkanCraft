@@ -20,7 +20,7 @@ layout(std140, binding = 0) uniform _FrameData {
 } FrameData;
 
 // Chunk data; storage buffer; changes every time the player moves between two chunks, or changes render distance.
-layout(std140, binding = 1) readonly buffer _ChunkData {
+layout(std430, binding = 1) readonly buffer _ChunkData {
     uvec2 PackedChunkData[];
 } ChunkData;
 
@@ -36,8 +36,8 @@ void UnpackFaceData(
     //                   packedFaceData.y                 packedFaceData.x
     // 64  60  56  52  48  44  40  36  32   28  24  20  16  12   8   4   0
     //   ------------hhhhwwwwzzzzyyyyxxxx cccccccccccccccctttttttttttttttt
-    // x = local x, y = local y, z = local z, w = width, h = height
-    localPosition = 0xF & uvec3(packedFaceData.x, packedFaceData.x >> 4, packedFaceData.x >> 8);
+    // t = texture id, c = chunk index, x = local x, y = local y, z = local z, w = width, h = height
+    localPosition = 0xF & uvec3(packedFaceData.y, packedFaceData.y >> 4, packedFaceData.y >> 8);
     size = 1 + (0xF & uvec2(packedFaceData.y >> 12, packedFaceData.y >> 16));
     textureID = 0xFFFF & packedFaceData.x;
     chunkIndex = packedFaceData.x >> 16;
@@ -45,14 +45,14 @@ void UnpackFaceData(
 
 void UnpackChunkData(
     const uvec2 packedChunkData,
-    out ivec3 relativeChunkPosition, // only 16 bits (per channel)
-    out uint face                    // 0, 1, 2, 3, 4, 5 => left(-x), right(+x), bottom(-y), top(+y), back(-z), front(+z)
+    out ivec3 chunkPosition, // only 16 bits (per channel)
+    out uint face            // 0, 1, 2, 3, 4, 5 => left(-x), right(+x), bottom(-y), top(+y), back(-z), front(+z)
 ) {
     //                  packedChunkData.y                packedChunkData.x
     // 64  60  56  52  48  44  40  36  32   28  24  20  16  12   8   4   0
     //   -------------fffzzzzzzzzzzzzzzzz yyyyyyyyyyyyyyyyxxxxxxxxxxxxxxxx
     // x = chunk x, y = chunk y, z = chunk z, f = face
-    relativeChunkPosition = (0xFFFF & ivec3(packedChunkData.x, packedChunkData.x >> 16, packedChunkData.y)) << 16 >> 16;
+    chunkPosition = ivec3(packedChunkData.x, packedChunkData.x >> 16, packedChunkData.y) << 16 >> 16;
     face = 0x7 & (packedChunkData.y >> 16);
 }
 
@@ -130,14 +130,14 @@ void main() {
     // Calculate texture coordinates based on the textureID.
 
     const uint textureX = textureID % FrameData.BlockTextureAtlas.TextureCount.x;
-    const uint textureY = (textureID % FrameData.BlockTextureAtlas.TexturesPerLayer) / FrameData.BlockTextureAtlas.TextureCount.y;
+    const uint textureY = (textureID % FrameData.BlockTextureAtlas.TexturesPerLayer) / FrameData.BlockTextureAtlas.TextureCount.x;
     const uint textureZ = textureID / FrameData.BlockTextureAtlas.TexturesPerLayer;
 
     // Change which axes get scaled depending on the face direction.
     const uvec3 sizes[3] = {
-        uvec3(1, size),           // left/right face
+        uvec3(1, size.y, size.x), // left/right face
         uvec3(size.x, 1, size.y), // bottom/top face
-        uvec3(size, 1),           // back/front face
+        uvec3(size.x, size.y, 1), // back/front face
     };
     const uvec3 size3 = sizes[face >> 1]; // left/right = 0, bottom/top = 1, back/front = 2
 

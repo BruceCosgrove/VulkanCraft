@@ -1,4 +1,5 @@
 #include "VulkanCraftLayer.hpp"
+#include "ImGuiHelper.hpp"
 #include <imgui.h>
 #include <array>
 
@@ -84,7 +85,7 @@ namespace vc
 
         CreateOrRecreateFramebuffers();
 
-        m_ImGuiRenderContext = std::make_unique<ImGuiRenderContext>(window, m_RenderPass->GetRenderPass());
+        LoadShader();
 
         {
             VertexBufferInfo info;
@@ -107,16 +108,15 @@ namespace vc
             m_StorageBuffer = std::make_shared<StorageBuffer>(info);
         }
 
-        LoadShader();
-
         {
 #define VC_TEXTURE(x) R"(D:\Dorkspace\Programming\Archive\VanillaDefault-Resource-Pack-16x-1.21\assets\minecraft\textures\)" x
             std::vector<LocalTexture> textures;
             textures.reserve(4);
             textures.emplace_back(VC_TEXTURE("block/amethyst_block.png"));
-            textures.emplace_back(VC_TEXTURE("block/bedrock.png"));
+            textures.emplace_back(VC_TEXTURE("block/ancient_debris_side.png"));
             textures.emplace_back(VC_TEXTURE("block/ancient_debris_top.png"));
             textures.emplace_back(VC_TEXTURE("block/andesite.png"));
+            textures.emplace_back(VC_TEXTURE("block/bedrock.png"));
             m_BlockTextureAtlas = std::make_unique<TextureAtlas>(context, 16, textures);
         }
 
@@ -125,14 +125,17 @@ namespace vc
         m_CameraController.SetFOV(glm::radians(90.0f));
         m_CameraController.SetNearPlane(0.001f);
         m_CameraController.SetFarPlane(1000.0f);
-        m_CameraController.SetMovementSpeed(1.0f);
+        m_CameraController.SetMovementSpeed(2.0f);
         m_CameraController.SetMouseSensitivity(1.0f);
+
+        m_ImGuiRenderContext = std::make_unique<ImGuiRenderContext>(window, m_RenderPass->GetRenderPass());
+        ImGuiHelper::Initialize();
     }
 
     void VulkanCraftLayer::OnDetach()
     {
-        auto& context = Layer::GetWindow().GetRenderContext();
-        VkDevice device = context.GetDevice();
+        ImGuiHelper::Shutdown();
+        m_ImGuiRenderContext.reset();
 
         m_BlockTextureAtlas.reset();
 
@@ -140,8 +143,6 @@ namespace vc
         m_StorageBuffer.reset();
         m_UniformBuffer.reset();
         m_VertexBuffer.reset();
-
-        m_ImGuiRenderContext.reset();
 
         m_Framebuffers.clear();
         m_FramebufferDepthAttachments.clear();
@@ -156,19 +157,15 @@ namespace vc
         event.Dispatch(&m_CameraController, &CameraController::OnEvent);
     }
 
-    static f32 angle = 0.0f;
     void VulkanCraftLayer::OnUpdate(Timestep timestep)
     {
-        angle += timestep;
         m_CameraController.OnUpdate(timestep);
     }
 
     void VulkanCraftLayer::OnRender()
     {
         auto& context = Layer::GetWindow().GetRenderContext();
-        VkExtent2D extent = context.GetSwapchainExtent();
         VkCommandBuffer commandBuffer = context.GetActiveCommandBuffer();
-        u32 swapchainImageIndex = context.GetSwapchainImageIndex();
 
         // Recreate the framebuffer if necessary.
         if (context.WasSwapchainRecreated())
@@ -183,14 +180,14 @@ namespace vc
         }
 
         std::array<VkClearValue, 2> clearValues{};
-        clearValues[0].color = {(std::cosf(angle) + 1.0f) * 0.5f, 0.0f, (std::sinf(angle) + 1.0f) * 0.5f, 1.0f};
+        clearValues[0].color = {0.2f, 0.3f, 0.8f, 1.0f};
         clearValues[1].depthStencil = {1.0f, 0};
 
         VkRenderPassBeginInfo info{};
         info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
         info.renderPass = m_RenderPass->GetRenderPass();
-        info.framebuffer = m_Framebuffers[swapchainImageIndex]->GetFramebuffer();
-        info.renderArea.extent = extent;
+        info.framebuffer = m_Framebuffers[context.GetSwapchainImageIndex()]->GetFramebuffer();
+        info.renderArea.extent = context.GetSwapchainExtent();
         info.clearValueCount = static_cast<u32>(clearValues.size());
         info.pClearValues = clearValues.data();
 
@@ -201,7 +198,12 @@ namespace vc
         {
             m_VertexBuffer->SetData(std::to_array<uvec2>
             ({
-                {0, 0},
+                {0 << 16 | 1, 17 << 12 | 0}, // left
+                {1 << 16 | 1, 17 << 12 | 1 << 0}, // right
+                {2 << 16 | 2, 17 << 12 | 0}, // bottom
+                {3 << 16 | 2, 17 << 12 | 1 << 4}, // top
+                {4 << 16 | 1, 17 << 12 | 0}, // back
+                {5 << 16 | 1, 17 << 12 | 1 << 8}, // front
             }));
 
             LocalUniformBuffer localUniformBuffer;
@@ -214,7 +216,12 @@ namespace vc
 
             m_StorageBuffer->SetData(std::to_array<uvec2>
             ({
-                {0, 4 << 16}, // back face
+                {0, 0 << 16}, // left
+                {0, 1 << 16}, // right
+                {0, 2 << 16}, // bottom
+                {0, 3 << 16}, // top
+                {0, 4 << 16}, // back
+                {0, 5 << 16}, // front
             }));
 
             auto uniformBuffers = std::to_array<ShaderUniformBufferBinding>
@@ -231,34 +238,21 @@ namespace vc
             });
 
             m_Shader->UpdateDescriptorSet({uniformBuffers, storageBuffers, samplers});
+
+            // Bind everything.
+            m_Shader->Bind(commandBuffer);
+            m_VertexBuffer->Bind(commandBuffer, 0);
+
+            SetDefaultViewportAndScissor();
+            vkCmdDraw(commandBuffer, 6, 6, 0, 0);
         }
 
-        // Bind everything.
-        m_Shader->Bind(commandBuffer);
-        m_VertexBuffer->Bind(commandBuffer, 0);
-
-        // Vulkan's +y direction is down, this fixes that.
-        // https://stackoverflow.com/questions/45570326/flipping-the-viewport-in-vulkan
-        VkViewport viewport{};
-        viewport.x = 0.0f;
-        viewport.y = static_cast<f32>(extent.height);
-        viewport.width = static_cast<f32>(extent.width);
-        viewport.height = -static_cast<f32>(extent.height);
-        viewport.minDepth = 0.0f;
-        viewport.maxDepth = 1.0f;
-        vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
-
-        VkRect2D scissor{};
-        scissor.offset = {0, 0};
-        scissor.extent = extent;
-        vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
-
-        vkCmdDraw(commandBuffer, 6, 1, 0, 0);
-
         // Render ImGui
-        m_ImGuiRenderContext->BeginFrame();
-        OnImGuiRender();
-        m_ImGuiRenderContext->EndFrame(commandBuffer);
+        {
+            m_ImGuiRenderContext->BeginFrame();
+            OnImGuiRender();
+            m_ImGuiRenderContext->EndFrame(commandBuffer);
+        }
 
         // End the render pass.
         vkCmdEndRenderPass(commandBuffer);
@@ -277,8 +271,6 @@ namespace vc
 
     void VulkanCraftLayer::OnImGuiRender()
     {
-        ImGui::ShowDemoWindow();
-
         ImGui::Begin("test window");
         ImGui::Button("test button");
         ImGui::End();
@@ -335,7 +327,7 @@ namespace vc
 
         auto bindings = std::to_array<ShaderVertexBufferBinding>
         ({
-            {0, VK_VERTEX_INPUT_RATE_VERTEX, {0}},
+            {0, VK_VERTEX_INPUT_RATE_INSTANCE, {0}},
         });
 
         ShaderInfo info;
@@ -348,5 +340,28 @@ namespace vc
         ENG_LOG_INFO("Loading shader \"{}\"...", info.Filepath.string());
         // TODO: async
         m_Shader = std::make_shared<Shader>(info);
+    }
+
+    void VulkanCraftLayer::SetDefaultViewportAndScissor()
+    {
+        auto& context = Layer::GetWindow().GetRenderContext();
+        VkExtent2D extent = context.GetSwapchainExtent();
+        VkCommandBuffer commandBuffer = context.GetActiveCommandBuffer();
+
+        // Vulkan's +y direction is down, this fixes that.
+        // https://stackoverflow.com/questions/45570326/flipping-the-viewport-in-vulkan
+        VkViewport viewport{};
+        viewport.x = 0.0f;
+        viewport.y = static_cast<f32>(extent.height);
+        viewport.width = static_cast<f32>(extent.width);
+        viewport.height = -static_cast<f32>(extent.height);
+        viewport.minDepth = 0.0f;
+        viewport.maxDepth = 1.0f;
+        vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
+
+        VkRect2D scissor{};
+        scissor.offset = {0, 0};
+        scissor.extent = extent;
+        vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
     }
 }

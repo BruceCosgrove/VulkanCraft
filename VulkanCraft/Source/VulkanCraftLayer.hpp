@@ -27,6 +27,7 @@ namespace vc
 
         void CreateOrRecreateFramebuffers();
         void LoadShader();
+        void SetDefaultViewportAndScissor();
     private:
         // TODO: there really needs to be some kind of allocator/ref system so new isn't
         // called that frequently (also increases cache performance).
@@ -37,16 +38,15 @@ namespace vc
         std::vector<std::shared_ptr<Image>> m_FramebufferDepthAttachments;
         std::vector<std::shared_ptr<Framebuffer>> m_Framebuffers;
 
-        std::unique_ptr<ImGuiRenderContext> m_ImGuiRenderContext;
-
+        std::shared_ptr<Shader> m_Shader;
         std::shared_ptr<VertexBuffer> m_VertexBuffer;
         std::shared_ptr<UniformBuffer> m_UniformBuffer;
         std::shared_ptr<StorageBuffer> m_StorageBuffer;
-        std::shared_ptr<Shader> m_Shader;
-
-        CameraController m_CameraController;
         std::unique_ptr<TextureAtlas> m_BlockTextureAtlas;
 
+        std::unique_ptr<ImGuiRenderContext> m_ImGuiRenderContext;
+
+        CameraController m_CameraController;
         bool m_ReloadShader = false;
     };
 }

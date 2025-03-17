@@ -24,7 +24,7 @@ layout(binding = 2) uniform sampler2DArray BlockTextureAtlas;
 vec3 CalculateTexCoord() {
     const float threshold = FrameData.BlockTextureAtlas.TextureThreshold;
     const vec2 scale = FrameData.BlockTextureAtlas.TextureScale;
-    const vec2 localTexCoord = mod(min(max(i_TexCoord, threshold), 1 - threshold), 1);
+    vec2 localTexCoord = clamp(mod(i_TexCoord, 1), threshold, 1 - threshold);
     return vec3(i_TexTopLeft + localTexCoord * scale, i_TexLayer);
 }
 

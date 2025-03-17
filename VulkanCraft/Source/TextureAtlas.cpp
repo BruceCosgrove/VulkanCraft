@@ -111,6 +111,8 @@ namespace vc
                 {
                     u32 atlasLeft = textureX * textureRowSizeBytes;
 
+                    if (textureIndex >= textures.size())
+                        goto noMoreTextures;
                     auto& texture = textures[textureIndex];
                     u8 const* texturePixels = texture.GetPixels2D().data_handle();
 
@@ -121,6 +123,7 @@ namespace vc
                 }
             }
         }
+    noMoreTextures:
 
         Texture2DArrayInfo info;
         info.RenderContext = &m_Context;
@@ -130,7 +133,7 @@ namespace vc
 
         m_TextureCount = uvec2(textureCountX, textureCountY);
         m_TextureScale = 1.0f / vec2(textureCountX, textureCountY);
-        m_TexturesPerLayer = textureCountX * textureCountY;
+        m_TexturesPerLayer = texturesPerLayer;
         m_TextureThreshold = 0.5f / m_TextureSize;
     }
 
@@ -144,8 +147,7 @@ namespace vc
         info.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
         info.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
         info.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-        info.anisotropyEnable = VK_TRUE; // TODO: slider for performance, 0 (off) -> max
-        info.maxAnisotropy = RenderContext::GetPhysicalDeviceProperties().limits.maxSamplerAnisotropy;
+        info.anisotropyEnable = VK_FALSE;
         info.compareEnable = VK_FALSE;
         info.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
         info.unnormalizedCoordinates = VK_FALSE;

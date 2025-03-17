@@ -198,6 +198,8 @@ namespace eng
 
     RenderContext::~RenderContext()
     {
+        m_FrameFreeQueues.clear();
+
         for (u32 i = 0; i < m_SwapchainImageCount; i++)
         {
             vkDestroySemaphore(m_Device, m_ImageAcquiredSemaphores[i], nullptr);

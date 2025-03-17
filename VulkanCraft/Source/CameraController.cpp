@@ -24,30 +24,30 @@ namespace vc
         m_RecalculateView = true;
     }
 
-    void CameraController::SetFOV(float fovRadians)
+    void CameraController::SetFOV(f32 fovRadians)
     {
         m_FOV = fovRadians;
         m_RecalculateProjection = true;
     }
 
-    void CameraController::SetNearPlane(float nearPlane)
+    void CameraController::SetNearPlane(f32 nearPlane)
     {
         m_NearPlane = nearPlane;
         m_RecalculateProjection = true;
     }
 
-    void CameraController::SetFarPlane(float farPlane)
+    void CameraController::SetFarPlane(f32 farPlane)
     {
         m_FarPlane = farPlane;
         m_RecalculateProjection = true;
     }
 
-    void CameraController::SetMovementSpeed(float movementSpeed)
+    void CameraController::SetMovementSpeed(f32 movementSpeed)
     {
         m_MovementSpeed = movementSpeed;
     }
 
-    void CameraController::SetMouseSensitivity(float mouseSensitivity)
+    void CameraController::SetMouseSensitivity(f32 mouseSensitivity)
     {
         m_MouseSensitivity = mouseSensitivity;
     }
@@ -109,13 +109,16 @@ namespace vc
     {
         vec2 mousePosition(event.GetX(), event.GetY());
 
-        if (m_EnableMouseMovement and !m_IgnoreLastMousePosition)
+        if (not m_IgnoreLastMousePosition)
         {
-            vec2 deltaMousePosition = mousePosition - m_LastMousePosition;
-            vec2 deltaMouseMovement = deltaMousePosition * m_LastViewportSizeInverse * m_MouseSensitivity;
-            m_Rotation.y -= deltaMouseMovement.x;
-            m_Rotation.x -= deltaMouseMovement.y;
-            m_RecalculateView = true;
+            if (m_EnableMouseMovement)
+            {
+                vec2 deltaMousePosition = mousePosition - m_LastMousePosition;
+                vec2 deltaMouseMovement = deltaMousePosition * m_LastViewportSizeInverse * m_MouseSensitivity;
+                m_Rotation.y -= deltaMouseMovement.x;
+                m_Rotation.x -= deltaMouseMovement.y;
+                m_RecalculateView = true;
+            }
         }
         else // This current position will be ignored, but not the ones after.
             m_IgnoreLastMousePosition = false;
@@ -143,7 +146,7 @@ namespace vc
 
     void CameraController::RecalculateProjection()
     {
-        float aspectRatio = static_cast<float>(m_LastViewportSizeInverse.y) / m_LastViewportSizeInverse.x;
+        f32 aspectRatio = static_cast<f32>(m_LastViewportSizeInverse.y) / m_LastViewportSizeInverse.x;
         m_Projection = glm::perspective(m_FOV, aspectRatio, m_NearPlane, m_FarPlane);
         m_RecalculateProjection = false;
     }
