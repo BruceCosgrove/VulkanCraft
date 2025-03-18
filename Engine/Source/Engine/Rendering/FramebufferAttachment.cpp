@@ -14,6 +14,7 @@ namespace eng
             info.Format,
             {info.Extent.width, info.Extent.height, 1},
             1,
+            1,
             info.Usage,
             VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, // TODO
             info.Aspect,
@@ -24,7 +25,7 @@ namespace eng
 
         VkCommandBuffer commandBuffer = m_Context.BeginOneTimeCommandBuffer();
         // Transition the image layout to be optimal for this attachment.
-        ImageUtils::TransitionImageLayout(commandBuffer, m_Image, VK_IMAGE_LAYOUT_UNDEFINED, info.Layout, 1);
+        ImageUtils::TransitionImageLayout(commandBuffer, m_Image, VK_IMAGE_LAYOUT_UNDEFINED, info.Layout, 1, 1);
         m_Context.EndOneTimeCommandBuffer(commandBuffer);
     }
 }

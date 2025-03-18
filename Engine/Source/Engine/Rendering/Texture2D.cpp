@@ -39,6 +39,7 @@ namespace eng
             info.Format,
             extent,
             1,
+            info.MipmapLevels,
             VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
             VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
             VK_IMAGE_ASPECT_COLOR_BIT,
@@ -48,12 +49,24 @@ namespace eng
         );
 
         VkCommandBuffer commandBuffer = m_Context.BeginOneTimeCommandBuffer();
+
         // Transition the image layout to be written to.
-        ImageUtils::TransitionImageLayout(commandBuffer, m_Image, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1);
+        ImageUtils::TransitionImageLayout(commandBuffer, m_Image, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, info.MipmapLevels);
         // Copy the texture from the staging buffer to the image.
         ImageUtils::CopyBufferToImage(commandBuffer, stagingBuffer, m_Image, extent, 1);
-        // Transition the image layout to be read from shaders.
-        ImageUtils::TransitionImageLayout(commandBuffer, m_Image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 1);
+
+        if (info.MipmapLevels > 1)
+        {
+            // Generate mipmap levels.
+            // Transition the image layout to be read from shaders.
+            ImageUtils::GenerateMipmaps(commandBuffer, m_Image, extent, 1, info.MipmapLevels);
+        }
+        else
+        {
+            // Transition the image layout to be read from shaders.
+            ImageUtils::TransitionImageLayout(commandBuffer, m_Image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 1, info.MipmapLevels);
+        }
+
         m_Context.EndOneTimeCommandBuffer(commandBuffer);
 
         // Destroy the staging buffer and free its memory.

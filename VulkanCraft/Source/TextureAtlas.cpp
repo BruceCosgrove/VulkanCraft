@@ -12,6 +12,8 @@ namespace vc
         : m_Context(context)
         , m_TextureSize(textureSize)
     {
+        ENG_ASSERT(std::bit_floor(textureSize) == textureSize, "Texture size must be a power of 2.");
+
         Stitch(textures);
         CreateSampler();
     }
@@ -130,6 +132,7 @@ namespace vc
         info.RenderContext = &m_Context;
         info.LocalTexture = &atlas;
         info.Format = VK_FORMAT_R8G8B8A8_SRGB;
+        info.MipmapLevels = std::countr_zero(m_TextureSize) + 1;
         m_TextureAtlas = std::make_shared<Texture2DArray>(info);
 
         m_TextureCount = uvec2(textureCountX, textureCountY);
@@ -143,14 +146,17 @@ namespace vc
         VkSamplerCreateInfo info{};
         info.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
         info.magFilter = VK_FILTER_NEAREST;
-        info.minFilter = VK_FILTER_LINEAR;
-        info.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+        info.minFilter = VK_FILTER_NEAREST;
+        info.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
         info.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
         info.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
         info.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-        info.anisotropyEnable = VK_FALSE;
+        //info.anisotropyEnable = VK_TRUE;
+        //info.maxAnisotropy = m_Context.GetPhysicalDeviceProperties().limits.maxSamplerAnisotropy;
         info.compareEnable = VK_FALSE;
-        info.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
+        info.minLod = 0.0f;
+        info.maxLod = static_cast<float>(std::countr_zero(m_TextureSize) + 1); // Same as mipmap levels.
+        info.borderColor = VK_BORDER_COLOR_FLOAT_TRANSPARENT_BLACK;
         info.unnormalizedCoordinates = VK_FALSE;
 
         VkResult result = vkCreateSampler(m_Context.GetDevice(), &info, nullptr, &m_Sampler);

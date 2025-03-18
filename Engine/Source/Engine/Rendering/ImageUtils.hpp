@@ -21,6 +21,7 @@ namespace eng
             VkFormat format,
             VkExtent3D extent,
             u32 layerCount,
+            u32 mipmapLevels,
             VkImageUsageFlags usage,
             VkMemoryPropertyFlags flags,
             VkImageAspectFlags aspect,
@@ -34,7 +35,8 @@ namespace eng
             VkImage image,
             VkImageLayout oldLayout,
             VkImageLayout newLayout,
-            u32 layerCount
+            u32 layerCount,
+            u32 mipmapLevels
         );
 
         static void CopyBufferToImage(
@@ -43,6 +45,16 @@ namespace eng
             VkImage image,
             VkExtent3D extent,
             u32 layerCount
+        );
+
+        // Assumes the image is already in VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL.
+        // TODO: results in all image mipmap levels being in VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL.
+        static void GenerateMipmaps(
+            VkCommandBuffer commandBuffer,
+            VkImage image,
+            VkExtent3D extent,
+            u32 layerCount,
+            u32 mipmapLevels
         );
     };
 }
