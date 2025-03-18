@@ -2,7 +2,6 @@
 #include "Engine/Core/AssertOrVerify.hpp"
 #include "Engine/Rendering/RenderContext.hpp"
 #include "Engine/Input/Window.hpp"
-#define GLFW_INCLUDE_NONE
 #include <glfw/glfw3.h>
 #include <backends/imgui_impl_glfw.h>
 #include <backends/imgui_impl_vulkan.h>

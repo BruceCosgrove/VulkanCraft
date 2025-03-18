@@ -7,7 +7,6 @@
 #include "Engine/Rendering/ImageUtils.hpp"
 #include "Engine/Rendering/RenderPass.hpp"
 #include "Engine/Rendering/Shader.hpp"
-#define GLFW_INCLUDE_NONE
 #include <glfw/glfw3.h>
 #include <array>
 #include <optional>

@@ -1,7 +1,6 @@
 #include "Application.hpp"
 #include "Engine/Core/DataTypes.hpp"
 #include "Engine/Input/Event/WindowEvents.hpp"
-#define GLFW_INCLUDE_NONE
 #include <glfw/glfw3.h>
 
 namespace eng

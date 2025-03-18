@@ -10,6 +10,7 @@ project "Engine"
 
     defines {
         "ENG_ENGINE",
+        "GLFW_INCLUDE_NONE",
         "GLM_FORCE_DEPTH_ZERO_TO_ONE",
     }
 

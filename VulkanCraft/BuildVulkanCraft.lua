@@ -8,6 +8,7 @@ project "VulkanCraft"
     objdir "%{OBJDir}"
 
     defines {
+        "GLFW_INCLUDE_NONE",
         "GLM_FORCE_DEPTH_ZERO_TO_ONE",
         "YAML_CPP_STATIC_DEFINE",
     }
