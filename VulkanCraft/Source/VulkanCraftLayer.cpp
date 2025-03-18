@@ -19,13 +19,12 @@ namespace vc
     VulkanCraftLayer::VulkanCraftLayer(Window& window)
         : Layer(window)
         , m_RenderPass(CreateRenderPass())
+        , m_Shader(LoadShader())
         , m_ImGuiRenderContext(window, m_RenderPass->GetRenderPass())
     {
         auto& context = window.GetRenderContext();
 
         CreateOrRecreateFramebuffers();
-
-        m_Shader = LoadShader();
 
         {
             VertexBufferInfo info;
@@ -91,13 +90,9 @@ namespace vc
         if (context.WasSwapchainRecreated())
             CreateOrRecreateFramebuffers();
 
-        // Reload the shader if necessary.
-        if (m_NewShaderLoaded.exchange(false, std::memory_order_acquire))
-        {
-            context.DeferFree([shader = std::move(m_Shader)] {});
-            m_Shader = std::move(m_NewlyLoadedShader);
-            m_NewShaderLoading.store(false, std::memory_order_release);
-        }
+        auto shader = m_Shader.Get();
+        if (shader.Old) // Defer old shader deletion until all previous frames have finished using it.
+            context.DeferFree([shader = std::move(shader.Old)] {});
 
         std::array<VkClearValue, 2> clearValues{};
         clearValues[0].color = {0.2f, 0.3f, 0.8f, 1.0f};
@@ -156,10 +151,10 @@ namespace vc
                 {2, m_BlockTextureAtlas->GetSampler(), m_BlockTextureAtlas->GetTexture()->GetImageView()},
             });
 
-            m_Shader->UpdateDescriptorSet({uniformBuffers, storageBuffers, samplers});
+            shader.Current->UpdateDescriptorSet({uniformBuffers, storageBuffers, samplers});
 
             // Bind everything.
-            m_Shader->Bind(commandBuffer);
+            shader.Current->Bind(commandBuffer);
             m_VertexBuffer->Bind(commandBuffer, 0);
 
             SetDefaultViewportAndScissor();
@@ -186,13 +181,12 @@ namespace vc
     {
         if (event.IsPressed() and event.GetKeycode() == Keycode::R and event.GetModifiers().HasOnly(Modifiers::Control))
         {
-            if (not m_NewShaderLoading.exchange(true, std::memory_order_acquire))
+            if (not m_Shader.Loading())
             {
                 // TODO IMPORTANT: delegate to a threadpool.
                 std::thread([this]
                 {
-                    m_NewlyLoadedShader = LoadShader();
-                    m_NewShaderLoaded.store(true, std::memory_order_release);
+                    m_Shader.Load([this] { return LoadShader(); });
                 }).detach();
             }
         }

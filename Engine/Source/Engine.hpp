@@ -36,6 +36,7 @@
 #include "Engine/Rendering/Texture2DArray.hpp"
 #include "Engine/Rendering/UniformBuffer.hpp"
 #include "Engine/Rendering/VertexBuffer.hpp"
+#include "Engine/Threading/DynamicResource.hpp"
 
 // Include glm
 

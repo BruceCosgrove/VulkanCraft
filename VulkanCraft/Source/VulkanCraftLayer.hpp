@@ -43,8 +43,7 @@ namespace vc
         std::vector<std::shared_ptr<Image>> m_FramebufferDepthAttachments;
         std::vector<std::shared_ptr<Framebuffer>> m_Framebuffers;
 
-        std::shared_ptr<Shader> m_Shader, m_NewlyLoadedShader;
-        std::atomic_bool m_NewShaderLoaded, m_NewShaderLoading;
+        DynamicResource<std::shared_ptr<Shader>> m_Shader;
 
         std::shared_ptr<VertexBuffer> m_VertexBuffer;
         std::shared_ptr<UniformBuffer> m_UniformBuffer;
