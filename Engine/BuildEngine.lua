@@ -24,12 +24,8 @@ project "Engine"
 
     includedirs {
         "%{IncludeDirs.engine}",
-        "%{IncludeDirs.ctre}",
-        "%{IncludeDirs.entt}",
-        "%{IncludeDirs.gcem}",
         "%{IncludeDirs.glfw}",
         "%{IncludeDirs.glm}",
-        "%{IncludeDirs.imgui}",
         "%{IncludeDirs.spdlog}",
         "%{IncludeDirs.stb}",
         "%{IncludeDirs.vulkan}",

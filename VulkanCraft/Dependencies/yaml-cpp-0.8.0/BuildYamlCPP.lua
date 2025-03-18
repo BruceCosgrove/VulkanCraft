@@ -8,20 +8,20 @@ project "yaml-cpp"
     targetdir "%{TargetDir}"
     objdir "%{OBJDir}"
 
+    defines {
+        "YAML_CPP_STATIC_DEFINE",
+    }
+
     files {
         "include/yaml-cpp/**.h",
         "src/**.h",
         "src/**.cpp",
-		"src/contrib/yaml-cpp.nativs",
+        "src/contrib/yaml-cpp.nativs",
     }
 
     includedirs {
         "include",
     }
-
-	defines {
-		"YAML_CPP_STATIC_DEFINE",
-	}
 
     filter "system:windows"
         systemversion "latest"

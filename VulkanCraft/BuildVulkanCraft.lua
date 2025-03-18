@@ -9,6 +9,7 @@ project "VulkanCraft"
 
     defines {
         "GLM_FORCE_DEPTH_ZERO_TO_ONE",
+        "YAML_CPP_STATIC_DEFINE",
     }
 
     files {
@@ -22,15 +23,14 @@ project "VulkanCraft"
 
     includedirs {
         "%{IncludeDirs.engine}",
-        "%{IncludeDirs.ctre}",
         "%{IncludeDirs.entt}",
-        "%{IncludeDirs.gcem}",
         "%{IncludeDirs.glfw}",
         "%{IncludeDirs.glm}",
         "%{IncludeDirs.imgui}",
         "%{IncludeDirs.spdlog}",
         "%{IncludeDirs.stb}",
         "%{IncludeDirs.vulkan}",
+        "%{IncludeDirs.yaml_cpp}",
     }
 
     links {
