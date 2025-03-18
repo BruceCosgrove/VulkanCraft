@@ -31,12 +31,12 @@ namespace vc
         return m_TextureAtlas;
     }
 
-    glm::uvec2 TextureAtlas::GetTextureCount() const
+    uvec3 TextureAtlas::GetTextureCount() const
     {
         return m_TextureCount;
     }
 
-    glm::vec2 TextureAtlas::GetTextureScale() const
+    vec2 TextureAtlas::GetTextureScale() const
     {
         return m_TextureScale;
     }
@@ -44,11 +44,6 @@ namespace vc
     u32 TextureAtlas::GetTexturesPerLayer() const
     {
         return m_TexturesPerLayer;
-    }
-
-    float TextureAtlas::GetTextureThreshold() const
-    {
-        return m_TextureThreshold;
     }
 
     void TextureAtlas::Stitch(std::span<LocalTexture> textures)
@@ -132,10 +127,9 @@ namespace vc
         info.Format = VK_FORMAT_R8G8B8A8_SRGB;
         m_TextureAtlas = std::make_shared<Texture2DArray>(info);
 
-        m_TextureCount = uvec2(textureCountX, textureCountY);
+        m_TextureCount = uvec3(textureCountX, textureCountY, textureCountZ);
         m_TextureScale = 1.0f / vec2(textureCountX, textureCountY);
         m_TexturesPerLayer = texturesPerLayer;
-        m_TextureThreshold = 0.5f / m_TextureSize;
     }
 
     void TextureAtlas::CreateSampler()
@@ -143,14 +137,13 @@ namespace vc
         VkSamplerCreateInfo info{};
         info.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
         info.magFilter = VK_FILTER_NEAREST;
-        info.minFilter = VK_FILTER_LINEAR;
-        info.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+        info.minFilter = VK_FILTER_NEAREST;
         info.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
         info.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
         info.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
         info.anisotropyEnable = VK_FALSE;
         info.compareEnable = VK_FALSE;
-        info.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
+        info.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_BLACK;
         info.unnormalizedCoordinates = VK_FALSE;
 
         VkResult result = vkCreateSampler(m_Context.GetDevice(), &info, nullptr, &m_Sampler);

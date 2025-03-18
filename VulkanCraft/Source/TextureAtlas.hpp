@@ -20,10 +20,9 @@ namespace vc
 
         VkSampler GetSampler() const;
         std::shared_ptr<Texture2DArray> const& GetTexture() const;
-        uvec2 GetTextureCount() const;
+        uvec3 GetTextureCount() const;
         vec2 GetTextureScale() const;
         u32 GetTexturesPerLayer() const;
-        float GetTextureThreshold() const;
 
     private:
         void Stitch(std::span<LocalTexture> textures);
@@ -35,9 +34,8 @@ namespace vc
         std::shared_ptr<Texture2DArray> m_TextureAtlas;
 
         u32 m_TextureSize;
-        uvec2 m_TextureCount;
+        uvec3 m_TextureCount;
         vec2 m_TextureScale;
         u32 m_TexturesPerLayer;
-        f32 m_TextureThreshold;
     };
 }

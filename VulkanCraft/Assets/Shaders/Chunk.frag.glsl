@@ -9,10 +9,9 @@ layout(location = 0) out vec4 o_Color;
 
 // Frame data; uniform buffer; may change up to once per frame.
 struct TextureAtlas {
-    uvec2 TextureCount;     // Count, in number of textures, of the texture atlas.
-    vec2 TextureScale;      // 1.0 / TextureCount
+    uvec3 TextureCount;     // Count, in number of textures, of the texture atlas.
+    vec2 TextureScale;      // 1.0 / TextureCount.xy
     uint TexturesPerLayer;  // TextureCount.x * TextureCount.y
-    float TextureThreshold; // 0.5 / (size of a single texture in pixels); Texture bleeding removal. NOTE: not the usual texture bleeding. The stuff this fixes is caused by modulated texture coordinates in the fragment shader, namely mod(1.0, 1.0), resulting in a texture coordinate of 0.0.
 };
 layout(std140, binding = 0) uniform _FrameData {
     mat4 ViewProjection;
@@ -22,10 +21,8 @@ layout(std140, binding = 0) uniform _FrameData {
 layout(binding = 2) uniform sampler2DArray BlockTextureAtlas;
 
 vec3 CalculateTexCoord() {
-    const float threshold = FrameData.BlockTextureAtlas.TextureThreshold;
     const vec2 scale = FrameData.BlockTextureAtlas.TextureScale;
-    vec2 localTexCoord = clamp(mod(i_TexCoord, 1), threshold, 1 - threshold);
-    return vec3(i_TexTopLeft + localTexCoord * scale, i_TexLayer);
+    return vec3(i_TexTopLeft + fract(i_TexCoord) * scale, i_TexLayer);
 }
 
 void main() {

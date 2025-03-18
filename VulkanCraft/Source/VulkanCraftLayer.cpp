@@ -11,10 +11,9 @@ namespace vc
 
         struct alignas(16)
         {
-            alignas(8) uvec2 TextureCount;
+            alignas(8) uvec3 TextureCount;
             alignas(8) vec2 TextureScale;    // 1.0f / TextureCount
             alignas(4) u32 TexturesPerLayer; // TextureCount.x * TextureCount.y
-            alignas(4) f32 TextureThreshold; // 0.5f / (size of a single texture in pixels)
         } BlockTextureAtlas;
     };
 
@@ -211,7 +210,6 @@ namespace vc
             localUniformBuffer.BlockTextureAtlas.TextureCount = m_BlockTextureAtlas->GetTextureCount();
             localUniformBuffer.BlockTextureAtlas.TextureScale = m_BlockTextureAtlas->GetTextureScale();
             localUniformBuffer.BlockTextureAtlas.TexturesPerLayer = m_BlockTextureAtlas->GetTexturesPerLayer();
-            localUniformBuffer.BlockTextureAtlas.TextureThreshold = m_BlockTextureAtlas->GetTextureThreshold();
             m_UniformBuffer->SetData(localUniformBuffer);
 
             m_StorageBuffer->SetData(std::to_array<uvec2>
