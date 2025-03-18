@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CameraController.hpp"
+#include "ImGuiRenderContext.hpp"
 #include "TextureAtlas.hpp"
 #include <Engine.hpp>
 #include <memory>

@@ -1,5 +1,4 @@
 include "BuildExtensions.lua"
-include "BuildDependencies.lua"
 
 workspace "VulkanCraft"
     architecture "x86_64"
@@ -26,28 +25,34 @@ workspace "VulkanCraft"
 
         -- Lua Scripts
         "BuildAll.lua",
-        "BuildDependencies.lua",
         "BuildExtensions.lua",
 
         -- Project Build Scripts
         "Engine/BuildEngine.lua",
+        "Engine/EngineDependencies.lua",
         "VulkanCraft/BuildVulkanCraft.lua",
+        "VulkanCraft/VulkanCraftDependencies.lua",
 
         -- Dependency Project Build Scripts
         "Engine/Dependencies/glfw-3.4/BuildGLFW.lua",
-        "Engine/Dependencies/imgui-docking-1.91.9-wip/BuildImGui.lua",
         "Engine/Dependencies/stb-2.30/BuildSTB.lua",
+        "VulkanCraft/Dependencies/imgui-docking-1.91.9-wip/BuildImGui.lua",
+        "VulkanCraft/Dependencies/yaml-cpp-0.8.0/BuildYamlCPP.lua",
     }
 
 RunPreBuild = "pushd \"%{wks.location}\" && \"Scripts/PreBuild.bat\" && popd"
 TargetDir = "%{wks.location}/bin/%{cfg.buildcfg}-%{cfg.system}-%{cfg.architecture}/%{prj.name}"
 OBJDir = "%{wks.location}/bin-int/%{cfg.buildcfg}-%{cfg.system}-%{cfg.architecture}/%{prj.name}"
 
--- Add any projects here with 'include "Build__EXAMPLE_PROJECT_NAME__.lua"'
+include "Engine/EngineDependencies.lua"
+include "VulkanCraft/VulkanCraftDependencies.lua"
+
+-- Dependency Projects
 group "Dependencies"
     include "Engine/Dependencies/glfw-3.4/BuildGLFW.lua"
-    include "Engine/Dependencies/imgui-docking-1.91.9-wip/BuildImGui.lua"
     include "Engine/Dependencies/stb-2.30/BuildSTB.lua"
+    include "VulkanCraft/Dependencies/imgui-docking-1.91.9-wip/BuildImGui.lua"
+    include "VulkanCraft/Dependencies/yaml-cpp-0.8.0/BuildYamlCPP.lua"
 group ""
 include "Engine/BuildEngine.lua"
 include "VulkanCraft/BuildVulkanCraft.lua"

@@ -24,7 +24,6 @@
 #include "Engine/IO/FileIO.hpp"
 #include "Engine/Rendering/Framebuffer.hpp"
 #include "Engine/Rendering/FramebufferAttachment.hpp"
-#include "Engine/Rendering/ImGuiRenderContext.hpp"
 #include "Engine/Rendering/LocalTexture.hpp"
 #include "Engine/Rendering/RenderContext.hpp"
 #include "Engine/Rendering/RenderPass.hpp"
