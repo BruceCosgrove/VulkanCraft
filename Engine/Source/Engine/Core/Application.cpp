@@ -10,8 +10,14 @@ namespace eng
         m_Running = false;
     }
 
+    void Application::ExecuteAsync(std::function<void()>&& task)
+    {
+        m_ThreadPool.SubmitTask(std::move(task));
+    }
+
     Application::Application(ApplicationInfo const& info)
-        : m_Window(info.WindowInfo)
+        : m_ThreadPool(info.ThreadPoolSize)
+        , m_Window(info.WindowInfo)
     {
         // Send initial framebuffer resize event to initialize all Client systems.
         u32 width, height;

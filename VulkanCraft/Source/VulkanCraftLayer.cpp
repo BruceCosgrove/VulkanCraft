@@ -183,11 +183,10 @@ namespace vc
         {
             if (not m_Shader.Loading())
             {
-                // TODO IMPORTANT: delegate to a threadpool.
-                std::thread([this]
+                Application::Get().ExecuteAsync([this]
                 {
                     m_Shader.Load([this] { return LoadShader(); });
-                }).detach();
+                });
             }
         }
     }
