@@ -2,12 +2,8 @@
 
 namespace eng
 {
-    void Layer::OnAttach()
-    {
-
-    }
-
-    void Layer::OnDetach()
+    Layer::Layer(Window& window)
+        : m_Window(window)
     {
 
     }
@@ -29,6 +25,6 @@ namespace eng
 
     Window& Layer::GetWindow()
     {
-        return *m_Window;
+        return m_Window;
     }
 }

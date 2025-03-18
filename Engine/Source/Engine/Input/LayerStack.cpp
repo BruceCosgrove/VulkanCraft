@@ -1,16 +1,29 @@
 #include "LayerStack.hpp"
 #include "Engine/Core/AssertOrVerify.hpp"
 
-namespace eng
+namespace eng::detail
 {
-    void LayerStack::PushLayer(std::unique_ptr<Layer>&& layer, Window* window)
+    LayerStack::LayerStack(std::span<LayerProducer const> initialLayerProducers, Window& window)
+    {
+        m_Layers.reserve(initialLayerProducers.size());
+        for (auto& layerProducer : initialLayerProducers)
+        {
+            m_Layers.push_back(layerProducer(window));
+            m_OverlayInsertIndex++;
+        }
+    }
+
+    void LayerStack::PushLayer(LayerProducer const& layerProducer, Window& window)
+    {
+        PushLayer(layerProducer(window));
+    }
+
+    void LayerStack::PushLayer(std::unique_ptr<Layer>&& layer)
     {
         ENG_ASSERT(layer != nullptr, "Tried to add a null layer.");
         ENG_ASSERT(std::find(m_Layers.begin(), m_Layers.end(), layer) == m_Layers.end(), "Tried to add the same layer twice.");
 
-        auto& addedLayer = *m_Layers.emplace(m_Layers.begin() + m_OverlayInsertIndex++, std::move(layer));
-        addedLayer->m_Window = window;
-        addedLayer->OnAttach();
+        m_Layers.insert(m_Layers.begin() + m_OverlayInsertIndex++, std::move(layer));
     }
 
     std::unique_ptr<Layer> LayerStack::PopLayer()
@@ -20,19 +33,20 @@ namespace eng
         auto it = m_Layers.begin() + --m_OverlayInsertIndex;
         std::unique_ptr<Layer> layer = std::move(*it);
         m_Layers.erase(it);
-        layer->OnDetach();
-        layer->m_Window = nullptr;
         return layer;
     }
 
-    void LayerStack::PushOverlay(std::unique_ptr<Layer>&& overlay, Window* window)
+    void LayerStack::PushOverlay(LayerProducer const& overlayProducer, Window& window)
+    {
+        PushOverlay(overlayProducer(window));
+    }
+
+    void LayerStack::PushOverlay(std::unique_ptr<Layer>&& overlay)
     {
         ENG_ASSERT(overlay != nullptr, "Tried to add a null overlay.");
         ENG_ASSERT(std::find(m_Layers.begin(), m_Layers.end(), overlay) == m_Layers.end(), "Tried to add the same overlay twice.");
 
-        auto& addedOverlay = m_Layers.emplace_back(std::move(overlay));
-        addedOverlay->m_Window = window;
-        addedOverlay->OnAttach();
+        m_Layers.push_back(std::move(overlay));
     }
 
     std::unique_ptr<Layer> LayerStack::PopOverlay()
@@ -41,29 +55,7 @@ namespace eng
 
         std::unique_ptr<Layer> overlay = std::move(m_Layers.back());
         m_Layers.pop_back();
-        overlay->OnDetach();
-        overlay->m_Window = nullptr;
         return overlay;
-    }
-
-    LayerStack::LayerStack(std::vector<std::unique_ptr<Layer>(*)()> const& initialLayerProducers, Window* window)
-    {
-        m_Layers.reserve(initialLayerProducers.size());
-        for (auto& layerProducer : initialLayerProducers)
-        {
-            auto& addedLayer = m_Layers.emplace_back(layerProducer());
-            addedLayer->m_Window = window;
-            addedLayer->OnAttach();
-            m_OverlayInsertIndex++;
-        }
-    }
-
-    LayerStack::~LayerStack()
-    {
-        for (auto& layer : m_Layers)
-            layer->OnDetach();
-        m_Layers.clear();
-        m_OverlayInsertIndex = 0;
     }
 
     void LayerStack::OnEvent(Event& event)

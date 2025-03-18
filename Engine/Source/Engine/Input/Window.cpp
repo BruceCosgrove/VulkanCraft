@@ -20,9 +20,14 @@ namespace eng
         return m_RenderContext;
     }
 
+    void Window::PushLayer(LayerProducer const& layerProducer)
+    {
+        m_LayerStack.PushLayer(layerProducer, *this);
+    }
+
     void Window::PushLayer(std::unique_ptr<Layer>&& layer)
     {
-        m_LayerStack.PushLayer(std::move(layer), this);
+        m_LayerStack.PushLayer(std::move(layer));
     }
 
     std::unique_ptr<Layer> Window::PopLayer()
@@ -30,9 +35,14 @@ namespace eng
         return m_LayerStack.PopLayer();
     }
 
+    void Window::PushOverlay(LayerProducer const& layerProducer)
+    {
+        m_LayerStack.PushOverlay(layerProducer, *this);
+    }
+
     void Window::PushOverlay(std::unique_ptr<Layer>&& overlay)
     {
-        m_LayerStack.PushOverlay(std::move(overlay), this);
+        m_LayerStack.PushOverlay(std::move(overlay));
     }
 
     std::unique_ptr<Layer> Window::PopOverlay()
@@ -43,7 +53,7 @@ namespace eng
     Window::Window(WindowInfo const& info)
         : m_NativeWindow(info, this)
         , m_RenderContext(m_NativeWindow.Handle)
-        , m_LayerStack(info.Layers.m_LayersProducers, this)
+        , m_LayerStack(info.Layers.m_LayerProducers, *this)
     {
         // Now that the window is fully initialized, show it.
         glfwShowWindow(m_NativeWindow.Handle);

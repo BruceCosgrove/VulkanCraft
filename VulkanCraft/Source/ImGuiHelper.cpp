@@ -5,7 +5,7 @@ using namespace eng;
 
 namespace vc
 {
-    void ImGuiHelper::Initialize()
+    ImGuiHelper::ImGuiHelper()
     {
         // TODO: load and upload font
 
@@ -36,7 +36,7 @@ namespace vc
         }
     }
 
-    void ImGuiHelper::Shutdown()
+    ImGuiHelper::~ImGuiHelper()
     {
 
     }

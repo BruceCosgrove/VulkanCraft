@@ -1,5 +1,4 @@
 #include "VulkanCraftLayer.hpp"
-#include "ImGuiHelper.hpp"
 #include <imgui.h>
 #include <array>
 
@@ -17,70 +16,12 @@ namespace vc
         } BlockTextureAtlas;
     };
 
-    void VulkanCraftLayer::OnAttach()
+    VulkanCraftLayer::VulkanCraftLayer(Window& window)
+        : Layer(window)
+        , m_RenderPass(CreateRenderPass())
+        , m_ImGuiRenderContext(window, m_RenderPass->GetRenderPass())
     {
-        auto& window = Layer::GetWindow();
         auto& context = window.GetRenderContext();
-
-        {
-            // For slightly more complicated subpass setups, use this for reference.
-            // https://www.saschawillems.de/blog/2018/07/19/vulkan-input-attachments-and-sub-passes/
-
-            std::array<VkAttachmentDescription, 2> attachments{};
-
-            auto& colorAttachment = attachments[0];
-            colorAttachment.format = context.GetSwapchainFormat();
-            colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
-            colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-            colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-            colorAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-            colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-            colorAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-            colorAttachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-
-            auto& depthAttachment = attachments[1];
-            depthAttachment.format = VK_FORMAT_D24_UNORM_S8_UINT;
-            depthAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
-            depthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-            depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-            depthAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-            depthAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-            depthAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-            depthAttachment.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-
-            VkAttachmentReference colorAttachmentReference{};
-            colorAttachmentReference.attachment = 0; // Index into info.pAttachments; referring to colorAttachment
-            colorAttachmentReference.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-
-            VkAttachmentReference depthAttachmentReference{};
-            depthAttachmentReference.attachment = 1; // Index into info.pAttachments; referring to depthAttachment
-            depthAttachmentReference.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-
-            std::array<VkSubpassDescription, 1> subpasses{};
-
-            auto& subpass0 = subpasses[0];
-            subpass0.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-            subpass0.colorAttachmentCount = 1;
-            subpass0.pColorAttachments = &colorAttachmentReference;
-            subpass0.pDepthStencilAttachment = &depthAttachmentReference;
-
-            std::array<VkSubpassDependency, 1> dependencies{};
-
-            auto& dependency0 = dependencies[0];
-            dependency0.srcSubpass = VK_SUBPASS_EXTERNAL;
-            dependency0.dstSubpass = 0;
-            dependency0.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
-            dependency0.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
-            dependency0.srcAccessMask = 0;
-            dependency0.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-
-            RenderPassInfo info;
-            info.RenderContext = &context;
-            info.Attachments = attachments;
-            info.Subpasses = subpasses;
-            info.SubpassDependencies = dependencies;
-            m_RenderPass = std::make_shared<RenderPass>(info);
-        }
 
         CreateOrRecreateFramebuffers();
 
@@ -126,31 +67,11 @@ namespace vc
         m_CameraController.SetFarPlane(1000.0f);
         m_CameraController.SetMovementSpeed(2.0f);
         m_CameraController.SetMouseSensitivity(1.0f);
-
-        m_ImGuiRenderContext = std::make_unique<ImGuiRenderContext>(window, m_RenderPass->GetRenderPass());
-        ImGuiHelper::Initialize();
-    }
-
-    void VulkanCraftLayer::OnDetach()
-    {
-        ImGuiHelper::Shutdown();
-        m_ImGuiRenderContext.reset();
-
-        m_BlockTextureAtlas.reset();
-
-        m_Shader.reset();
-        m_StorageBuffer.reset();
-        m_UniformBuffer.reset();
-        m_VertexBuffer.reset();
-
-        m_Framebuffers.clear();
-        m_FramebufferDepthAttachments.clear();
-        m_RenderPass.reset();
     }
 
     void VulkanCraftLayer::OnEvent(Event& event)
     {
-        event.Dispatch(m_ImGuiRenderContext.get(), &ImGuiRenderContext::OnEvent);
+        event.Dispatch(&m_ImGuiRenderContext, &ImGuiRenderContext::OnEvent);
         event.Dispatch(this, &VulkanCraftLayer::OnWindowCloseEvent);
         event.Dispatch(this, &VulkanCraftLayer::OnKeyPressEvent);
         event.Dispatch(&m_CameraController, &CameraController::OnEvent);
@@ -247,9 +168,9 @@ namespace vc
 
         // Render ImGui
         {
-            m_ImGuiRenderContext->BeginFrame();
+            m_ImGuiRenderContext.BeginFrame();
             OnImGuiRender();
-            m_ImGuiRenderContext->EndFrame(commandBuffer);
+            m_ImGuiRenderContext.EndFrame(commandBuffer);
         }
 
         // End the render pass.
@@ -272,6 +193,69 @@ namespace vc
         ImGui::Begin("test window");
         ImGui::Button("test button");
         ImGui::End();
+    }
+
+    std::shared_ptr<RenderPass> VulkanCraftLayer::CreateRenderPass()
+    {
+        auto& context = Layer::GetWindow().GetRenderContext();
+
+        // For slightly more complicated subpass setups, use this for reference.
+        // https://www.saschawillems.de/blog/2018/07/19/vulkan-input-attachments-and-sub-passes/
+
+        std::array<VkAttachmentDescription, 2> attachments{};
+
+        auto& colorAttachment = attachments[0];
+        colorAttachment.format = context.GetSwapchainFormat();
+        colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
+        colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+        colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+        colorAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+        colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+        colorAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+        colorAttachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+
+        auto& depthAttachment = attachments[1];
+        depthAttachment.format = VK_FORMAT_D24_UNORM_S8_UINT;
+        depthAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
+        depthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+        depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+        depthAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+        depthAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+        depthAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+        depthAttachment.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+
+        VkAttachmentReference colorAttachmentReference{};
+        colorAttachmentReference.attachment = 0; // Index into info.pAttachments; referring to colorAttachment
+        colorAttachmentReference.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+        VkAttachmentReference depthAttachmentReference{};
+        depthAttachmentReference.attachment = 1; // Index into info.pAttachments; referring to depthAttachment
+        depthAttachmentReference.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+
+        std::array<VkSubpassDescription, 1> subpasses{};
+
+        auto& subpass0 = subpasses[0];
+        subpass0.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+        subpass0.colorAttachmentCount = 1;
+        subpass0.pColorAttachments = &colorAttachmentReference;
+        subpass0.pDepthStencilAttachment = &depthAttachmentReference;
+
+        std::array<VkSubpassDependency, 1> dependencies{};
+
+        auto& dependency0 = dependencies[0];
+        dependency0.srcSubpass = VK_SUBPASS_EXTERNAL;
+        dependency0.dstSubpass = 0;
+        dependency0.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
+        dependency0.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
+        dependency0.srcAccessMask = 0;
+        dependency0.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+
+        RenderPassInfo info;
+        info.RenderContext = &context;
+        info.Attachments = attachments;
+        info.Subpasses = subpasses;
+        info.SubpassDependencies = dependencies;
+        return std::make_shared<RenderPass>(info);
     }
 
     void VulkanCraftLayer::CreateOrRecreateFramebuffers()

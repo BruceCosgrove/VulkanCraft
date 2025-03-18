@@ -2,6 +2,7 @@
 
 #include "CameraController.hpp"
 #include "ImGuiRenderContext.hpp"
+#include "ImGuiHelper.hpp"
 #include "TextureAtlas.hpp"
 #include <Engine.hpp>
 #include <memory>
@@ -12,11 +13,10 @@ namespace vc
 {
     class VulkanCraftLayer : public Layer
     {
+        ENG_IMMOVABLE_UNCOPYABLE_CLASS(VulkanCraftLayer);
     public:
-        ENG_IMMOVABLE_UNCOPYABLE_DEFAULTABLE_CLASS(VulkanCraftLayer);
+        VulkanCraftLayer(Window& window);
 
-        virtual void OnAttach() override;
-        virtual void OnDetach() override;
         virtual void OnEvent(Event& event) override;
         virtual void OnUpdate(Timestep timestep) override;
         virtual void OnRender() override;
@@ -26,8 +26,11 @@ namespace vc
 
         void OnImGuiRender();
 
+        std::shared_ptr<RenderPass> CreateRenderPass();
+
         void CreateOrRecreateFramebuffers();
         void LoadShader();
+
         void SetDefaultViewportAndScissor();
     private:
         // TODO: there really needs to be some kind of allocator/ref system so new isn't
@@ -45,7 +48,8 @@ namespace vc
         std::shared_ptr<StorageBuffer> m_StorageBuffer;
         std::unique_ptr<TextureAtlas> m_BlockTextureAtlas;
 
-        std::unique_ptr<ImGuiRenderContext> m_ImGuiRenderContext;
+        ImGuiRenderContext m_ImGuiRenderContext;
+        ImGuiHelper m_ImGuiHelper;
 
         CameraController m_CameraController;
         bool m_ReloadShader = false;

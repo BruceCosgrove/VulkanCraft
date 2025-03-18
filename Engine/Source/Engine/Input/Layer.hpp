@@ -10,18 +10,17 @@ namespace eng
 
     class Layer
     {
+        ENG_IMMOVABLE_UNCOPYABLE_CLASS(Layer);
     public:
-        ENG_IMMOVABLE_UNCOPYABLE_INHERITABLE_CLASS(Layer);
+        Layer(Window& window);
+        virtual ~Layer() = default;
 
-        virtual void OnAttach();
-        virtual void OnDetach();
         virtual void OnEvent(Event& event);
         virtual void OnUpdate(Timestep timestep);
         virtual void OnRender();
 
         Window& GetWindow();
     private:
-        friend class LayerStack;
-        Window* m_Window = nullptr; // non-owning
+        Window& m_Window; // non-owning
     };
 }

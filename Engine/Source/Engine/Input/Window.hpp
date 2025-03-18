@@ -2,7 +2,7 @@
 
 #include "Engine/Core/ClassTypes.hpp"
 #include "Engine/Core/DataTypes.hpp"
-#include "Engine/Core/LayerStack.hpp"
+#include "Engine/Input/LayerStack.hpp"
 #include "Engine/Rendering/RenderContext.hpp"
 #include <string>
 
@@ -10,6 +10,7 @@ struct GLFWwindow;
 
 namespace eng
 {
+    class Window;
     class WindowMinimizeEvent;
     class WindowFramebufferResizeEvent;
 
@@ -23,11 +24,11 @@ namespace eng
             requires(std::is_base_of_v<Layer, T>)
             void Add()
             {
-                m_LayersProducers.push_back([]() -> std::unique_ptr<Layer> { return std::make_unique<T>(); });
+                m_LayerProducers.push_back([](Window& window) -> std::unique_ptr<Layer> { return std::make_unique<T>(window); });
             }
         private:
             friend class Window;
-            std::vector<std::unique_ptr<Layer>(*)()> m_LayersProducers;
+            std::vector<LayerProducer> m_LayerProducers;
         };
     }
 
@@ -48,9 +49,11 @@ namespace eng
         GLFWwindow* GetNativeWindow();
         RenderContext& GetRenderContext();
 
+        void PushLayer(LayerProducer const& layerProducer);
         void PushLayer(std::unique_ptr<Layer>&& layer);
         std::unique_ptr<Layer> PopLayer();
 
+        void PushOverlay(LayerProducer const& overlayProducer);
         void PushOverlay(std::unique_ptr<Layer>&& overlay);
         std::unique_ptr<Layer> PopOverlay();
     private:
@@ -84,7 +87,7 @@ namespace eng
 
         NativeWindow m_NativeWindow;
         RenderContext m_RenderContext;
-        LayerStack m_LayerStack;
+        detail::LayerStack m_LayerStack;
 
         f64 m_LastTime = 0.0;
         bool m_Minimized = false;

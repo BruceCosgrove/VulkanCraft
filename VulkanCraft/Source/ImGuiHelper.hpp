@@ -7,9 +7,9 @@ namespace vc
 {
     class ImGuiHelper
     {
-        ENG_STATIC_CLASS(ImGuiHelper);
+        ENG_IMMOVABLE_UNCOPYABLE_CLASS(ImGuiHelper);
     public:
-        static void Initialize();
-        static void Shutdown();
+        ImGuiHelper();
+        ~ImGuiHelper();
     };
 }
