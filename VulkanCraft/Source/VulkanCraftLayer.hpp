@@ -5,6 +5,7 @@
 #include "ImGuiHelper.hpp"
 #include "TextureAtlas.hpp"
 #include <Engine.hpp>
+#include <atomic>
 #include <memory>
 
 using namespace eng;
@@ -29,7 +30,7 @@ namespace vc
         std::shared_ptr<RenderPass> CreateRenderPass();
 
         void CreateOrRecreateFramebuffers();
-        void LoadShader();
+        std::shared_ptr<Shader> LoadShader();
 
         void SetDefaultViewportAndScissor();
     private:
@@ -42,7 +43,9 @@ namespace vc
         std::vector<std::shared_ptr<Image>> m_FramebufferDepthAttachments;
         std::vector<std::shared_ptr<Framebuffer>> m_Framebuffers;
 
-        std::shared_ptr<Shader> m_Shader;
+        std::shared_ptr<Shader> m_Shader, m_NewlyLoadedShader;
+        std::atomic_bool m_NewShaderLoaded, m_NewShaderLoading;
+
         std::shared_ptr<VertexBuffer> m_VertexBuffer;
         std::shared_ptr<UniformBuffer> m_UniformBuffer;
         std::shared_ptr<StorageBuffer> m_StorageBuffer;
@@ -52,6 +55,5 @@ namespace vc
         ImGuiHelper m_ImGuiHelper;
 
         CameraController m_CameraController;
-        bool m_ReloadShader = false;
     };
 }

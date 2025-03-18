@@ -25,7 +25,7 @@ namespace vc
 
         CreateOrRecreateFramebuffers();
 
-        LoadShader();
+        m_Shader = LoadShader();
 
         {
             VertexBufferInfo info;
@@ -92,11 +92,11 @@ namespace vc
             CreateOrRecreateFramebuffers();
 
         // Reload the shader if necessary.
-        if (m_ReloadShader)
+        if (m_NewShaderLoaded.exchange(false, std::memory_order_acquire))
         {
-            m_ReloadShader = false;
-            context.DeferFree([shader = m_Shader] {});
-            LoadShader();
+            context.DeferFree([shader = std::move(m_Shader)] {});
+            m_Shader = std::move(m_NewlyLoadedShader);
+            m_NewShaderLoading.store(false, std::memory_order_release);
         }
 
         std::array<VkClearValue, 2> clearValues{};
@@ -185,7 +185,17 @@ namespace vc
     void VulkanCraftLayer::OnKeyPressEvent(KeyPressEvent& event)
     {
         if (event.IsPressed() and event.GetKeycode() == Keycode::R and event.GetModifiers().HasOnly(Modifiers::Control))
-            m_ReloadShader = true;
+        {
+            if (not m_NewShaderLoading.exchange(true, std::memory_order_acquire))
+            {
+                // TODO IMPORTANT: delegate to a threadpool.
+                std::thread([this]
+                {
+                    m_NewlyLoadedShader = LoadShader();
+                    m_NewShaderLoaded.store(true, std::memory_order_release);
+                }).detach();
+            }
+        }
     }
 
     void VulkanCraftLayer::OnImGuiRender()
@@ -303,7 +313,7 @@ namespace vc
         }
     }
 
-    void VulkanCraftLayer::LoadShader()
+    std::shared_ptr<Shader> VulkanCraftLayer::LoadShader()
     {
         auto& context = Layer::GetWindow().GetRenderContext();
 
@@ -320,8 +330,7 @@ namespace vc
         info.RenderPass = m_RenderPass->GetRenderPass();
 
         ENG_LOG_INFO("Loading shader \"{}\"...", info.Filepath.string());
-        // TODO: async
-        m_Shader = std::make_shared<Shader>(info);
+        return std::make_shared<Shader>(info);
     }
 
     void VulkanCraftLayer::SetDefaultViewportAndScissor()
