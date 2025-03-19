@@ -20,7 +20,7 @@ namespace vc
 
         virtual void OnEvent(Event& event) override;
         virtual void OnUpdate(Timestep timestep) override;
-        virtual void OnRender() override;
+        virtual void OnRender(Timestep timestep) override;
     private:
         void OnWindowCloseEvent(WindowCloseEvent& event);
         void OnKeyPressEvent(KeyPressEvent& event);

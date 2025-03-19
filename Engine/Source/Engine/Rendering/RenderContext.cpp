@@ -741,12 +741,12 @@ namespace eng
         ENG_ASSERT(result == VK_SUCCESS, "Failed to get present modes.");
 
         // If VK_PRESENT_MODE_MAILBOX_KHR is available, use it.
-        for (VkPresentModeKHR presentMode : presentModes)
-            if (presentMode == VK_PRESENT_MODE_MAILBOX_KHR)
-                return presentMode;
+        //for (VkPresentModeKHR presentMode : presentModes)
+        //    if (presentMode == VK_PRESENT_MODE_MAILBOX_KHR) // no vsync
+        //        return presentMode;
 
         // Otherwise, fallback to VK_PRESENT_MODE_FIFO_KHR,
         // which is guaranteed to be available.
-        return VK_PRESENT_MODE_FIFO_KHR;
+        return VK_PRESENT_MODE_FIFO_KHR; // vsync
     }
 }

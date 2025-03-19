@@ -20,6 +20,7 @@ namespace vc
         ImGuiStyle& style = ImGui::GetStyle();
         style.WindowRounding = 0.0f;
         style.Colors[ImGuiCol_WindowBg].w = 1.0f;
+        style.Colors[ImGuiCol_PopupBg].w = 1.0f;
         style.Colors[ImGuiCol_TitleBgCollapsed].w = 1.0f;
 
         // NOTE: There is a PR for this on ImGui's repository, but it needn't be that complicated.
@@ -34,10 +35,5 @@ namespace vc
             style.Colors[i].z = std::powf(style.Colors[i].z, 2.2f);
             style.Colors[i].w = std::powf(style.Colors[i].w, 2.2f);
         }
-    }
-
-    ImGuiHelper::~ImGuiHelper()
-    {
-
     }
 }

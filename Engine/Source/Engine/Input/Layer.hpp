@@ -17,7 +17,7 @@ namespace eng
 
         virtual void OnEvent(Event& event);
         virtual void OnUpdate(Timestep timestep);
-        virtual void OnRender();
+        virtual void OnRender(Timestep timestep);
 
         Window& GetWindow();
     private:

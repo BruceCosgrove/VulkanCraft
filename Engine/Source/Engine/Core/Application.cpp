@@ -7,7 +7,12 @@ namespace eng
 {
     void Application::Terminate()
     {
-        m_Running = false;
+        m_Running.store(false, std::memory_order_release);
+    }
+
+    bool Application::IsRunning() const
+    {
+        return m_Running.load(std::memory_order_acquire);
     }
 
     void Application::ExecuteAsync(std::function<void()>&& task)
@@ -28,12 +33,36 @@ namespace eng
 
     void Application::Run()
     {
-        while (m_Running)
+        std::jthread updateThread([this]
         {
-            glfwPollEvents();
+            ENG_LOG_TRACE("Starting update thread.");
 
-            m_Window.OnUpdate();
-            m_Window.OnRender();
-        }
+            while (m_Running.load(std::memory_order_acquire))
+            {
+                m_Window.OnUpdate();
+            }
+
+            ENG_LOG_TRACE("Exiting update thread.");
+        });
+
+        std::jthread renderThread([this]
+        {
+            ENG_LOG_TRACE("Starting render thread.");
+
+            while (m_Running.load(std::memory_order_acquire))
+            {
+                m_Window.OnRender();
+            }
+
+            ENG_LOG_TRACE("Exiting render thread.");
+        });
+
+        ENG_LOG_TRACE("Starting event handling on main thread.");
+
+        // Process all events on the main thread.
+        while (m_Running.load(std::memory_order_acquire))
+            glfwWaitEvents();
+
+        ENG_LOG_TRACE("Exiting event handling on main thread.");
     }
 }

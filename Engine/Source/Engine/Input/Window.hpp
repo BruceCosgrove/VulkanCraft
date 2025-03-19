@@ -89,7 +89,8 @@ namespace eng
         RenderContext m_RenderContext;
         detail::LayerStack m_LayerStack;
 
-        f64 m_LastTime = 0.0;
+        f64 m_LastUpdateTime = 0.0;
+        f64 m_LastRenderTime = 0.0;
         bool m_Minimized = false;
         bool m_ZeroSize = false;
     };

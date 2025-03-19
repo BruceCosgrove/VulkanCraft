@@ -10,6 +10,5 @@ namespace vc
         ENG_IMMOVABLE_UNCOPYABLE_CLASS(ImGuiHelper);
     public:
         ImGuiHelper();
-        ~ImGuiHelper();
     };
 }

@@ -1,4 +1,5 @@
 #include "Window.hpp"
+#include "Engine/Core/Application.hpp"
 #include "Engine/Core/AssertOrVerify.hpp"
 #include "Engine/Core/Log.hpp"
 #include "Engine/Input/Event/WindowEvents.hpp"
@@ -54,8 +55,10 @@ namespace eng
         , m_RenderContext(m_NativeWindow.Handle)
         , m_LayerStack(info.Layers.m_LayerProducers, *this)
     {
-        // Now that the window is fully initialized, show it.
+        // Now that the window and Client are fully initialized, show the window.
         glfwShowWindow(m_NativeWindow.Handle);
+
+        m_LastUpdateTime = m_LastRenderTime = glfwGetTime();
     }
 
     Window::~Window()
@@ -71,13 +74,9 @@ namespace eng
 
     void Window::OnUpdate()
     {
-        // Calculate the time since the last update/frame combo.
-        // TODO: separate update/render threads, and only pass the time to the update thread.
-        // TODO: think about implementing FixedUpdate.
-
         f64 currentTime = glfwGetTime();
-        Timestep timestep = static_cast<f32>(currentTime - m_LastTime);
-        m_LastTime = currentTime;
+        Timestep timestep = static_cast<f32>(currentTime - m_LastUpdateTime);
+        m_LastUpdateTime = currentTime;
 
         m_LayerStack.OnUpdate(timestep);
     }
@@ -89,7 +88,15 @@ namespace eng
 
         if (m_RenderContext.BeginFrame())
         {
-            m_LayerStack.OnRender();
+            f64 currentTime = glfwGetTime();
+            Timestep timestep = static_cast<f32>(currentTime - m_LastRenderTime);
+            m_LastRenderTime = currentTime;
+
+            // TODO: SetWindowLongW, called from ImGui_ImplGlfw_NewFrame,
+            // blocks execution if the application is terminated between
+            // RenderContext::BeginFrame() and RenderContext::EndFrame().
+            if (Application::Get().IsRunning())
+                m_LayerStack.OnRender(timestep);
             m_RenderContext.EndFrame();
         }
     }

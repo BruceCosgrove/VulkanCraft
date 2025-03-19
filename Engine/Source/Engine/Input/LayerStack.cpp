@@ -70,9 +70,9 @@ namespace eng::detail
             layer->OnUpdate(timestep);
     }
 
-    void LayerStack::OnRender()
+    void LayerStack::OnRender(Timestep timestep)
     {
         for (auto& layer : m_Layers)
-            layer->OnRender();
+            layer->OnRender(timestep);
     }
 }

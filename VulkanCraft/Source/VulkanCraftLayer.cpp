@@ -81,7 +81,7 @@ namespace vc
         m_CameraController.OnUpdate(timestep);
     }
 
-    void VulkanCraftLayer::OnRender()
+    void VulkanCraftLayer::OnRender(Timestep timestep)
     {
         auto& context = Layer::GetWindow().GetRenderContext();
         VkCommandBuffer commandBuffer = context.GetActiveCommandBuffer();
@@ -163,7 +163,7 @@ namespace vc
 
         // Render ImGui
         {
-            m_ImGuiRenderContext.BeginFrame();
+            m_ImGuiRenderContext.BeginFrame(timestep);
             OnImGuiRender();
             m_ImGuiRenderContext.EndFrame(commandBuffer);
         }
@@ -193,6 +193,14 @@ namespace vc
 
     void VulkanCraftLayer::OnImGuiRender()
     {
+        // TODO: multiple threads broke imgui extra viewports.
+        // THATS PROBABLY RELATED TO WHY SetWindowLongW BLOCKS in ImGui_ImplGlfw_NewFrame.
+        // I forgot ImGui wasn't thread safe.
+        // I need to initialize and shutdown its context on the render thread, cause it's
+        // only ever called from there, so a single context should do.
+
+        ImGui::ShowDemoWindow();
+
         ImGui::Begin("test window");
         ImGui::Button("test button");
         ImGui::End();
