@@ -15,9 +15,16 @@ namespace eng
         Layer(Window& window);
         virtual ~Layer() = default;
 
+        // Called on the main thread when an event occurs.
         virtual void OnEvent(Event& event);
+        // Called on the update thread once per update.
         virtual void OnUpdate(Timestep timestep);
+        // Called on the render thread once per frame.
         virtual void OnRender(Timestep timestep);
+        // Called on the render thread right after it starts.
+        virtual void OnRenderThreadStarted();
+        // Called on the render thread right before it stops.
+        virtual void OnRenderThreadStopped();
 
         Window& GetWindow();
     private:

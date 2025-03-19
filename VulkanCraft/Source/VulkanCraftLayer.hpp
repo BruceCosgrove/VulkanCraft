@@ -21,14 +21,15 @@ namespace vc
         virtual void OnEvent(Event& event) override;
         virtual void OnUpdate(Timestep timestep) override;
         virtual void OnRender(Timestep timestep) override;
+        virtual void OnRenderThreadStarted() override;
+        virtual void OnRenderThreadStopped() override;
     private:
         void OnWindowCloseEvent(WindowCloseEvent& event);
         void OnKeyPressEvent(KeyPressEvent& event);
 
         void OnImGuiRender();
 
-        std::shared_ptr<RenderPass> CreateRenderPass();
-
+        void CreateRenderPass();
         void CreateOrRecreateFramebuffers();
         std::shared_ptr<Shader> LoadShader();
 
@@ -50,8 +51,9 @@ namespace vc
         std::shared_ptr<StorageBuffer> m_StorageBuffer;
         std::unique_ptr<TextureAtlas> m_BlockTextureAtlas;
 
-        ImGuiRenderContext m_ImGuiRenderContext;
-        ImGuiHelper m_ImGuiHelper;
+        std::atomic_bool m_ImGuiRenderContextLoaded;
+        std::unique_ptr<ImGuiRenderContext> m_ImGuiRenderContext;
+        std::unique_ptr<ImGuiHelper> m_ImGuiHelper;
 
         CameraController m_CameraController;
     };

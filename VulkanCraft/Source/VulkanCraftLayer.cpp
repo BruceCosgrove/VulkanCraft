@@ -18,11 +18,11 @@ namespace vc
 
     VulkanCraftLayer::VulkanCraftLayer(Window& window)
         : Layer(window)
-        , m_RenderPass(CreateRenderPass())
-        , m_Shader(LoadShader())
-        , m_ImGuiRenderContext(window, m_RenderPass->GetRenderPass())
     {
         auto& context = window.GetRenderContext();
+
+        CreateRenderPass();
+        (void)m_Shader.Exchange(LoadShader());
 
         CreateOrRecreateFramebuffers();
 
@@ -70,7 +70,8 @@ namespace vc
 
     void VulkanCraftLayer::OnEvent(Event& event)
     {
-        event.Dispatch(&m_ImGuiRenderContext, &ImGuiRenderContext::OnEvent);
+        if (m_ImGuiRenderContextLoaded.load(std::memory_order_acquire))
+            event.Dispatch(m_ImGuiRenderContext.get(), &ImGuiRenderContext::OnEvent);
         event.Dispatch(this, &VulkanCraftLayer::OnWindowCloseEvent);
         event.Dispatch(this, &VulkanCraftLayer::OnKeyPressEvent);
         event.Dispatch(&m_CameraController, &CameraController::OnEvent);
@@ -163,13 +164,28 @@ namespace vc
 
         // Render ImGui
         {
-            m_ImGuiRenderContext.BeginFrame(timestep);
+            // NOTE: No need to check m_ImGuiRenderContextLoaded because this is the render thread.
+            m_ImGuiRenderContext->BeginFrame();
             OnImGuiRender();
-            m_ImGuiRenderContext.EndFrame(commandBuffer);
+            m_ImGuiRenderContext->EndFrame(commandBuffer);
         }
 
         // End the render pass.
         vkCmdEndRenderPass(commandBuffer);
+    }
+
+    void VulkanCraftLayer::OnRenderThreadStarted()
+    {
+        m_ImGuiRenderContext = std::make_unique<ImGuiRenderContext>(Layer::GetWindow(), m_RenderPass->GetRenderPass());
+        m_ImGuiHelper = std::make_unique<ImGuiHelper>();
+        m_ImGuiRenderContextLoaded.store(true, std::memory_order_release);
+    }
+
+    void VulkanCraftLayer::OnRenderThreadStopped()
+    {
+        m_ImGuiHelper.reset();
+        m_ImGuiRenderContext.reset();
+        m_ImGuiRenderContextLoaded.store(false, std::memory_order_release);
     }
 
     void VulkanCraftLayer::OnWindowCloseEvent(WindowCloseEvent& event)
@@ -206,7 +222,7 @@ namespace vc
         ImGui::End();
     }
 
-    std::shared_ptr<RenderPass> VulkanCraftLayer::CreateRenderPass()
+    void VulkanCraftLayer::CreateRenderPass()
     {
         auto& context = Layer::GetWindow().GetRenderContext();
 
@@ -266,7 +282,7 @@ namespace vc
         info.Attachments = attachments;
         info.Subpasses = subpasses;
         info.SubpassDependencies = dependencies;
-        return std::make_shared<RenderPass>(info);
+        m_RenderPass = std::make_shared<RenderPass>(info);
     }
 
     void VulkanCraftLayer::CreateOrRecreateFramebuffers()

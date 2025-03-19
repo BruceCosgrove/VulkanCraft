@@ -75,4 +75,16 @@ namespace eng::detail
         for (auto& layer : m_Layers)
             layer->OnRender(timestep);
     }
+
+    void LayerStack::OnRenderThreadStarted()
+    {
+        for (auto& layer : m_Layers)
+            layer->OnRenderThreadStarted();
+    }
+
+    void LayerStack::OnRenderThreadStopped()
+    {
+        for (auto& layer : m_Layers)
+            layer->OnRenderThreadStopped();
+    }
 }

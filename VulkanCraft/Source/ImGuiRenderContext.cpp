@@ -5,6 +5,7 @@
 #include <glfw/glfw3.h>
 #include <backends/imgui_impl_glfw.h>
 #include <backends/imgui_impl_vulkan.h>
+#include <imgui_internal.h>
 
 namespace vc
 {
@@ -17,7 +18,7 @@ namespace vc
         // "info.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;           // Assume that graphics family == present family"
         ENG_ASSERT(context.GetGraphicsFamily() == context.GetPresentFamily(), "ImGui requires the graphics queue to be the same as the present queue.");
 
-        ImGui::CreateContext();
+        m_ImGuiContext = ImGui::CreateContext();
 
         ImGui_ImplVulkan_InitInfo info{};
         info.Instance = RenderContext::GetInstance();
@@ -42,13 +43,11 @@ namespace vc
         ImGui::DestroyContext();
     }
 
-    void ImGuiRenderContext::BeginFrame(Timestep timestep)
+    void ImGuiRenderContext::BeginFrame()
     {
         ImGui_ImplVulkan_NewFrame();
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
-
-        ImGui::GetIO().DeltaTime = timestep;
     }
 
     void ImGuiRenderContext::EndFrame(VkCommandBuffer commandBuffer)
@@ -61,7 +60,7 @@ namespace vc
 
     void ImGuiRenderContext::OnEvent(Event& event)
     {
-        ImGuiIO& io = ImGui::GetIO();
+        ImGuiIO& io = ImGui::GetIO(m_ImGuiContext);
 
         if ((io.WantCaptureMouse and event.GetCategories().HasAll(EventCategory::Mouse)) or
             (io.WantCaptureKeyboard and event.GetCategories().HasAll(EventCategory::Key)))

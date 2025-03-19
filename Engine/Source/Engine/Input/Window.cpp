@@ -61,17 +61,6 @@ namespace eng
         m_LastUpdateTime = m_LastRenderTime = glfwGetTime();
     }
 
-    Window::~Window()
-    {
-        VkResult result = vkDeviceWaitIdle(m_RenderContext.GetDevice());
-        ENG_ASSERT(result == VK_SUCCESS, "Failed to wait for the device to stop working. This really shouldn't happen.");
-    }
-
-    void Window::OnEvent(Event& event)
-    {
-        m_LayerStack.OnEvent(event);
-    }
-
     void Window::OnUpdate()
     {
         f64 currentTime = glfwGetTime();
@@ -101,9 +90,14 @@ namespace eng
         }
     }
 
-    void Window::GetFramebufferSize(u32& width, u32& height) const
+    void Window::OnRenderThreadStarted()
     {
-        glfwGetFramebufferSize(m_NativeWindow.Handle, (i32*)&width, (i32*)&height);
+        m_LayerStack.OnRenderThreadStarted();
+    }
+
+    void Window::OnRenderThreadStopped()
+    {
+        m_LayerStack.OnRenderThreadStopped();
     }
 
     void Window::OnWindowMinimizeEvent(WindowMinimizeEvent& event)

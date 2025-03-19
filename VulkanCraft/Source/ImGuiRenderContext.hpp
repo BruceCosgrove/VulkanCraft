@@ -4,6 +4,8 @@
 
 using namespace eng;
 
+struct ImGuiContext;
+
 namespace vc
 {
     class ImGuiRenderContext
@@ -14,9 +16,11 @@ namespace vc
         ImGuiRenderContext(Window& window, VkRenderPass renderPass);
         ~ImGuiRenderContext();
 
-        void BeginFrame(Timestep timestep);
+        void BeginFrame();
         void EndFrame(VkCommandBuffer commandBuffer);
 
         void OnEvent(Event& event);
+    private:
+        ImGuiContext* m_ImGuiContext = nullptr;
     };
 }

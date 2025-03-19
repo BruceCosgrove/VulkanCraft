@@ -2,11 +2,6 @@
 #include "Engine/Core/AssertOrVerify.hpp"
 #include "Engine/Core/Attributes.hpp"
 #include "Engine/Core/Log.hpp"
-#include "Engine/Rendering/Framebuffer.hpp"
-#include "Engine/Rendering/Image.hpp"
-#include "Engine/Rendering/ImageUtils.hpp"
-#include "Engine/Rendering/RenderPass.hpp"
-#include "Engine/Rendering/Shader.hpp"
 #include <glfw/glfw3.h>
 #include <array>
 #include <optional>

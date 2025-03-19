@@ -2,6 +2,7 @@
 #include "Engine/Core/DataTypes.hpp"
 #include "Engine/Input/Event/WindowEvents.hpp"
 #include <glfw/glfw3.h>
+#include <vulkan/vulkan.h>
 
 namespace eng
 {
@@ -24,11 +25,7 @@ namespace eng
         : m_ThreadPool(info.ThreadPoolSize)
         , m_Window(info.WindowInfo)
     {
-        // Send initial framebuffer resize event to initialize all Client systems.
-        u32 width, height;
-        m_Window.GetFramebufferSize(width, height);
-        WindowFramebufferResizeEvent event(width, height);
-        m_Window.OnEvent(event);
+
     }
 
     void Application::Run()
@@ -42,19 +39,24 @@ namespace eng
                 m_Window.OnUpdate();
             }
 
-            ENG_LOG_TRACE("Exiting update thread.");
+            ENG_LOG_TRACE("Stopping update thread.");
         });
 
         std::jthread renderThread([this]
         {
             ENG_LOG_TRACE("Starting render thread.");
+            m_Window.OnRenderThreadStarted();
 
             while (m_Running.load(std::memory_order_acquire))
             {
                 m_Window.OnRender();
             }
 
-            ENG_LOG_TRACE("Exiting render thread.");
+            VkResult result = vkDeviceWaitIdle(m_Window.GetRenderContext().GetDevice());
+            ENG_ASSERT(result == VK_SUCCESS, "Failed to wait for the device to stop working. This really shouldn't happen.");
+
+            m_Window.OnRenderThreadStopped();
+            ENG_LOG_TRACE("Stopping render thread.");
         });
 
         ENG_LOG_TRACE("Starting event handling on main thread.");
@@ -63,6 +65,6 @@ namespace eng
         while (m_Running.load(std::memory_order_acquire))
             glfwWaitEvents();
 
-        ENG_LOG_TRACE("Exiting event handling on main thread.");
+        ENG_LOG_TRACE("Stopping event handling on main thread.");
     }
 }

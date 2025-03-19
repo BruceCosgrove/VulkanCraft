@@ -23,6 +23,16 @@ namespace eng
 
     }
 
+    void Layer::OnRenderThreadStarted()
+    {
+
+    }
+
+    void Layer::OnRenderThreadStopped()
+    {
+
+    }
+
     Window& Layer::GetWindow()
     {
         return m_Window;

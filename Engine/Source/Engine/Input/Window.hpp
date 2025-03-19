@@ -60,14 +60,11 @@ namespace eng
         friend class Application;
 
         Window(WindowInfo const& info);
-        ~Window();
 
-        void OnEvent(Event& event);
         void OnUpdate();
         void OnRender();
-
-        // TODO: refactor this
-        void GetFramebufferSize(u32& width, u32& height) const;
+        void OnRenderThreadStarted();
+        void OnRenderThreadStopped();
     private:
         void OnWindowMinimizeEvent(WindowMinimizeEvent& event);
         void OnWindowFramebufferResizeEvent(WindowFramebufferResizeEvent& event);

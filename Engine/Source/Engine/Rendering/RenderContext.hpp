@@ -11,11 +11,6 @@ struct GLFWwindow;
 
 namespace eng
 {
-    class Framebuffer;
-    class Image;
-    class RenderPass;
-    class Shader;
-
     class RenderContext
     {
     private:

@@ -24,6 +24,8 @@ namespace eng::detail
         void OnEvent(Event& event);
         void OnUpdate(Timestep timestep);
         void OnRender(Timestep timestep);
+        void OnRenderThreadStarted();
+        void OnRenderThreadStopped();
 
         void PushLayer(LayerProducer const& layerProducer, Window& window);
         void PushLayer(std::unique_ptr<Layer>&& layer);
