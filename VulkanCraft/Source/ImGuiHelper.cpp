@@ -12,7 +12,7 @@ namespace vc
         // Configuration.
 
         ImGuiIO& io = ImGui::GetIO();
-        io.ConfigFlags |= ImGuiConfigFlags_DockingEnable | ImGuiConfigFlags_ViewportsEnable | ImGuiConfigFlags_IsSRGB;
+        io.ConfigFlags |= ImGuiConfigFlags_DockingEnable /*| ImGuiConfigFlags_ViewportsEnable*/ | ImGuiConfigFlags_IsSRGB;
         io.ConfigWindowsMoveFromTitleBarOnly = true;
 
         ImGui::StyleColorsDark();

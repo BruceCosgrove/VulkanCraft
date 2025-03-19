@@ -4,6 +4,8 @@
 
 using namespace eng;
 
+struct ImGuiContext;
+
 namespace vc
 {
     class ImGuiRenderContext
@@ -18,5 +20,7 @@ namespace vc
         void EndFrame(VkCommandBuffer commandBuffer);
 
         void OnEvent(Event& event);
+    private:
+        ImGuiContext* m_ImGuiContext = nullptr;
     };
 }
