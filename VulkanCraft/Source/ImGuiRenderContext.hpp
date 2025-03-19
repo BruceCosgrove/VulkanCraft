@@ -14,7 +14,7 @@ namespace vc
         ImGuiRenderContext(Window& window, VkRenderPass renderPass);
         ~ImGuiRenderContext();
 
-        void BeginFrame(Timestep timestep);
+        void BeginFrame();
         void EndFrame(VkCommandBuffer commandBuffer);
 
         void OnEvent(Event& event);

@@ -163,7 +163,7 @@ namespace vc
 
         // Render ImGui
         {
-            m_ImGuiRenderContext.BeginFrame(timestep);
+            m_ImGuiRenderContext.BeginFrame();
             OnImGuiRender();
             m_ImGuiRenderContext.EndFrame(commandBuffer);
         }

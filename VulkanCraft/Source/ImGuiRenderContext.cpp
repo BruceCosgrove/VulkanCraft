@@ -42,13 +42,11 @@ namespace vc
         ImGui::DestroyContext();
     }
 
-    void ImGuiRenderContext::BeginFrame(Timestep timestep)
+    void ImGuiRenderContext::BeginFrame()
     {
         ImGui_ImplVulkan_NewFrame();
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
-
-        ImGui::GetIO().DeltaTime = timestep;
     }
 
     void ImGuiRenderContext::EndFrame(VkCommandBuffer commandBuffer)
