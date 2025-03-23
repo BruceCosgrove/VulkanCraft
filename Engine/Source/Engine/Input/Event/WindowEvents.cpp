@@ -137,18 +137,4 @@ namespace eng
     {
         return m_ContentScaleY;
     }
-
-
-
-    WindowPathDropEvent::WindowPathDropEvent(std::span<char const*> paths) noexcept
-        : Event(GetStaticType(), GetStaticCategories())
-        , m_Paths(paths)
-    {
-
-    }
-
-    std::span<char const* const> WindowPathDropEvent::GetPaths() const noexcept
-    {
-        return m_Paths;
-    }
 }

@@ -223,14 +223,6 @@ namespace eng
             window.m_LayerStack.OnEvent(event);
         });
 
-        glfwSetDropCallback(Handle, [](GLFWwindow* handle, i32 path_count, char const* paths[])
-        {
-            Window& window = *static_cast<Window*>(glfwGetWindowUserPointer(handle));
-
-            WindowPathDropEvent event({paths, static_cast<u64>(path_count)});
-            window.m_LayerStack.OnEvent(event);
-        });
-
         glfwSetMouseButtonCallback(Handle, [](GLFWwindow* handle, i32 button, i32 action, i32 mods)
         {
             Window& window = *static_cast<Window*>(glfwGetWindowUserPointer(handle));

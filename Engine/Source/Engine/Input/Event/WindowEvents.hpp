@@ -129,20 +129,6 @@ namespace eng
         f32 m_ContentScaleY;
     };
     _ENG_ASSERT_EVENT_INTERFACE(WindowContentScaleEvent);
-
-
-
-    class WindowPathDropEvent : public Event
-    {
-    public:
-        _ENG_EVENT_GET_STATIC_FUNCS(EventType::WindowPathDrop, EventCategory::Window);
-        WindowPathDropEvent(std::span<char const*> paths) noexcept;
-
-        std::span<char const* const> GetPaths() const noexcept;
-    private:
-        std::span<char const*> m_Paths;
-    };
-    _ENG_ASSERT_EVENT_INTERFACE(WindowPathDropEvent);
 }
 
 _ENG_EVENT_FORMAT(eng::WindowMoveEvent,
@@ -186,9 +172,4 @@ _ENG_EVENT_FORMAT(eng::WindowFramebufferResizeEvent,
 _ENG_EVENT_FORMAT(eng::WindowContentScaleEvent,
     "WindowContentScaleEvent(ContentScaleX={}, ContentScaleX={})",
     event.GetContentScaleX(), event.GetContentScaleY()
-);
-
-_ENG_EVENT_FORMAT(eng::WindowPathDropEvent,
-    "WindowPathDropEvent(PathCount={})",
-    event.GetPaths().size()
 );
