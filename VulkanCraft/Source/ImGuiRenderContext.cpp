@@ -21,7 +21,7 @@ namespace vc
         // "info.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;           // Assume that graphics family == present family"
         ENG_ASSERT(context.GetGraphicsFamily() == context.GetPresentFamily(), "ImGui requires the graphics queue to be the same as the present queue.");
 
-        m_ImGuiContext = ImGui::CreateContext();
+        ImGui::CreateContext();
 
         ImGui_ImplVulkan_InitInfo info{};
         info.Instance = RenderContext::GetInstance();
@@ -63,7 +63,7 @@ namespace vc
 
     void ImGuiRenderContext::OnEvent(Event& event)
     {
-        ImGuiIO& io = ImGui::GetIO(m_ImGuiContext);
+        ImGuiIO& io = ImGui::GetIO();
 
         if ((io.WantCaptureMouse and event.GetCategories().HasAll(EventCategory::Mouse)) or
             (io.WantCaptureKeyboard and event.GetCategories().HasAll(EventCategory::Key)))
