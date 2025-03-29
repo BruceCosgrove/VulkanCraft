@@ -8,6 +8,9 @@
 
 namespace vc
 {
+    // TODO: if storing the imgui render context in the base render context,
+    // then upon render context creation, it would either need the client render pass,
+    // or it would need to create its own, which requires a framebuffer at render time.
     ImGuiRenderContext::ImGuiRenderContext(Window& window, VkRenderPass renderPass)
     {
         RenderContext& context = window.GetRenderContext();
@@ -53,8 +56,8 @@ namespace vc
     {
         ImGui::Render(); // Calls ImGui::EndFrame();
         ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), commandBuffer);
-        ImGui::UpdatePlatformWindows();
-        ImGui::RenderPlatformWindowsDefault();
+        //ImGui::UpdatePlatformWindows();
+        //ImGui::RenderPlatformWindowsDefault();
     }
 
     void ImGuiRenderContext::OnEvent(Event& event)
