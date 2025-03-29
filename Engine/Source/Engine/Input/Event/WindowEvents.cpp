@@ -3,7 +3,7 @@
 namespace eng
 {
     WindowMoveEvent::WindowMoveEvent(i32 x, i32 y) noexcept
-        : Event(GetStaticType(), GetStaticCategories())
+        : Event(GetStaticType(), GetStaticCategories(), sizeof(*this))
         , m_X(x)
         , m_Y(y)
     {
@@ -23,7 +23,7 @@ namespace eng
 
 
     WindowResizeEvent::WindowResizeEvent(u32 width, u32 height) noexcept
-        : Event(GetStaticType(), GetStaticCategories())
+        : Event(GetStaticType(), GetStaticCategories(), sizeof(*this))
         , m_Width(width)
         , m_Height(height)
     {
@@ -43,7 +43,7 @@ namespace eng
 
 
     WindowCloseEvent::WindowCloseEvent() noexcept
-        : Event(GetStaticType(), GetStaticCategories())
+        : Event(GetStaticType(), GetStaticCategories(), sizeof(*this))
     {
 
     }
@@ -51,7 +51,7 @@ namespace eng
 
 
     WindowRefreshEvent::WindowRefreshEvent() noexcept
-        : Event(GetStaticType(), GetStaticCategories())
+        : Event(GetStaticType(), GetStaticCategories(), sizeof(*this))
     {
 
     }
@@ -59,7 +59,7 @@ namespace eng
 
 
     WindowFocusEvent::WindowFocusEvent(bool focused) noexcept
-        : Event(GetStaticType(), GetStaticCategories())
+        : Event(GetStaticType(), GetStaticCategories(), sizeof(*this))
         , m_Focused(focused)
     {
 
@@ -73,7 +73,7 @@ namespace eng
 
 
     WindowMinimizeEvent::WindowMinimizeEvent(bool minimized) noexcept
-        : Event(GetStaticType(), GetStaticCategories())
+        : Event(GetStaticType(), GetStaticCategories(), sizeof(*this))
         , m_Minimized(minimized)
     {
 
@@ -87,7 +87,7 @@ namespace eng
 
 
     WindowMaximizeEvent::WindowMaximizeEvent(bool maximized) noexcept
-        : Event(GetStaticType(), GetStaticCategories())
+        : Event(GetStaticType(), GetStaticCategories(), sizeof(*this))
         , m_Maximized(maximized)
     {
 
@@ -101,7 +101,7 @@ namespace eng
 
 
     WindowFramebufferResizeEvent::WindowFramebufferResizeEvent(u32 framebufferWidth, u32 framebufferHeight) noexcept
-        : Event(GetStaticType(), GetStaticCategories())
+        : Event(GetStaticType(), GetStaticCategories(), sizeof(*this))
         , m_FramebufferWidth(framebufferWidth)
         , m_FramebufferHeight(framebufferHeight)
     {
@@ -121,7 +121,7 @@ namespace eng
 
 
     WindowContentScaleEvent::WindowContentScaleEvent(f32 contentScaleX, f32 contentScaleY) noexcept
-        : Event(GetStaticType(), GetStaticCategories())
+        : Event(GetStaticType(), GetStaticCategories(), sizeof(*this))
         , m_ContentScaleX(contentScaleX)
         , m_ContentScaleY(contentScaleY)
     {

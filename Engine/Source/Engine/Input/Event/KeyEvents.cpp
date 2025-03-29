@@ -3,7 +3,7 @@
 namespace eng
 {
     KeyPressEvent::KeyPressEvent(Keycode keycode, Modifiers modifiers, bool pressed) noexcept
-        : Event(GetStaticType(), GetStaticCategories())
+        : Event(GetStaticType(), GetStaticCategories(), sizeof(*this))
         , m_Keycode(keycode)
         , m_Modifiers(modifiers)
         , m_Pressed(pressed)
@@ -29,7 +29,7 @@ namespace eng
 
 
     KeyTypeEvent::KeyTypeEvent(u32 codepoint) noexcept
-        : Event(GetStaticType(), GetStaticCategories())
+        : Event(GetStaticType(), GetStaticCategories(), sizeof(*this))
         , m_Codepoint(codepoint)
     {
 

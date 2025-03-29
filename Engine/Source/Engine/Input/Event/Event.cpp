@@ -2,13 +2,6 @@
 
 namespace eng
 {
-    Event::Event(EventType type, EventCategory category) noexcept
-        : m_Type(type)
-        , m_Categories(category)
-    {
-
-    }
-
     EventType Event::GetType() const noexcept
     {
         return m_Type;
@@ -19,6 +12,11 @@ namespace eng
         return m_Categories;
     }
 
+    u8 Event::GetSize() const noexcept
+    {
+        return m_Size;
+    }
+
     bool Event::IsHandled() const noexcept
     {
         return m_Handled;
@@ -27,5 +25,13 @@ namespace eng
     void Event::Handle() noexcept
     {
         m_Handled = true;
+    }
+
+    Event::Event(EventType type, EventCategory category, u8 size) noexcept
+        : m_Type(type)
+        , m_Categories(category)
+        , m_Size(size)
+    {
+
     }
 }

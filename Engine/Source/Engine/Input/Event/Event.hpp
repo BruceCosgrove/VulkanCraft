@@ -53,21 +53,21 @@ namespace eng
         // Interface for all event types to conform to.
         template <class EventT>
         concept EventI =
-            std::derived_from<EventT, Event> &&
-            requires(EventT& event)
+            std::derived_from<EventT, Event> and
+            alignof(EventT) == alignof(Event) and
+            requires()
             {
                 { EventT::GetStaticType() } noexcept -> std::same_as<EventType>;
                 { EventT::GetStaticCategories() } noexcept -> std::same_as<EventCategory>;
             };
     }
 
-    class Event
+    class alignas(sizeof(u32)) Event
     {
     public:
-        Event(EventType type, EventCategory category) noexcept;
-
         EventType GetType() const noexcept;
         EventCategory GetCategories() const noexcept;
+        u8 GetSize() const noexcept;
         bool IsHandled() const noexcept;
         void Handle() noexcept;
     public:
@@ -102,9 +102,12 @@ namespace eng
             if (!m_Handled and m_Type == EventT::GetStaticType())
                 (object->*callback)(static_cast<EventT&>(*this), std::forward<Args>(args)...);
         }
+    protected:
+        Event(EventType type, EventCategory category, u8 size) noexcept;
     private:
         EventType m_Type;
         EventCategory m_Categories;
+        u8 m_Size;
         bool m_Handled = false;
     };
 }

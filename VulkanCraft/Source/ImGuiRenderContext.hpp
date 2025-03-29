@@ -18,5 +18,8 @@ namespace vc
         void EndFrame(VkCommandBuffer commandBuffer);
 
         void OnEvent(Event& event);
+    private:
+        std::vector<u32> m_EventData;
+        std::mutex m_EventDataMutex;
     };
 }
