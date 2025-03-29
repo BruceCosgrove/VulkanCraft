@@ -5,7 +5,6 @@
 #include <glfw/glfw3.h>
 #include <backends/imgui_impl_glfw.h>
 #include <backends/imgui_impl_vulkan.h>
-#include <imgui_internal.h>
 
 namespace vc
 {
