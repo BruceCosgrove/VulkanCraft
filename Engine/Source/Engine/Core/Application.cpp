@@ -1,5 +1,6 @@
 #include "Application.hpp"
 #include "Engine/Core/DataTypes.hpp"
+#include "Engine/Core/Log.hpp"
 #include "Engine/Input/Event/WindowEvents.hpp"
 #include <glfw/glfw3.h>
 
