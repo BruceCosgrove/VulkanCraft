@@ -85,7 +85,7 @@ namespace eng::detail
         constexpr string_view ToString() const noexcept { return Names.at(m_Value - _Begin); } \
         constexpr enumName() noexcept = default; \
         constexpr enumName(underlyingType value) noexcept : m_Value(value) {} \
-        constexpr underlyingType operator+() noexcept { return m_Value; } \
+        constexpr underlyingType operator+() const noexcept { return m_Value; } \
         constexpr explicit operator bool() const noexcept { return m_Value; } \
         constexpr bool operator!() const noexcept { return !m_Value; } \
         friend constexpr bool operator==(enumName lhs, enumName rhs) noexcept { return lhs.m_Value == rhs.m_Value; } \
@@ -131,7 +131,7 @@ namespace eng::detail
         static constexpr ::eng::u64 MaxNameLength = ENG_FOR_EACH_ZIP1(_ENG_ENUM_MAX_NAME_LENGTH_IMPL, enumName, __VA_ARGS__) -1; \
         constexpr enumName() noexcept = default; \
         constexpr enumName(underlyingType value) noexcept : m_Value(value & _Mask) {} \
-        constexpr underlyingType operator+() noexcept { return m_Value; } \
+        constexpr underlyingType operator+() const noexcept { return m_Value; } \
         constexpr explicit operator bool() const noexcept { return m_Value; } \
         constexpr bool operator!() const noexcept { return !m_Value; } \
         friend constexpr bool operator==(enumName lhs, enumName rhs) noexcept { return lhs.m_Value == rhs.m_Value; } \
@@ -169,9 +169,9 @@ namespace eng
     // Common assert use cases.
 
 #define ENG_ASSERT_BOUNDED_ENUM_VALID(enumName, value) \
-    ENG_ASSERT(::eng::IsBoundedEnumValid(value), "Unknown {}.", (enumName))
+    ENG_ASSERT(::eng::IsBoundedEnumValid(value), "Unknown {}.", #enumName)
 #define ENG_ASSERT_MASKED_ENUM_VALID(enumName, value) \
-    ENG_ASSERT(::eng::IsMaskedEnumValid(value), "Unknown {}.", (enumName))
+    ENG_ASSERT(::eng::IsMaskedEnumValid(value), "Unknown {}.", #enumName)
 }
 
 // Formatting

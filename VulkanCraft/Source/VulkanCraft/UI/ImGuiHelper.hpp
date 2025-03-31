@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Engine/Core/ClassTypes.hpp"
+#include <Engine.hpp>
 #include <imgui.h>
 
 namespace vc

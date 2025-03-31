@@ -18,17 +18,18 @@ namespace eng
         // They will all immediately become idle and wait for tasks.
         ThreadPool(u8 count);
 
-        // Signal to all threads they should terminate as soon
-        // as possible and wait for all of them to terminate.
+        // Signal to all threads in this pool that they should
+        // terminate as soon as all tasks are completed and waits
+        // for them all to terminate.
         ~ThreadPool();
 
-        // Add a task that any one of the threads can perform.
+        // Add a task that any one of the threads in this pool can perform.
         void SubmitTask(std::function<void()>&& task);
     private:
         void ThreadFunction();
     private:
         std::vector<std::jthread> m_Threads;
-        std::atomic_bool m_Terminating;
+        std::atomic_bool m_Running = true;
 
         std::mutex m_TaskMutex;
         std::condition_variable m_TaskAvailable;

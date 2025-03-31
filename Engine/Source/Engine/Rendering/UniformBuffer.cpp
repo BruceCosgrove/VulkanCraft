@@ -10,9 +10,7 @@ namespace eng
     {
         // Account for alignment.
         VkDeviceSize minAlignment = m_Context.GetPhysicalDeviceProperties().limits.minUniformBufferOffsetAlignment;
-        VkDeviceSize misalignmentCorrection = m_Size % minAlignment ? minAlignment : 0;
-        // Modify m_Size directly to allow it to use the extra storage.
-        m_Size = (m_Size / minAlignment) * minAlignment + misalignmentCorrection;
+        m_Size = (m_Size + minAlignment - 1) & ~(minAlignment - 1);
 
         VkDeviceSize totalSize = m_Size * m_Context.GetSwapchainImageCount();
 

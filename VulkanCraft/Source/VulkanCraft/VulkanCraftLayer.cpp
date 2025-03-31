@@ -1,4 +1,5 @@
 #include "VulkanCraftLayer.hpp"
+#include "VulkanCraft/Rendering/BlockModel.hpp"
 #include <imgui.h>
 #include <array>
 
@@ -27,13 +28,6 @@ namespace vc
         CreateOrRecreateFramebuffers();
 
         {
-            VertexBufferInfo info;
-            info.RenderContext = &context;
-            info.Size = 1024; // 1 KiB for now, nothing fancy
-            m_VertexBuffer = std::make_shared<VertexBuffer>(info);
-        }
-
-        {
             UniformBufferInfo info;
             info.RenderContext = &context;
             info.Size = sizeof(LocalUniformBuffer);
@@ -51,12 +45,78 @@ namespace vc
 #define VC_TEXTURE(x) R"(D:\Dorkspace\Programming\Archive\VanillaDefault-Resource-Pack-16x-1.21\assets\minecraft\textures\)" x
             std::vector<LocalTexture> textures;
             textures.reserve(4);
-            textures.emplace_back(VC_TEXTURE("block/amethyst_block.png"));
-            textures.emplace_back(VC_TEXTURE("block/ancient_debris_side.png"));
-            textures.emplace_back(VC_TEXTURE("block/ancient_debris_top.png"));
-            textures.emplace_back(VC_TEXTURE("block/andesite.png"));
             textures.emplace_back(VC_TEXTURE("block/bedrock.png"));
+            textures.emplace_back(VC_TEXTURE("block/stone.png"));
+            textures.emplace_back(VC_TEXTURE("block/dirt.png"));
+            textures.emplace_back(VC_TEXTURE("block/grass_block_side.png"));
+            textures.emplace_back(VC_TEXTURE("block/grass_block_top.png"));
             m_BlockTextureAtlas = std::make_unique<TextureAtlas>(context, 16, textures);
+        }
+
+        {
+            m_BlockRegistry = std::make_unique<BlockRegistry>();
+
+            // TODO: block model files using yaml-cpp
+
+            // air
+            {
+                m_BlockRegistry->CreateBlock("minecraft:air");
+            }
+
+            // bedrock
+            {
+                BlockID block = m_BlockRegistry->CreateBlock("minecraft:bedrock");
+                BlockModel& model = m_BlockRegistry->EmplaceComponent<BlockModel>(block);
+                model.Left = TextureID(0);
+                model.Right = TextureID(0);
+                model.Bottom = TextureID(0);
+                model.Top = TextureID(0);
+                model.Back = TextureID(0);
+                model.Front = TextureID(0);
+            }
+
+            // stone
+            {
+                BlockID block = m_BlockRegistry->CreateBlock("minecraft:stone");
+                BlockModel& model = m_BlockRegistry->EmplaceComponent<BlockModel>(block);
+                model.Left = TextureID(1);
+                model.Right = TextureID(1);
+                model.Bottom = TextureID(1);
+                model.Top = TextureID(1);
+                model.Back = TextureID(1);
+                model.Front = TextureID(1);
+            }
+
+            // dirt
+            {
+                BlockID block = m_BlockRegistry->CreateBlock("minecraft:dirt");
+                BlockModel& model = m_BlockRegistry->EmplaceComponent<BlockModel>(block);
+                model.Left = TextureID(2);
+                model.Right = TextureID(2);
+                model.Bottom = TextureID(2);
+                model.Top = TextureID(2);
+                model.Back = TextureID(2);
+                model.Front = TextureID(2);
+            }
+
+            // grass
+            {
+                BlockID block = m_BlockRegistry->CreateBlock("minecraft:grass");
+                BlockModel& model = m_BlockRegistry->EmplaceComponent<BlockModel>(block);
+                model.Left = TextureID(3);
+                model.Right = TextureID(3);
+                model.Bottom = TextureID(2);
+                model.Top = TextureID(4);
+                model.Back = TextureID(3);
+                model.Front = TextureID(3);
+            }
+        }
+
+        {
+            //m_World = std::make_unique<World>();
+
+            m_Chunk = std::make_shared<Chunk>(ivec3(0, 0, 0), context);
+            m_Chunk->GenerateTerrain();
         }
 
         m_CameraController.SetPosition(vec3(0.0f, 0.0f, -1.0f));
@@ -65,7 +125,7 @@ namespace vc
         m_CameraController.SetNearPlane(0.001f);
         m_CameraController.SetFarPlane(1000.0f);
         m_CameraController.SetMovementSpeed(2.0f);
-        m_CameraController.SetMouseSensitivity(1.0f);
+        m_CameraController.SetMouseSensitivity(2.0f);
     }
 
     void VulkanCraftLayer::OnEvent(Event& event)
@@ -109,25 +169,10 @@ namespace vc
         // Begin the render pass.
         vkCmdBeginRenderPass(commandBuffer, &info, VK_SUBPASS_CONTENTS_INLINE);
 
+        SetDefaultViewportAndScissor();
+
         // Set all the necessary data.
         {
-            m_VertexBuffer->SetData(std::to_array<uvec2>
-            ({
-                {0 << 16 | 1, 17 << 12 | 0}, // left
-                {1 << 16 | 1, 17 << 12 | 1 << 0}, // right
-                {2 << 16 | 2, 17 << 12 | 0}, // bottom
-                {3 << 16 | 2, 17 << 12 | 1 << 4}, // top
-                {4 << 16 | 1, 17 << 12 | 0}, // back
-                {5 << 16 | 1, 17 << 12 | 1 << 8}, // front
-            }));
-
-            LocalUniformBuffer localUniformBuffer;
-            localUniformBuffer.ViewProjection = m_CameraController.GetViewProjection();
-            localUniformBuffer.BlockTextureAtlas.TextureCount = m_BlockTextureAtlas->GetTextureCount();
-            localUniformBuffer.BlockTextureAtlas.TextureScale = m_BlockTextureAtlas->GetTextureScale();
-            localUniformBuffer.BlockTextureAtlas.TexturesPerLayer = m_BlockTextureAtlas->GetTexturesPerLayer();
-            m_UniformBuffer->SetData(localUniformBuffer);
-
             m_StorageBuffer->SetData(std::to_array<uvec2>
             ({
                 {0, 0 << 16}, // left
@@ -137,6 +182,13 @@ namespace vc
                 {0, 4 << 16}, // back
                 {0, 5 << 16}, // front
             }));
+
+            LocalUniformBuffer localUniformBuffer;
+            localUniformBuffer.ViewProjection = m_CameraController.GetViewProjection();
+            localUniformBuffer.BlockTextureAtlas.TextureCount = m_BlockTextureAtlas->GetTextureCount();
+            localUniformBuffer.BlockTextureAtlas.TextureScale = m_BlockTextureAtlas->GetTextureScale();
+            localUniformBuffer.BlockTextureAtlas.TexturesPerLayer = m_BlockTextureAtlas->GetTexturesPerLayer();
+            m_UniformBuffer->SetData(localUniformBuffer);
 
             auto uniformBuffers = std::to_array<ShaderUniformBufferBinding>
             ({
@@ -155,10 +207,15 @@ namespace vc
 
             // Bind everything.
             shader.Current->Bind(commandBuffer);
-            m_VertexBuffer->Bind(commandBuffer, 0);
 
-            SetDefaultViewportAndScissor();
-            vkCmdDraw(commandBuffer, 6, 6, 0, 0);
+            // TODO: indirect buffer
+            // TODO: set indirect buffer from compute shader
+
+            auto chunkMesh = m_Chunk->GetMesh().Get();
+            if (chunkMesh.Old)
+                context.DeferFree([mesh = std::move(chunkMesh.Old)] {});
+            if (chunkMesh.Current)
+                chunkMesh.Current->Draw(commandBuffer);
         }
 
         // Render ImGui
@@ -199,7 +256,7 @@ namespace vc
         // I need to initialize and shutdown its context on the render thread, cause it's
         // only ever called from there, so a single context should do.
 
-        ImGui::ShowDemoWindow();
+        //ImGui::ShowDemoWindow();
 
         ImGui::Begin("test window");
         ImGui::Button("test button");

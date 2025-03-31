@@ -1,9 +1,11 @@
 #pragma once
 
-#include "CameraController.hpp"
-#include "ImGuiRenderContext.hpp"
-#include "ImGuiHelper.hpp"
-#include "TextureAtlas.hpp"
+#include "VulkanCraft/Input/CameraController.hpp"
+#include "VulkanCraft/Rendering/TextureAtlas.hpp"
+#include "VulkanCraft/UI/ImGuiRenderContext.hpp"
+#include "VulkanCraft/UI/ImGuiHelper.hpp"
+#include "VulkanCraft/World/BlockRegistry.hpp"
+#include "VulkanCraft/World/World.hpp"
 #include <Engine.hpp>
 #include <atomic>
 #include <memory>
@@ -45,7 +47,6 @@ namespace vc
 
         DynamicResource<std::shared_ptr<Shader>> m_Shader;
 
-        std::shared_ptr<VertexBuffer> m_VertexBuffer;
         std::shared_ptr<UniformBuffer> m_UniformBuffer;
         std::shared_ptr<StorageBuffer> m_StorageBuffer;
         std::unique_ptr<TextureAtlas> m_BlockTextureAtlas;
@@ -53,6 +54,9 @@ namespace vc
         ImGuiRenderContext m_ImGuiRenderContext;
         ImGuiHelper m_ImGuiHelper;
 
+        std::unique_ptr<BlockRegistry> m_BlockRegistry;
+        //std::unique_ptr<World> m_World;
+        std::shared_ptr<Chunk> m_Chunk;
         CameraController m_CameraController;
     };
 }

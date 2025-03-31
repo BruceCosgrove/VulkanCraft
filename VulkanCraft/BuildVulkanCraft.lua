@@ -23,6 +23,7 @@ project "VulkanCraft"
     }
 
     includedirs {
+        "%{IncludeDirs.vulkancraft}",
         "%{IncludeDirs.engine}",
         "%{IncludeDirs.entt}",
         "%{IncludeDirs.glfw}",

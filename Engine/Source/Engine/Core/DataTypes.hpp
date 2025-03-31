@@ -51,6 +51,8 @@ namespace eng
     // TODO: add that more optimized string class I made once it's done.
     using string = std::string;
     using string_view = std::string_view;
+    using small_string = std::string;
+    using small_string_view = std::string_view;
 
     using path = std::filesystem::path;
 }

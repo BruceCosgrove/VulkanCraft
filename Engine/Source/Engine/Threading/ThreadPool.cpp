@@ -16,7 +16,7 @@ namespace eng
     {
         ENG_LOG_TRACE("Exiting thread pool with {} threads.", m_Threads.size());
 
-        m_Terminating.store(true, std::memory_order_release);
+        m_Running.store(false, std::memory_order_release);
         m_TaskAvailable.notify_all();
     }
 
@@ -42,10 +42,12 @@ namespace eng
             std::function<void()> task;
             {
                 std::unique_lock lock(m_TaskMutex);
-                bool terminating = false;
-                while (not (terminating = m_Terminating.load(std::memory_order_acquire)) and m_Tasks.empty())
+
+                bool running, tasksRemaining;
+                while ((running = m_Running.load(std::memory_order_acquire)) and not (tasksRemaining = not m_Tasks.empty()))
                     m_TaskAvailable.wait(lock);
-                if (terminating)
+
+                if (not tasksRemaining)
                     break;
                 task = std::move(m_Tasks.front());
                 m_Tasks.pop_front();
