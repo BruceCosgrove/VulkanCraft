@@ -21,6 +21,7 @@ namespace vc
         {
             Chunk& chunk = *c;
 
+            // TODO: terrain generation
             for (u8 z = 0; z < Size; z++)
             {
                 for (u8 y = 0; y < Size; y++)
@@ -37,7 +38,7 @@ namespace vc
                         else if (y < 7) blockID = BlockID(3); // stone
                         else if (y < 10) blockID = BlockID(4); // dirt
                         else if (y == 11) blockID = BlockID(5); // grass
-                        chunk.m_BlockStates[Index(x, y, z)] = chunk.m_BlockStateRegistry.CreateBlockState(blockID);
+                        chunk.m_BlockStateRegistry.CreateBlockState(blockID);
                     }
                 }
             }

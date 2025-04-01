@@ -29,11 +29,6 @@ namespace vc
     private:
         ivec3 m_Position;
 
-        // Handles to block state data.
-        // NOTE: All block state ids default to 0, which is minecraft:void.
-        // TODO: this might not be necessary.
-        std::array<BlockStateID, Size3> m_BlockStates{};
-        // This is the actual block state data.
         BlockStateRegistry m_BlockStateRegistry;
 
         // Rendering

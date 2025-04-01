@@ -1,5 +1,4 @@
 #include "RenderContext.hpp"
-#include "Engine/Core/AssertOrVerify.hpp"
 #include "Engine/Core/Attributes.hpp"
 #include "Engine/Core/Log.hpp"
 #include "Engine/Rendering/Framebuffer.hpp"
@@ -12,10 +11,6 @@
 #include <optional>
 #include <span>
 #include <vector>
-
-#define _ENG_GET_FUNC_VK_EXT(name) \
-    auto name = (PFN_##name)vkGetInstanceProcAddr(s_Instance, #name); \
-    ENG_ASSERT(name != nullptr, "Failed to load Vulkan extension: \"" #name "\".")
 
 namespace eng
 {
@@ -216,7 +211,7 @@ namespace eng
         if (--s_RenderContextCount == 0)
         {
 #if ENG_CONFIG_DEBUG
-            _ENG_GET_FUNC_VK_EXT(vkDestroyDebugUtilsMessengerEXT);
+            ENG_GET_FUNC_VK_EXT(vkDestroyDebugUtilsMessengerEXT);
             vkDestroyDebugUtilsMessengerEXT(s_Instance, s_DebugUtilsMessenger, nullptr);
 #endif
             vkDestroyInstance(s_Instance, nullptr);
@@ -383,7 +378,7 @@ namespace eng
             VK_DEBUG_UTILS_MESSAGE_TYPE_DEVICE_ADDRESS_BINDING_BIT_EXT;
         info.pfnUserCallback = &DebugUtilsMessengerCallback;
 
-        _ENG_GET_FUNC_VK_EXT(vkCreateDebugUtilsMessengerEXT);
+        ENG_GET_FUNC_VK_EXT(vkCreateDebugUtilsMessengerEXT);
         VkResult result = vkCreateDebugUtilsMessengerEXT(s_Instance, &info, nullptr, &s_DebugUtilsMessenger);
         ENG_ASSERT(result == VK_SUCCESS, "Failed to create debug utils messenger.");
     }
@@ -466,7 +461,10 @@ namespace eng
     {
         auto extensions = std::to_array<char const*>
         ({
-            "VK_KHR_swapchain",
+            VK_KHR_SWAPCHAIN_EXTENSION_NAME,
+#if not ENG_CONFIG_DIST
+            VK_EXT_EXTENDED_DYNAMIC_STATE_3_EXTENSION_NAME,
+#endif
         });
 
         f32 priority = 1.0f;
@@ -487,13 +485,22 @@ namespace eng
             deviceQueueCreateInfos[1].pQueuePriorities = &priority;
         }
 
+#if not ENG_CONFIG_DIST
+        VkPhysicalDeviceExtendedDynamicState3FeaturesEXT dynamicState3Features{};
+        dynamicState3Features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_EXTENDED_DYNAMIC_STATE_3_FEATURES_EXT;
+        dynamicState3Features.extendedDynamicState3PolygonMode = VK_TRUE;
+#endif
+
         VkPhysicalDeviceFeatures features{};
-        features.samplerAnisotropy = VK_TRUE; // TODO
         features.multiDrawIndirect = VK_TRUE; // TODO
         features.drawIndirectFirstInstance = VK_TRUE; // TODO
+        features.fillModeNonSolid = VK_TRUE; // TODO
 
         VkDeviceCreateInfo deviceCreateInfo{};
         deviceCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
+#if not ENG_CONFIG_DIST
+        deviceCreateInfo.pNext = &dynamicState3Features;
+#endif
         deviceCreateInfo.queueCreateInfoCount = queueCount;
         deviceCreateInfo.pQueueCreateInfos = deviceQueueCreateInfos;
         deviceCreateInfo.enabledExtensionCount = static_cast<u32>(extensions.size());

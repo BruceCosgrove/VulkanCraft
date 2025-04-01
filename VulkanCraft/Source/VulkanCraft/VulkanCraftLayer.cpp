@@ -169,6 +169,12 @@ namespace vc
         // Begin the render pass.
         vkCmdBeginRenderPass(commandBuffer, &info, VK_SUBPASS_CONTENTS_INLINE);
 
+#if not ENG_CONFIG_DIST
+        ENG_GET_FUNC_VK_EXT(vkCmdSetPolygonModeEXT);
+        VkPolygonMode polygonMode = m_Wireframe.load(std::memory_order_acquire) ? VK_POLYGON_MODE_LINE : VK_POLYGON_MODE_FILL;
+        vkCmdSetPolygonModeEXT(commandBuffer, polygonMode);
+#endif
+
         SetDefaultViewportAndScissor();
 
         // Set all the necessary data.
@@ -220,6 +226,9 @@ namespace vc
 
         // Render ImGui
         {
+#if not ENG_CONFIG_DIST
+            vkCmdSetPolygonModeEXT(commandBuffer, VK_POLYGON_MODE_FILL);
+#endif
             m_ImGuiRenderContext.BeginFrame();
             OnImGuiRender();
             m_ImGuiRenderContext.EndFrame(commandBuffer);
@@ -236,15 +245,26 @@ namespace vc
 
     void VulkanCraftLayer::OnKeyPressEvent(KeyPressEvent& event)
     {
-        if (event.IsPressed() and event.GetKeycode() == Keycode::R and event.GetModifiers().HasOnly(Modifiers::Control))
+        if (event.IsPressed())
         {
-            if (not m_Shader.Loading())
+            // Ctrl+R => reload shaders
+            if (event.GetKeycode() == Keycode::R and event.GetModifiers().HasOnly(Modifiers::Control))
             {
-                Application::Get().ExecuteAsync([this]
+                if (not m_Shader.Loading())
                 {
-                    m_Shader.Load([this] { return LoadShader(); });
-                });
+                    Application::Get().ExecuteAsync([this]
+                    {
+                        m_Shader.Load([this] { return LoadShader(); });
+                    });
+                }
             }
+#if not ENG_CONFIG_DIST
+            // F1 => toggle wireframe
+            else if (event.GetKeycode() == Keycode::F1 and event.GetModifiers() == Modifiers::None)
+            {
+                m_Wireframe ^= 1;
+            }
+#endif
         }
     }
 

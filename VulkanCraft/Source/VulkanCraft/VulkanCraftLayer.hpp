@@ -58,5 +58,9 @@ namespace vc
         //std::unique_ptr<World> m_World;
         std::shared_ptr<Chunk> m_Chunk;
         CameraController m_CameraController;
+
+#if not ENG_CONFIG_DIST
+        std::atomic<u8> m_Wireframe = 0;
+#endif
     };
 }

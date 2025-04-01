@@ -498,6 +498,9 @@ namespace eng
         auto dynamicStates = std::to_array({
             VK_DYNAMIC_STATE_VIEWPORT,
             VK_DYNAMIC_STATE_SCISSOR,
+#if not ENG_CONFIG_DIST
+            VK_DYNAMIC_STATE_POLYGON_MODE_EXT,
+#endif
         });
 
         VkPipelineDynamicStateCreateInfo dynamicStateInfo{};
@@ -526,7 +529,9 @@ namespace eng
         rasterizationStateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
         rasterizationStateInfo.depthClampEnable = VK_FALSE;
         rasterizationStateInfo.rasterizerDiscardEnable = VK_FALSE;
+#if ENG_CONFIG_DIST
         rasterizationStateInfo.polygonMode = VK_POLYGON_MODE_FILL; // TODO: relevant
+#endif
         rasterizationStateInfo.cullMode = VK_CULL_MODE_BACK_BIT; // TODO: relevant
         rasterizationStateInfo.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
         rasterizationStateInfo.depthBiasEnable = VK_FALSE; // TODO: some shadow implementations apparently use this?
