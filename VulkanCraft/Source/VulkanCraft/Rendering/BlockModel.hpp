@@ -6,6 +6,7 @@ namespace vc
 {
     struct BlockModel
     {
+        u8 SolidBits = 0;
         TextureID Left{};
         TextureID Right{};
         TextureID Bottom{};

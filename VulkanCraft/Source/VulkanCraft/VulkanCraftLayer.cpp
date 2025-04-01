@@ -54,69 +54,7 @@ namespace vc
         }
 
         {
-            m_BlockRegistry = std::make_unique<BlockRegistry>();
-
-            // TODO: block model files using yaml-cpp
-
-            // air
-            {
-                m_BlockRegistry->CreateBlock("minecraft:air");
-            }
-
-            // bedrock
-            {
-                BlockID block = m_BlockRegistry->CreateBlock("minecraft:bedrock");
-                BlockModel& model = m_BlockRegistry->EmplaceComponent<BlockModel>(block);
-                model.Left = TextureID(0);
-                model.Right = TextureID(0);
-                model.Bottom = TextureID(0);
-                model.Top = TextureID(0);
-                model.Back = TextureID(0);
-                model.Front = TextureID(0);
-            }
-
-            // stone
-            {
-                BlockID block = m_BlockRegistry->CreateBlock("minecraft:stone");
-                BlockModel& model = m_BlockRegistry->EmplaceComponent<BlockModel>(block);
-                model.Left = TextureID(1);
-                model.Right = TextureID(1);
-                model.Bottom = TextureID(1);
-                model.Top = TextureID(1);
-                model.Back = TextureID(1);
-                model.Front = TextureID(1);
-            }
-
-            // dirt
-            {
-                BlockID block = m_BlockRegistry->CreateBlock("minecraft:dirt");
-                BlockModel& model = m_BlockRegistry->EmplaceComponent<BlockModel>(block);
-                model.Left = TextureID(2);
-                model.Right = TextureID(2);
-                model.Bottom = TextureID(2);
-                model.Top = TextureID(2);
-                model.Back = TextureID(2);
-                model.Front = TextureID(2);
-            }
-
-            // grass
-            {
-                BlockID block = m_BlockRegistry->CreateBlock("minecraft:grass");
-                BlockModel& model = m_BlockRegistry->EmplaceComponent<BlockModel>(block);
-                model.Left = TextureID(3);
-                model.Right = TextureID(3);
-                model.Bottom = TextureID(2);
-                model.Top = TextureID(4);
-                model.Back = TextureID(3);
-                model.Front = TextureID(3);
-            }
-        }
-
-        {
-            //m_World = std::make_unique<World>();
-
-            m_Chunk = std::make_shared<Chunk>(ivec3(0, 0, 0), context);
-            m_Chunk->GenerateTerrain();
+            m_World = std::make_unique<World>(context);
         }
 
         m_CameraController.SetPosition(vec3(0.0f, 0.0f, -1.0f));
@@ -215,11 +153,7 @@ namespace vc
             // TODO: indirect buffer
             // TODO: set indirect buffer from compute shader
 
-            auto chunkMesh = m_Chunk->GetMesh().Get();
-            if (chunkMesh.Old)
-                context.DeferFree([mesh = std::move(chunkMesh.Old)] {});
-            if (chunkMesh.Current)
-                chunkMesh.Current->Draw(commandBuffer);
+            m_World->Draw(commandBuffer);
         }
 
         // Render ImGui

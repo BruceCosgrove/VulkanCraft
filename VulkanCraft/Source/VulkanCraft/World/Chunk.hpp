@@ -2,12 +2,15 @@
 
 #include "VulkanCraft/Rendering/ChunkMesh.hpp"
 #include "VulkanCraft/World/BlockStateRegistry.hpp"
+#include "VulkanCraft/World/ChunkPos.hpp"
 #include <Engine.hpp>
 
 using namespace eng;
 
 namespace vc
 {
+    class World;
+
     class Chunk : public std::enable_shared_from_this<Chunk>
     {
         ENG_IMMOVABLE_UNCOPYABLE_CLASS(Chunk);
@@ -17,7 +20,7 @@ namespace vc
         inline static constexpr u32 Size2 = Size * Size;
         inline static constexpr u32 Size3 = Size * Size * Size;
     public:
-        Chunk(ivec3 position, RenderContext& context);
+        Chunk(World& world, BlockRegistry& blockRegistry, ChunkPos position, RenderContext& context);
         ~Chunk();
     public: // TODO: private: friend class World;
         void GenerateTerrain();
@@ -25,11 +28,10 @@ namespace vc
 
         DynamicResource<std::shared_ptr<ChunkMesh>>& GetMesh();
     private:
-        static u64 Index(u8 x, u8 y, u8 z);
-    private:
-        ivec3 m_Position;
-
+        World& m_World; // non-owning
+        BlockRegistry& m_BlockRegistry; // non-owning
         BlockStateRegistry m_BlockStateRegistry;
+        ChunkPos m_Position;
 
         // Rendering
         RenderContext& m_Context; // non-owning

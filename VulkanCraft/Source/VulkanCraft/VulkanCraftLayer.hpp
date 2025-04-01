@@ -54,9 +54,7 @@ namespace vc
         ImGuiRenderContext m_ImGuiRenderContext;
         ImGuiHelper m_ImGuiHelper;
 
-        std::unique_ptr<BlockRegistry> m_BlockRegistry;
-        //std::unique_ptr<World> m_World;
-        std::shared_ptr<Chunk> m_Chunk;
+        std::unique_ptr<World> m_World;
         CameraController m_CameraController;
 
         std::atomic<u8> m_Wireframe = 0;
