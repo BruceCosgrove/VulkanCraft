@@ -462,9 +462,7 @@ namespace eng
         auto extensions = std::to_array<char const*>
         ({
             VK_KHR_SWAPCHAIN_EXTENSION_NAME,
-#if not ENG_CONFIG_DIST
             VK_EXT_EXTENDED_DYNAMIC_STATE_3_EXTENSION_NAME,
-#endif
         });
 
         f32 priority = 1.0f;
@@ -485,11 +483,9 @@ namespace eng
             deviceQueueCreateInfos[1].pQueuePriorities = &priority;
         }
 
-#if not ENG_CONFIG_DIST
         VkPhysicalDeviceExtendedDynamicState3FeaturesEXT dynamicState3Features{};
         dynamicState3Features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_EXTENDED_DYNAMIC_STATE_3_FEATURES_EXT;
         dynamicState3Features.extendedDynamicState3PolygonMode = VK_TRUE;
-#endif
 
         VkPhysicalDeviceFeatures features{};
         features.multiDrawIndirect = VK_TRUE; // TODO
@@ -498,9 +494,7 @@ namespace eng
 
         VkDeviceCreateInfo deviceCreateInfo{};
         deviceCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
-#if not ENG_CONFIG_DIST
         deviceCreateInfo.pNext = &dynamicState3Features;
-#endif
         deviceCreateInfo.queueCreateInfoCount = queueCount;
         deviceCreateInfo.pQueueCreateInfos = deviceQueueCreateInfos;
         deviceCreateInfo.enabledExtensionCount = static_cast<u32>(extensions.size());

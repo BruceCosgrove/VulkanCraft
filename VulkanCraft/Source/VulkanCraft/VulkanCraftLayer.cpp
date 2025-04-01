@@ -169,11 +169,9 @@ namespace vc
         // Begin the render pass.
         vkCmdBeginRenderPass(commandBuffer, &info, VK_SUBPASS_CONTENTS_INLINE);
 
-#if not ENG_CONFIG_DIST
         ENG_GET_FUNC_VK_EXT(vkCmdSetPolygonModeEXT);
         VkPolygonMode polygonMode = m_Wireframe.load(std::memory_order_acquire) ? VK_POLYGON_MODE_LINE : VK_POLYGON_MODE_FILL;
         vkCmdSetPolygonModeEXT(commandBuffer, polygonMode);
-#endif
 
         SetDefaultViewportAndScissor();
 
@@ -226,9 +224,8 @@ namespace vc
 
         // Render ImGui
         {
-#if not ENG_CONFIG_DIST
-            vkCmdSetPolygonModeEXT(commandBuffer, VK_POLYGON_MODE_FILL);
-#endif
+            if (polygonMode != VK_POLYGON_MODE_FILL)
+                vkCmdSetPolygonModeEXT(commandBuffer, VK_POLYGON_MODE_FILL);
             m_ImGuiRenderContext.BeginFrame();
             OnImGuiRender();
             m_ImGuiRenderContext.EndFrame(commandBuffer);
@@ -245,26 +242,25 @@ namespace vc
 
     void VulkanCraftLayer::OnKeyPressEvent(KeyPressEvent& event)
     {
-        if (event.IsPressed())
+        if (event.IsPressed() and event.GetModifiers() == Modifiers::None)
         {
-            // Ctrl+R => reload shaders
-            if (event.GetKeycode() == Keycode::R and event.GetModifiers().HasOnly(Modifiers::Control))
+            switch (+event.GetKeycode())
             {
-                if (not m_Shader.Loading())
-                {
-                    Application::Get().ExecuteAsync([this]
+                // Ctrl+R => reload shaders
+                case Keycode::F1:
+                    if (not m_Shader.Loading())
                     {
-                        m_Shader.Load([this] { return LoadShader(); });
-                    });
-                }
+                        Application::Get().ExecuteAsync([this]
+                        {
+                            m_Shader.Load([this] { return LoadShader(); });
+                        });
+                    }
+                    break;
+                // F1 => toggle wireframe
+                case Keycode::F2:
+                    m_Wireframe ^= 1;
+                    break;
             }
-#if not ENG_CONFIG_DIST
-            // F1 => toggle wireframe
-            else if (event.GetKeycode() == Keycode::F1 and event.GetModifiers() == Modifiers::None)
-            {
-                m_Wireframe ^= 1;
-            }
-#endif
         }
     }
 
