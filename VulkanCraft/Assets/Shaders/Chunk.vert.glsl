@@ -29,17 +29,15 @@ void UnpackFaceData(
     const uvec2 packedFaceData,
     out uvec3 localPosition,    // 0..15
     out uvec2 size,             // 1..16
-    out uint textureID,         // only 16 bits
-    out uint chunkIndex         // only 16 bits
+    out uint textureID          // only 16 bits
 ) {
     //                   packedFaceData.y                 packedFaceData.x
     // 64  60  56  52  48  44  40  36  32   28  24  20  16  12   8   4   0
-    //   ------------hhhhwwwwzzzzyyyyxxxx cccccccccccccccctttttttttttttttt
-    // t = texture id, c = chunk index, x = local x, y = local y, z = local z, w = width, h = height
-    localPosition = 0xF & uvec3(packedFaceData.y, packedFaceData.y >> 4, packedFaceData.y >> 8);
-    size = 1 + (0xF & uvec2(packedFaceData.y >> 12, packedFaceData.y >> 16));
+    //   ----------------------------hhhh wwwwzzzzyyyyxxxxtttttttttttttttt
+    // t = texture id, x = local x, y = local y, z = local z, w = width, h = height
+    localPosition = 0xF & uvec3(packedFaceData.x >> 16, packedFaceData.x >> 20, packedFaceData.x >> 24);
+    size = 1 + (0xF & uvec2(packedFaceData.x >> 28, packedFaceData.y));
     textureID = 0xFFFF & packedFaceData.x;
-    chunkIndex = packedFaceData.x >> 16;
 }
 
 void UnpackChunkData(
@@ -119,12 +117,11 @@ void main() {
     uvec3 localPosition;
     uvec2 size;
     uint textureID;
-    uint chunkIndex;
     ivec3 chunkPosition;
     uint face;
 
-    UnpackFaceData(i_PackedFaceData, localPosition, size, textureID, chunkIndex);
-    UnpackChunkData(ChunkData.PackedChunkData[chunkIndex], chunkPosition, face);
+    UnpackFaceData(i_PackedFaceData, localPosition, size, textureID);
+    UnpackChunkData(ChunkData.PackedChunkData[gl_DrawID], chunkPosition, face);
 
     // Calculate texture coordinates based on the textureID.
 

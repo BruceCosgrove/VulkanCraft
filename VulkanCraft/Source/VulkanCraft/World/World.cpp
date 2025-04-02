@@ -87,5 +87,6 @@ namespace vc
             if (chunkMesh.Current)
                 chunkMesh.Current->Draw(commandBuffer);
         }
+        //vkCmdDrawIndirect();
     }
 }

@@ -22,7 +22,8 @@ namespace vc
     public:
         Chunk(World& world, BlockRegistry& blockRegistry, ChunkPos position, RenderContext& context);
         ~Chunk();
-    public: // TODO: private: friend class World;
+    private:
+        friend class World;
         void GenerateTerrain();
         void GenerateMesh();
 

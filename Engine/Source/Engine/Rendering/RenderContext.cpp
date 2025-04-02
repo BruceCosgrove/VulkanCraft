@@ -462,7 +462,8 @@ namespace eng
         auto extensions = std::to_array<char const*>
         ({
             VK_KHR_SWAPCHAIN_EXTENSION_NAME,
-            VK_EXT_EXTENDED_DYNAMIC_STATE_3_EXTENSION_NAME,
+            VK_EXT_EXTENDED_DYNAMIC_STATE_3_EXTENSION_NAME, // TODO
+            VK_KHR_SHADER_DRAW_PARAMETERS_EXTENSION_NAME, // TODO
         });
 
         f32 priority = 1.0f;
@@ -485,7 +486,12 @@ namespace eng
 
         VkPhysicalDeviceExtendedDynamicState3FeaturesEXT dynamicState3Features{};
         dynamicState3Features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_EXTENDED_DYNAMIC_STATE_3_FEATURES_EXT;
-        dynamicState3Features.extendedDynamicState3PolygonMode = VK_TRUE;
+        dynamicState3Features.extendedDynamicState3PolygonMode = VK_TRUE; // TODO
+
+        VkPhysicalDeviceShaderDrawParametersFeatures shaderDrawParametersFeatures{};
+        shaderDrawParametersFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_DRAW_PARAMETERS_FEATURES;
+        shaderDrawParametersFeatures.pNext = &dynamicState3Features;
+        shaderDrawParametersFeatures.shaderDrawParameters = VK_TRUE; // TODO
 
         VkPhysicalDeviceFeatures features{};
         features.multiDrawIndirect = VK_TRUE; // TODO
@@ -494,7 +500,7 @@ namespace eng
 
         VkDeviceCreateInfo deviceCreateInfo{};
         deviceCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
-        deviceCreateInfo.pNext = &dynamicState3Features;
+        deviceCreateInfo.pNext = &shaderDrawParametersFeatures;
         deviceCreateInfo.queueCreateInfoCount = queueCount;
         deviceCreateInfo.pQueueCreateInfos = deviceQueueCreateInfos;
         deviceCreateInfo.enabledExtensionCount = static_cast<u32>(extensions.size());
