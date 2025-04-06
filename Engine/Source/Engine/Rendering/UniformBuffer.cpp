@@ -23,10 +23,9 @@ namespace eng
             m_DeviceMemory
         );
 
-        void* mappedMemory;
-        BufferUtils::MapMemory(m_Context, m_DeviceMemory, 0, m_Size, mappedMemory);
-
-        m_MappedMemory = std::span(static_cast<u8*>(mappedMemory), totalSize);
+        u8* mappedMemory = nullptr;
+        BufferUtils::MapMemory(m_Context, m_DeviceMemory, 0, totalSize, (void*&)mappedMemory);
+        m_MappedMemory = std::span(mappedMemory, totalSize);
     }
 
     UniformBuffer::~UniformBuffer()

@@ -22,8 +22,7 @@ namespace eng
         VertexBuffer(VertexBufferInfo const& info);
         ~VertexBuffer();
 
-        void SetData(std::span<u8 const> data);
-        _ENG_BUFFER_SET_ARBITRARY_DATA(SetData)
+        _ENG_BUFFER_SET_DATA(SetData);
 
         void Bind(VkCommandBuffer commandBuffer, u32 binding = 0);
     private:

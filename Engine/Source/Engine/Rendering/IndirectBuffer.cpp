@@ -1,17 +1,13 @@
-#include "StorageBuffer.hpp"
+#include "IndirectBuffer.hpp"
 #include "Engine/Core/AssertOrVerify.hpp"
 #include "Engine/Rendering/RenderContext.hpp"
 
 namespace eng
 {
-    StorageBuffer::StorageBuffer(StorageBufferInfo const& info)
+    IndirectBuffer::IndirectBuffer(IndirectBufferInfo const& info)
         : m_Context(*info.RenderContext)
         , m_Size(info.Size)
     {
-        // Account for alignment.
-        VkDeviceSize minAlignment = m_Context.GetPhysicalDeviceProperties().limits.minStorageBufferOffsetAlignment;
-        m_Size = (m_Size + minAlignment - 1) & ~(minAlignment - 1);
-
         VkDeviceSize totalSize = m_Size * m_Context.GetSwapchainImageCount();
 
         BufferUtils::CreateBuffer(
@@ -28,7 +24,7 @@ namespace eng
         m_MappedMemory = std::span(mappedMemory, totalSize);
     }
 
-    StorageBuffer::~StorageBuffer()
+    IndirectBuffer::~IndirectBuffer()
     {
         VkDevice device = m_Context.GetDevice();
 
@@ -38,7 +34,7 @@ namespace eng
         vkDestroyBuffer(device, m_Buffer, nullptr);
     }
 
-    void StorageBuffer::SetData(std::span<u8 const> data)
+    void IndirectBuffer::SetData(std::span<u8 const> data)
     {
         ENG_ASSERT(data.size() <= m_Size);
 
@@ -46,17 +42,17 @@ namespace eng
         std::memcpy(frameMemory.data(), data.data(), data.size());
     }
 
-    VkDeviceSize StorageBuffer::GetOffset() const
+    VkDeviceSize IndirectBuffer::GetOffset() const
     {
         return m_Size * m_Context.GetSwapchainImageIndex();
     }
 
-    VkDeviceSize StorageBuffer::GetSize() const
+    VkDeviceSize IndirectBuffer::GetSize() const
     {
         return m_Size;
     }
 
-    VkBuffer StorageBuffer::GetBuffer() const
+    VkBuffer IndirectBuffer::GetBuffer() const
     {
         return m_Buffer;
     }

@@ -38,7 +38,7 @@ namespace eng
     };
 }
 
-#define _ENG_BUFFER_SET_ARBITRARY_DATA(setDataFunc) \
+#define _ENG_BUFFER_SET_DATA(setDataFunc) \
     template <typename Container> \
     void setDataFunc(Container const& container) \
     { \
@@ -50,4 +50,6 @@ namespace eng
         } \
         else \
             setDataFunc({(::eng::u8 const*)::std::addressof(container), sizeof(container)}); \
-    }
+    } \
+    void setDataFunc(::std::span<u8 const> data)
+

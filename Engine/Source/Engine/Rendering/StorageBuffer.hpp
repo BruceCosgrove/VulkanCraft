@@ -25,8 +25,7 @@ namespace eng
         StorageBuffer(StorageBufferInfo const& info);
         ~StorageBuffer();
 
-        void SetData(std::span<u8 const> data);
-        _ENG_BUFFER_SET_ARBITRARY_DATA(SetData)
+        _ENG_BUFFER_SET_DATA(SetData);
 
         VkDeviceSize GetOffset() const;
         VkDeviceSize GetSize() const;
