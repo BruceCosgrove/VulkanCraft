@@ -1,15 +1,15 @@
 #include "Chunk.hpp"
 #include "VulkanCraft/Rendering/BlockModel.hpp"
+#include "VulkanCraft/Rendering/ChunkMeshData.hpp"
 #include "VulkanCraft/World/BlockRegistry.hpp"
 #include "VulkanCraft/World/World.hpp"
 
 namespace vc
 {
-    Chunk::Chunk(World& world, BlockRegistry& blockRegistry, ChunkPos position, RenderContext& context)
+    Chunk::Chunk(World& world, BlockRegistry& blockRegistry, ChunkPos position)
         : m_World(world)
         , m_BlockRegistry(blockRegistry)
         , m_Position(position)
-        , m_Context(context)
     {
 
     }
@@ -19,8 +19,15 @@ namespace vc
 
     }
 
+    ChunkPos Chunk::GetPosition() const
+    {
+        return m_Position;
+    }
+
     void Chunk::GenerateTerrain()
     {
+        if (m_Generating.exchange(true, std::memory_order_relaxed))
+            return;
         Application::Get().ExecuteAsync([this, c = shared_from_this()]
         {
             BlockID air = m_BlockRegistry.GetBlock("minecraft:air");
@@ -46,73 +53,70 @@ namespace vc
                         if (y == 0) blockID = bedrock;
                         else if (y < 7) blockID = stone;
                         else if (y < 10) blockID = dirt;
-                        else if (y == 10 and (x != 7 or z != 7)) blockID = grass;
+                        else if (y == 10 and (x % Size != m_Position.x or z % Size != m_Position.z)) blockID = grass;
                         m_BlockStateRegistry.CreateBlockState(blockID);
                     }
                 }
             }
 
-            // TODO: how to propagate incremental changes.
-            // terrain generation stages ... mesh generation
-            GenerateMesh();
+            m_GenerationStage = ChunkGenerationStage::Terrain;
+            m_Generating.store(false, std::memory_order_release);
         });
     }
 
     void Chunk::GenerateMesh()
     {
-        if (m_Mesh.Loading())
+        if (m_Generating.exchange(true, std::memory_order_relaxed))
             return;
-
-        Application::Get().ExecuteAsync([this, c = shared_from_this()]() mutable
+        Application::Get().ExecuteAsync([this, c = shared_from_this()]
         {
-            m_Mesh.Load([this, c = std::move(c)]() -> std::shared_ptr<ChunkMesh>
+            // TODO: this seems potentially suited for gpu compute.
+
+            Chunk* leftChunk   = m_World.GetChunk({m_Position.x - 1, m_Position.y, m_Position.z});
+            Chunk* rightChunk  = m_World.GetChunk({m_Position.x + 1, m_Position.y, m_Position.z});
+            Chunk* bottomChunk = m_World.GetChunk({m_Position.x, m_Position.y - 1, m_Position.z});
+            Chunk* topChunk    = m_World.GetChunk({m_Position.x, m_Position.y + 1, m_Position.z});
+            Chunk* backChunk   = m_World.GetChunk({m_Position.x, m_Position.y, m_Position.z - 1});
+            Chunk* frontChunk  = m_World.GetChunk({m_Position.x, m_Position.y, m_Position.z + 1});
+
+            std::vector<u32> faceSolidMasks(Size2 * 6);
+
+            // Represent the solid state of block faces in binary.
+            auto blockStates = m_BlockStateRegistry.GetView<BlockState>(); // NOTE: These block states will be used later too.
+            for (auto e : blockStates)
             {
-                // TODO: this seems potentially suited for gpu compute.
-
-                Chunk* leftChunk   = m_World.GetChunk({m_Position.x - 1, m_Position.y, m_Position.z});
-                Chunk* rightChunk  = m_World.GetChunk({m_Position.x + 1, m_Position.y, m_Position.z});
-                Chunk* bottomChunk = m_World.GetChunk({m_Position.x, m_Position.y - 1, m_Position.z});
-                Chunk* topChunk    = m_World.GetChunk({m_Position.x, m_Position.y + 1, m_Position.z});
-                Chunk* backChunk   = m_World.GetChunk({m_Position.x, m_Position.y, m_Position.z - 1});
-                Chunk* frontChunk  = m_World.GetChunk({m_Position.x, m_Position.y, m_Position.z + 1});
-
-                std::vector<u32> faceSolidMasks(Size2 * 6);
-
-                // Represent the solid state of block faces in binary.
-                auto blockStates = m_BlockStateRegistry.GetView<BlockState>(); // NOTE: These block states will be used later too.
-                for (auto e : blockStates)
+                // TODO: variants
+                auto& blockState = blockStates.get<BlockState>(e);
+                // Only sample block states with a model.
+                if (auto* model = m_BlockRegistry.TryGetComponent<BlockModel>(blockState.BlockID))
                 {
-                    // TODO: variants
-                    auto& blockState = blockStates.get<BlockState>(e);
-                    // Only sample block states with a model.
-                    if (auto* model = m_BlockRegistry.TryGetComponent<BlockModel>(blockState.BlockID))
+                    // Use the entt::entity/id_type as the block index.
+                    u32 index = std::to_underlying(e);
+                    u8 x = index % Size;
+                    u8 y = index / Size % Size;
+                    u8 z = index / Size2;
+
+                    auto constructMask = [&faceSolidMasks, &model = *model](u8 face, u8 px, u8 py, u8 pz)
                     {
-                        // Use the entt::entity/id_type as the block index.
-                        u32 index = std::to_underlying(e);
-                        u8 x = index % Size;
-                        u8 y = index / Size % Size;
-                        u8 z = index / Size2;
+                        faceSolidMasks[px + Size * py + Size2 * face] |= (model.SolidBits >> (face ^ 1) & 1) << pz;
+                    };
 
-                        auto constructMask = [&faceSolidMasks, &model = *model](u8 face, u8 px, u8 py, u8 pz)
-                        {
-                            faceSolidMasks[px + Size * py + Size2 * face] |= (model.SolidBits >> (face ^ 1) & 1) << pz;
-                        };
-
-                        constructMask(0, z, y, x + 1);  // left
-                        constructMask(1, z, y, 16 - x); // right
-                        constructMask(2, x, z, y + 1);  // bottom
-                        constructMask(3, x, z, 16 - y); // top
-                        constructMask(4, x, y, z + 1);  // back
-                        constructMask(5, x, y, 16 - z); // front
-                    }
+                    constructMask(0, z, y, x + 1);  // left
+                    constructMask(1, z, y, 16 - x); // right
+                    constructMask(2, x, z, y + 1);  // bottom
+                    constructMask(3, x, z, 16 - y); // top
+                    constructMask(4, x, y, z + 1);  // back
+                    constructMask(5, x, y, 16 - z); // front
                 }
+            }
 
-                // If the whole chunk has no solid faces, there is no mesh.
-                // NOTE: this checks if faceSolidMasks is all zeros.
-                if (faceSolidMasks.front() == 0 and
-                        std::memcmp(faceSolidMasks.data(), faceSolidMasks.data() + 1, faceSolidMasks.size() - 1) == 0)
-                    return nullptr;
+            ChunkMeshData meshData;
 
+            // If the whole chunk has no solid faces, there is no mesh.
+            // NOTE: this checks if faceSolidMasks is all zeros.
+            if (faceSolidMasks.front() != 0 or
+                std::memcmp(faceSolidMasks.data(), faceSolidMasks.data() + 1, faceSolidMasks.size() - 1) != 0)
+            {
                 // TODO: the order { front back bottom left right top } seems optimal for cache (profile).
 
                 auto insertChunkEdge = [this, &faceSolidMasks](Chunk* chunk, u8 face, u8 x, u8 y, u8 z, u8 px, u8 py)
@@ -194,19 +198,12 @@ namespace vc
                     }
                 }
 
-                ChunkMeshInfo info;
-                info.RenderContext = &m_Context;
-
                 // Greedy mesh each plane.
                 struct GreedyQuad
                 {
                     u8 x, y, z, w, h;
                 };
 
-                // TODO: VERY BIG PROBLEM:
-                // Can't store chunk index in the vertices, since chunks can be rendered in any order, and the
-                // order may easily change every frame, thus would require a new mesh for EVERY CHUNK PER FRAME.
-                //
                 //                   packedFaceData.y                 packedFaceData.x
                 // 64  60  56  52  48  44  40  36  32   28  24  20  16  12   8   4   0
                 //   ----------------------------hhhh wwwwzzzzyyyyxxxxtttttttttttttttt
@@ -224,7 +221,7 @@ namespace vc
                 {
                     for (u8 face = 0; face < 6; face++)
                     {
-                        auto& packedVertices = (&info.Left)[face];
+                        auto& packedVertices = (&meshData.Left)[face];
                         for (u8 pz = 0; pz < Size; pz++)
                         {
                             auto plane = std::span(facePlanes).subspan(Size * pz + Size2 * face, Size);
@@ -282,14 +279,21 @@ namespace vc
                         }
                     }
                 }
+            }
 
-                return std::make_shared<ChunkMesh>(info);
-            });
+            m_StageOutput = meshData;
+            m_GenerationStage = ChunkGenerationStage::Mesh;
+            m_Generating.store(false, std::memory_order_release);
         });
     }
 
-    DynamicResource<std::shared_ptr<ChunkMesh>>& Chunk::GetMesh()
+    ChunkGenerationStage Chunk::GetGenerationStage() const
     {
-        return m_Mesh;
+        return m_GenerationStage;
+    }
+
+    bool Chunk::IsGenerating() const
+    {
+        return m_Generating.load(std::memory_order_acquire);
     }
 }

@@ -19,7 +19,7 @@ namespace eng
             RenderContext& context,
             VkDeviceSize size,
             VkBufferUsageFlags usage,
-            VkMemoryPropertyFlags flags,
+            VkMemoryPropertyFlags properties,
             VkBuffer& buffer,
             VkDeviceMemory& deviceMemory
         );
@@ -34,7 +34,14 @@ namespace eng
 
         static void UnmapMemory(RenderContext& context, VkDeviceMemory deviceMemory);
 
-        static u32 SelectMemoryType(u32 memoryType, VkMemoryPropertyFlags flags);
+        static u32 SelectMemoryType(u32 memoryType, VkMemoryPropertyFlags properties);
+
+        template <std::unsigned_integral T1, std::unsigned_integral T2>
+        static constexpr auto Align(T1 size, T2 alignment)
+        {
+            using CT = std::common_type_t<T1, T2>;
+            return CT((CT(size) + CT(alignment) - 1) & ~(CT(alignment) - 1));
+        }
     };
 }
 

@@ -36,26 +36,28 @@ namespace eng
     {
         std::jthread updateThread([this]
         {
-            ENG_LOG_TRACE("Starting update thread.");
+            u32 tid = std::this_thread::get_id()._Get_underlying_id();
+            ENG_LOG_TRACE("Starting update thread with tid={}.", tid);
 
             while (m_Running.load(std::memory_order_acquire))
             {
                 m_Window.OnUpdate();
             }
 
-            ENG_LOG_TRACE("Exiting update thread.");
+            ENG_LOG_TRACE("Exiting update thread with tid={}.", tid);
         });
 
         std::jthread renderThread([this]
         {
-            ENG_LOG_TRACE("Starting render thread.");
+            u32 tid = std::this_thread::get_id()._Get_underlying_id();
+            ENG_LOG_TRACE("Starting render thread with tid={}.", tid);
 
             while (m_Running.load(std::memory_order_acquire))
             {
                 m_Window.OnRender();
             }
 
-            ENG_LOG_TRACE("Exiting render thread.");
+            ENG_LOG_TRACE("Exiting render thread with tid={}.", tid);
         });
 
         ENG_LOG_TRACE("Starting event handling on main thread.");

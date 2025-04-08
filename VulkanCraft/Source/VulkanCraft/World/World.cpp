@@ -3,8 +3,7 @@
 
 namespace vc
 {
-    World::World(RenderContext& context)
-        : m_Context(context)
+    World::World()
     {
         // TODO: block model files using yaml-cpp
 
@@ -65,8 +64,22 @@ namespace vc
             model.Front = TextureID(3);
         }
 
-        m_Chunks[ivec3(0, 0, 0)] = std::make_shared<Chunk>(*this, m_BlockRegistry, ivec3(0, 0, 0), context);
-        m_Chunks[ivec3(0, 0, 0)]->GenerateTerrain();
+        // TODO: I tested this for 2+ chunks and it just fell over.
+        // Will fix this in an upcoming commit.
+        ivec3 min(0, 0, 0);
+        ivec3 max(0, 0, 0);
+        for (i32 z = min.z; z <= max.z; z++)
+        {
+            for (i32 y = min.y; y <= max.y; y++)
+            {
+                for (i32 x = min.x; x <= max.x; x++)
+                {
+                    ivec3 position(x, y, z);
+                    m_Chunks[position] = std::make_shared<Chunk>(*this, m_BlockRegistry, position);
+                    m_Chunks[position]->GenerateTerrain();
+                }
+            }
+        }
     }
 
     Chunk* World::GetChunk(ChunkPos chunkPos)
@@ -74,19 +87,5 @@ namespace vc
         if (auto it = m_Chunks.find(chunkPos); it != m_Chunks.end())
             return it->second.get();
         return nullptr;
-    }
-
-    void World::Draw(VkCommandBuffer commandBuffer)
-    {
-        // TODO: cull chunks
-        for (auto& [position, chunk] : m_Chunks)
-        {
-            auto chunkMesh = chunk->GetMesh().Get();
-            if (chunkMesh.Old)
-                m_Context.DeferFree([mesh = std::move(chunkMesh.Old)] {});
-            if (chunkMesh.Current)
-                chunkMesh.Current->Draw(commandBuffer);
-        }
-        //vkCmdDrawIndirect();
     }
 }

@@ -34,7 +34,7 @@ namespace eng
     void ThreadPool::ThreadFunction()
     {
         u32 tid = std::this_thread::get_id()._Get_underlying_id();
-        ENG_LOG_TRACE("Pooled thread with tid={} starting.", tid);
+        ENG_LOG_TRACE("Starting pooled thread with tid={}.", tid);
 
         while (true)
         {
@@ -43,7 +43,7 @@ namespace eng
             {
                 std::unique_lock lock(m_TaskMutex);
 
-                bool running, tasksRemaining;
+                bool running = true, tasksRemaining = true;
                 while ((running = m_Running.load(std::memory_order_acquire)) and not (tasksRemaining = not m_Tasks.empty()))
                     m_TaskAvailable.wait(lock);
 
@@ -54,11 +54,11 @@ namespace eng
             }
 
             // Perform the task.
-            ENG_LOG_TRACE("Pooled thread with tid={} starting task.", tid);
+            ENG_LOG_TRACE("Starting task on pooled thread with tid={}.", tid);
             task();
-            ENG_LOG_TRACE("Pooled thread with tid={} finished task.", tid);
+            ENG_LOG_TRACE("Finishing task on pooled thread with tid={}.", tid);
         }
 
-        ENG_LOG_TRACE("Pooled thread with tid={} exiting.", tid);
+        ENG_LOG_TRACE("Exiting pooled thread with tid={}.", tid);
     }
 }

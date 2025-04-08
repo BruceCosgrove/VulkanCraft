@@ -1,11 +1,10 @@
 #pragma once
 
 #include "VulkanCraft/Input/CameraController.hpp"
-#include "VulkanCraft/Rendering/TextureAtlas.hpp"
 #include "VulkanCraft/UI/ImGuiRenderContext.hpp"
 #include "VulkanCraft/UI/ImGuiHelper.hpp"
-#include "VulkanCraft/World/BlockRegistry.hpp"
 #include "VulkanCraft/World/World.hpp"
+#include "VulkanCraft/Rendering/WorldRenderer.hpp"
 #include <Engine.hpp>
 #include <atomic>
 #include <memory>
@@ -32,7 +31,6 @@ namespace vc
         std::shared_ptr<RenderPass> CreateRenderPass();
 
         void CreateOrRecreateFramebuffers();
-        std::shared_ptr<Shader> LoadShader();
 
         void SetDefaultViewportAndScissor();
     private:
@@ -45,18 +43,13 @@ namespace vc
         std::vector<std::shared_ptr<Image>> m_FramebufferDepthAttachments;
         std::vector<std::shared_ptr<Framebuffer>> m_Framebuffers;
 
-        DynamicResource<std::shared_ptr<Shader>> m_Shader;
-
-        std::shared_ptr<UniformBuffer> m_UniformBuffer;
-        std::shared_ptr<StorageBuffer> m_StorageBuffer;
-        std::unique_ptr<TextureAtlas> m_BlockTextureAtlas;
-
-        ImGuiRenderContext m_ImGuiRenderContext;
-        ImGuiHelper m_ImGuiHelper;
-
         std::unique_ptr<World> m_World;
+        std::unique_ptr<WorldRenderer> m_WorldRenderer;
         CameraController m_CameraController;
 
         std::atomic<u8> m_Wireframe = 0;
+
+        ImGuiRenderContext m_ImGuiRenderContext;
+        ImGuiHelper m_ImGuiHelper;
     };
 }

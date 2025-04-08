@@ -10,7 +10,7 @@ namespace eng
     {
         // Account for alignment.
         VkDeviceSize minAlignment = m_Context.GetPhysicalDeviceProperties().limits.minUniformBufferOffsetAlignment;
-        m_Size = (m_Size + minAlignment - 1) & ~(minAlignment - 1);
+        m_Size = BufferUtils::Align(m_Size, minAlignment);
 
         VkDeviceSize totalSize = m_Size * m_Context.GetSwapchainImageCount();
 

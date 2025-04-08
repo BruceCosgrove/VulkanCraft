@@ -8,7 +8,7 @@ namespace eng
         RenderContext& context,
         VkDeviceSize size,
         VkBufferUsageFlags usage,
-        VkMemoryPropertyFlags flags,
+        VkMemoryPropertyFlags properties,
         VkBuffer& buffer,
         VkDeviceMemory& deviceMemory
     )
@@ -23,7 +23,7 @@ namespace eng
         bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
         VkResult result = vkCreateBuffer(device, &bufferInfo, nullptr, &buffer);
-        ENG_ASSERT(result == VK_SUCCESS, "Failed to create vertex buffer.");
+        ENG_ASSERT(result == VK_SUCCESS, "Failed to create buffer.");
 
         // Get memory requirements.
         VkMemoryRequirements memoryRequirements;
@@ -32,7 +32,7 @@ namespace eng
         VkMemoryAllocateInfo memoryAllocateInfo{};
         memoryAllocateInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
         memoryAllocateInfo.allocationSize = memoryRequirements.size;
-        memoryAllocateInfo.memoryTypeIndex = SelectMemoryType(memoryRequirements.memoryTypeBits, flags);
+        memoryAllocateInfo.memoryTypeIndex = SelectMemoryType(memoryRequirements.memoryTypeBits, properties);
 
         // Allocate the memory.
         // TODO: use https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator
@@ -61,15 +61,15 @@ namespace eng
         vkUnmapMemory(context.GetDevice(), deviceMemory);
     }
 
-    u32 BufferUtils::SelectMemoryType(u32 memoryType, VkMemoryPropertyFlags flags)
+    u32 BufferUtils::SelectMemoryType(u32 memoryType, VkMemoryPropertyFlags properties)
     {
         VkPhysicalDevice physicalDevice = RenderContext::GetPhysicalDevice();
 
-        VkPhysicalDeviceMemoryProperties properties;
-        vkGetPhysicalDeviceMemoryProperties(physicalDevice, &properties);
+        VkPhysicalDeviceMemoryProperties deviceProperties;
+        vkGetPhysicalDeviceMemoryProperties(physicalDevice, &deviceProperties);
 
-        for (u32 i = 0; i < properties.memoryTypeCount; i++)
-            if ((memoryType & (1 << i)) and (properties.memoryTypes[i].propertyFlags & flags) == flags)
+        for (u32 i = 0; i < deviceProperties.memoryTypeCount; i++)
+            if ((memoryType & (1 << i)) and (deviceProperties.memoryTypes[i].propertyFlags & properties) == properties)
                 return i;
 
         ENG_ASSERT(false, "Failed to find memory type.");

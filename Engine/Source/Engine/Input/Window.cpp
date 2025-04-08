@@ -92,11 +92,7 @@ namespace eng
             Timestep timestep = static_cast<f32>(currentTime - m_LastRenderTime);
             m_LastRenderTime = currentTime;
 
-            // TODO: SetWindowLongW, called from ImGui_ImplGlfw_NewFrame,
-            // blocks execution if the application is terminated between
-            // RenderContext::BeginFrame() and RenderContext::EndFrame().
-            if (Application::Get().IsRunning())
-                m_LayerStack.OnRender(timestep);
+            m_LayerStack.OnRender(timestep);
             m_RenderContext.EndFrame();
         }
     }

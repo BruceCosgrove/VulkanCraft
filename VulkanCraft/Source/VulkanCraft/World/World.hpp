@@ -13,14 +13,11 @@ namespace vc
     {
         ENG_IMMOVABLE_UNCOPYABLE_CLASS(World);
     public:
-        World(RenderContext& context);
+        World();
     public:
         Chunk* GetChunk(ChunkPos chunkPos);
-
-        // TODO: Separate rendering code. Moreover, this way of drawing will be replaced entirely.
-        void Draw(VkCommandBuffer commandBuffer);
     private:
-        RenderContext& m_Context; // non-owning
+        friend class WorldRenderer;
         BlockRegistry m_BlockRegistry;
         std::unordered_map<ChunkPos, std::shared_ptr<Chunk>, ChunkPosHash> m_Chunks;
     };

@@ -111,9 +111,9 @@ namespace eng
         for (auto& uniformBuffer : data.UniformBuffers)
         {
             auto& bufferInfo = bufferInfos.emplace_back();
-            bufferInfo.buffer = uniformBuffer.Descriptor->GetBuffer();
-            bufferInfo.offset = uniformBuffer.Descriptor->GetOffset();
-            bufferInfo.range = uniformBuffer.Descriptor->GetSize();
+            bufferInfo.buffer = uniformBuffer.Buffer;
+            bufferInfo.offset = uniformBuffer.Offset;
+            bufferInfo.range = uniformBuffer.Size;
 
             auto& write = writes.emplace_back();
             write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
@@ -129,9 +129,9 @@ namespace eng
         for (auto& storageBuffer : data.StorageBuffers)
         {
             auto& bufferInfo = bufferInfos.emplace_back();
-            bufferInfo.buffer = storageBuffer.Descriptor->GetBuffer();
-            bufferInfo.offset = storageBuffer.Descriptor->GetOffset();
-            bufferInfo.range = storageBuffer.Descriptor->GetSize();
+            bufferInfo.buffer = storageBuffer.Buffer;
+            bufferInfo.offset = storageBuffer.Offset;
+            bufferInfo.range = storageBuffer.Size;
 
             auto& write = writes.emplace_back();
             write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;

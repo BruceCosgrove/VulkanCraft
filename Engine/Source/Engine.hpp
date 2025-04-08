@@ -31,6 +31,7 @@
 #include "Engine/Rendering/RenderContext.hpp"
 #include "Engine/Rendering/RenderPass.hpp"
 #include "Engine/Rendering/Shader.hpp"
+#include "Engine/Rendering/StagingBuffer.hpp"
 #include "Engine/Rendering/StorageBuffer.hpp"
 #include "Engine/Rendering/Texture2D.hpp"
 #include "Engine/Rendering/Texture2DArray.hpp"

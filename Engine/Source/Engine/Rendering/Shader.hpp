@@ -23,13 +23,17 @@ namespace eng
     struct ShaderUniformBufferBinding
     {
         u32 Binding = 0;
-        std::shared_ptr<UniformBuffer> Descriptor;
+        VkBuffer Buffer = VK_NULL_HANDLE;
+        u64 Offset = 0;
+        u64 Size = 0;
     };
 
     struct ShaderStorageBufferBinding
     {
         u32 Binding = 0;
-        std::shared_ptr<StorageBuffer> Descriptor;
+        VkBuffer Buffer = VK_NULL_HANDLE;
+        u64 Offset = 0;
+        u64 Size = 0;
     };
 
     struct ShaderSamplerBinding

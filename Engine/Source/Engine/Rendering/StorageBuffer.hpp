@@ -1,9 +1,6 @@
 #pragma once
 
-#include "Engine/Core/ClassTypes.hpp"
-#include "Engine/Core/DataTypes.hpp"
 #include "Engine/Rendering/BufferUtils.hpp"
-#include <span>
 
 namespace eng
 {

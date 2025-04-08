@@ -5,22 +5,9 @@
 
 namespace vc
 {
-    struct LocalUniformBuffer
-    {
-        alignas(16) mat4 ViewProjection;
-
-        struct alignas(16)
-        {
-            alignas(8) uvec3 TextureCount;
-            alignas(8) vec2 TextureScale;    // 1.0f / TextureCount
-            alignas(4) u32 TexturesPerLayer; // TextureCount.x * TextureCount.y
-        } BlockTextureAtlas;
-    };
-
     VulkanCraftLayer::VulkanCraftLayer(Window& window)
         : Layer(window)
         , m_RenderPass(CreateRenderPass())
-        , m_Shader(LoadShader())
         , m_ImGuiRenderContext(window, m_RenderPass->GetRenderPass())
     {
         auto& context = window.GetRenderContext();
@@ -28,36 +15,11 @@ namespace vc
         CreateOrRecreateFramebuffers();
 
         {
-            UniformBufferInfo info;
-            info.RenderContext = &context;
-            info.Size = sizeof(LocalUniformBuffer);
-            m_UniformBuffer = std::make_shared<UniformBuffer>(info);
+            m_World = std::make_unique<World>();
+            m_WorldRenderer = std::make_unique<WorldRenderer>(context, m_RenderPass->GetRenderPass(), 1); // TODO: render distance
         }
 
-        {
-            StorageBufferInfo info;
-            info.RenderContext = &context;
-            info.Size = 1024; // 1 KiB for now, nothing fancy
-            m_StorageBuffer = std::make_shared<StorageBuffer>(info);
-        }
-
-        {
-#define VC_TEXTURE(x) R"(D:\Dorkspace\Programming\Archive\VanillaDefault-Resource-Pack-16x-1.21\assets\minecraft\textures\)" x
-            std::vector<LocalTexture> textures;
-            textures.reserve(4);
-            textures.emplace_back(VC_TEXTURE("block/bedrock.png"));
-            textures.emplace_back(VC_TEXTURE("block/stone.png"));
-            textures.emplace_back(VC_TEXTURE("block/dirt.png"));
-            textures.emplace_back(VC_TEXTURE("block/grass_block_side.png"));
-            textures.emplace_back(VC_TEXTURE("block/grass_block_top.png"));
-            m_BlockTextureAtlas = std::make_unique<TextureAtlas>(context, 16, textures);
-        }
-
-        {
-            m_World = std::make_unique<World>(context);
-        }
-
-        m_CameraController.SetPosition(vec3(0.0f, 0.0f, -1.0f));
+        m_CameraController.SetPosition(vec3(0.0f, 16.0f, -1.0f));
         m_CameraController.SetRotation(vec3(0.0f, glm::radians(180.0f), 0.0f));
         m_CameraController.SetFOV(glm::radians(90.0f));
         m_CameraController.SetNearPlane(0.001f);
@@ -88,10 +50,6 @@ namespace vc
         if (context.WasSwapchainRecreated())
             CreateOrRecreateFramebuffers();
 
-        auto shader = m_Shader.Get();
-        if (shader.Old) // Defer old shader deletion until all previous frames have finished using it.
-            context.DeferFree([shader = std::move(shader.Old)] {});
-
         std::array<VkClearValue, 2> clearValues{};
         clearValues[0].color = {0.2f, 0.3f, 0.8f, 1.0f};
         clearValues[1].depthStencil = {1.0f, 0};
@@ -113,50 +71,16 @@ namespace vc
 
         SetDefaultViewportAndScissor();
 
-        // Set all the necessary data.
+        // Render world
         {
-            m_StorageBuffer->SetData(std::to_array<uvec2>
-            ({
-                {0, 0 << 16}, // left
-                {0, 1 << 16}, // right
-                {0, 2 << 16}, // bottom
-                {0, 3 << 16}, // top
-                {0, 4 << 16}, // back
-                {0, 5 << 16}, // front
-            }));
-
-            LocalUniformBuffer localUniformBuffer;
-            localUniformBuffer.ViewProjection = m_CameraController.GetViewProjection();
-            localUniformBuffer.BlockTextureAtlas.TextureCount = m_BlockTextureAtlas->GetTextureCount();
-            localUniformBuffer.BlockTextureAtlas.TextureScale = m_BlockTextureAtlas->GetTextureScale();
-            localUniformBuffer.BlockTextureAtlas.TexturesPerLayer = m_BlockTextureAtlas->GetTexturesPerLayer();
-            m_UniformBuffer->SetData(localUniformBuffer);
-
-            auto uniformBuffers = std::to_array<ShaderUniformBufferBinding>
-            ({
-                {0, m_UniformBuffer},
-            });
-            auto storageBuffers = std::to_array<ShaderStorageBufferBinding>
-            ({
-                {1, m_StorageBuffer},
-            });
-            auto samplers = std::to_array<ShaderSamplerBinding>
-            ({
-                {2, m_BlockTextureAtlas->GetSampler(), m_BlockTextureAtlas->GetTexture()->GetImageView()},
-            });
-
-            shader.Current->UpdateDescriptorSet({uniformBuffers, storageBuffers, samplers});
-
-            // Bind everything.
-            shader.Current->Bind(commandBuffer);
-
-            // TODO: indirect buffer
-            // TODO: set indirect buffer from compute shader
-
-            m_World->Draw(commandBuffer);
+            m_WorldRenderer->Render(commandBuffer, *m_World, m_CameraController.GetViewProjection());
         }
 
         // Render ImGui
+        // TODO: SetWindowLongW, called from ImGui_ImplGlfw_NewFrame,
+        // blocks execution if the application is terminated between
+        // RenderContext::BeginFrame() and RenderContext::EndFrame().
+        if (Application::Get().IsRunning())
         {
             if (polygonMode != VK_POLYGON_MODE_FILL)
                 vkCmdSetPolygonModeEXT(commandBuffer, VK_POLYGON_MODE_FILL);
@@ -182,13 +106,7 @@ namespace vc
             {
                 // Ctrl+R => reload shaders
                 case Keycode::F1:
-                    if (not m_Shader.Loading())
-                    {
-                        Application::Get().ExecuteAsync([this]
-                        {
-                            m_Shader.Load([this] { return LoadShader(); });
-                        });
-                    }
+                    m_WorldRenderer->ReloadShaders();
                     break;
                 // F1 => toggle wireframe
                 case Keycode::F2:
@@ -319,26 +237,6 @@ namespace vc
                 m_Framebuffers.push_back(std::make_shared<Framebuffer>(info));
             }
         }
-    }
-
-    std::shared_ptr<Shader> VulkanCraftLayer::LoadShader()
-    {
-        auto& context = Layer::GetWindow().GetRenderContext();
-
-        auto bindings = std::to_array<ShaderVertexBufferBinding>
-        ({
-            {0, VK_VERTEX_INPUT_RATE_INSTANCE, {0}},
-        });
-
-        ShaderInfo info;
-        info.RenderContext = &context;
-        info.Filepath = "Assets/Shaders/Chunk";
-        info.VertexBufferBindings = bindings;
-        info.Topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
-        info.RenderPass = m_RenderPass->GetRenderPass();
-
-        ENG_LOG_INFO("Loading shader \"{}\"...", info.Filepath.string());
-        return std::make_shared<Shader>(info);
     }
 
     void VulkanCraftLayer::SetDefaultViewportAndScissor()
