@@ -25,8 +25,12 @@ namespace eng
     private:
         struct FreeRAII
         {
-            ~FreeRAII() { FreeFunction(); }
-            std::function<void()> FreeFunction;
+            FreeRAII(std::function<void()>&& freeFunction) : m_FreeFunction(std::move(freeFunction)) {}
+            FreeRAII(FreeRAII&&) noexcept = default;
+            FreeRAII& operator=(FreeRAII&&) noexcept = default;
+            ~FreeRAII() { if (m_FreeFunction) m_FreeFunction(); }
+        private:
+            std::function<void()> m_FreeFunction;
         };
     public:
         ENG_IMMOVABLE_UNCOPYABLE_CLASS(RenderContext);

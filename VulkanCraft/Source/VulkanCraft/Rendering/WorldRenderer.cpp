@@ -294,7 +294,7 @@ namespace vc
             // x = chunk x, y = chunk y, z = chunk z, f = face
             auto packStorageData = [](Chunk* chunk, MeshType type) -> uvec2
             {
-                ChunkPos position = chunk->GetPosition();
+                ChunkPos position = chunk->GetPosition() & 0xFFFF;
                 return
                 {
                     position.y << 16 | position.x,

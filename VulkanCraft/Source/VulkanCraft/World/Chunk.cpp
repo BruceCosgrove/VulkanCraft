@@ -53,7 +53,7 @@ namespace vc
                         if (y == 0) blockID = bedrock;
                         else if (y < 7) blockID = stone;
                         else if (y < 10) blockID = dirt;
-                        else if (y == 10 and (x % Size != m_Position.x or z % Size != m_Position.z)) blockID = grass;
+                        else if (y == 10 and (x % Size != u32(m_Position.x) % Size or z % Size != u32(m_Position.z) % Size)) blockID = grass;
                         m_BlockStateRegistry.CreateBlockState(blockID);
                     }
                 }

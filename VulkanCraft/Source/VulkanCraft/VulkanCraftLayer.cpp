@@ -16,7 +16,7 @@ namespace vc
 
         {
             m_World = std::make_unique<World>();
-            m_WorldRenderer = std::make_unique<WorldRenderer>(context, m_RenderPass->GetRenderPass(), 1); // TODO: render distance
+            m_WorldRenderer = std::make_unique<WorldRenderer>(context, m_RenderPass->GetRenderPass(), 16); // TODO: render distance
         }
 
         m_CameraController.SetPosition(vec3(0.0f, 16.0f, -1.0f));
@@ -24,7 +24,7 @@ namespace vc
         m_CameraController.SetFOV(glm::radians(90.0f));
         m_CameraController.SetNearPlane(0.001f);
         m_CameraController.SetFarPlane(1000.0f);
-        m_CameraController.SetMovementSpeed(2.0f);
+        m_CameraController.SetMovementSpeed(8.0f);
         m_CameraController.SetMouseSensitivity(2.0f);
     }
 

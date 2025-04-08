@@ -64,10 +64,8 @@ namespace vc
             model.Front = TextureID(3);
         }
 
-        // TODO: I tested this for 2+ chunks and it just fell over.
-        // Will fix this in an upcoming commit.
-        ivec3 min(0, 0, 0);
-        ivec3 max(0, 0, 0);
+        ivec3 min(-2, 0, -2);
+        ivec3 max(1, 0, 1);
         for (i32 z = min.z; z <= max.z; z++)
         {
             for (i32 y = min.y; y <= max.y; y++)
