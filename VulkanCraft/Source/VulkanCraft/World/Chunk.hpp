@@ -5,6 +5,7 @@
 #include "VulkanCraft/World/ChunkGenerationStage.hpp"
 #include <Engine.hpp>
 #include <any>
+#include <optional>
 
 using namespace eng;
 
@@ -29,6 +30,7 @@ namespace vc
     private:
         friend class World;
         friend class WorldRenderer;
+
         void GenerateTerrain();
         void GenerateMesh();
 
@@ -36,11 +38,15 @@ namespace vc
         bool IsGenerating() const;
 
         template <typename T>
-        T GetGenerationStageOutput()
+        std::optional<T> ConsumeGenerationStageOutput()
         {
-            // NOTE: Yes, this is unsafe.
-            // TODO: Refactor this later.
-            return std::move(*(T*)std::any_cast<T>(&m_StageOutput));
+            if (T* casted = (T*)std::any_cast<T>(&m_StageOutput))
+            {
+                T output = std::move(*casted);
+                m_StageOutput.reset();
+                return output;
+            }
+            return std::nullopt;
         }
     private:
         World& m_World; // non-owning

@@ -64,8 +64,8 @@ namespace vc
             model.Front = TextureID(3);
         }
 
-        ivec3 min(-2, 0, -2);
-        ivec3 max(1, 0, 1);
+        ivec3 min(-4, -4, -4);
+        ivec3 max(3, 3, 3);
         for (i32 z = min.z; z <= max.z; z++)
         {
             for (i32 y = min.y; y <= max.y; y++)

@@ -10,17 +10,13 @@ namespace vc
         , m_RenderPass(CreateRenderPass())
         , m_ImGuiRenderContext(window, m_RenderPass->GetRenderPass())
     {
-        auto& context = window.GetRenderContext();
-
         CreateOrRecreateFramebuffers();
 
-        {
-            m_World = std::make_unique<World>();
-            m_WorldRenderer = std::make_unique<WorldRenderer>(context, m_RenderPass->GetRenderPass(), 16); // TODO: render distance
-        }
+        m_World = std::make_unique<World>();
+        m_WorldRenderer = std::make_unique<WorldRenderer>(window.GetRenderContext(), m_RenderPass->GetRenderPass(), 512); // TODO: render distance
 
-        m_CameraController.SetPosition(vec3(0.0f, 16.0f, -1.0f));
-        m_CameraController.SetRotation(vec3(0.0f, glm::radians(180.0f), 0.0f));
+        m_CameraController.SetPosition({0.0f, 64.0f, -1.0f});
+        m_CameraController.SetRotation({glm::radians(-90.0f), glm::radians(180.0f), 0.0f});
         m_CameraController.SetFOV(glm::radians(90.0f));
         m_CameraController.SetNearPlane(0.001f);
         m_CameraController.SetFarPlane(1000.0f);
@@ -50,31 +46,26 @@ namespace vc
         if (context.WasSwapchainRecreated())
             CreateOrRecreateFramebuffers();
 
-        std::array<VkClearValue, 2> clearValues{};
-        clearValues[0].color = {0.2f, 0.3f, 0.8f, 1.0f};
-        clearValues[1].depthStencil = {1.0f, 0};
-
-        VkRenderPassBeginInfo info{};
-        info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-        info.renderPass = m_RenderPass->GetRenderPass();
-        info.framebuffer = m_Framebuffers[context.GetSwapchainImageIndex()]->GetFramebuffer();
-        info.renderArea.extent = context.GetSwapchainExtent();
-        info.clearValueCount = static_cast<u32>(clearValues.size());
-        info.pClearValues = clearValues.data();
+        auto clearValues = std::to_array<VkClearValue>
+        ({
+            {.color{0.2f, 0.3f, 0.8f, 1.0f}},
+            {.depthStencil{1.0f, 0}},
+        });
 
         // Begin the render pass.
+        VkRenderPassBeginInfo info
+        {
+            .sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
+            .renderPass = m_RenderPass->GetRenderPass(),
+            .framebuffer = m_Framebuffers[context.GetSwapchainImageIndex()]->GetFramebuffer(),
+            .renderArea{.extent = context.GetSwapchainExtent()},
+            .clearValueCount = u32(clearValues.size()),
+            .pClearValues = clearValues.data(),
+        };
         vkCmdBeginRenderPass(commandBuffer, &info, VK_SUBPASS_CONTENTS_INLINE);
 
-        ENG_GET_FUNC_VK_EXT(vkCmdSetPolygonModeEXT);
-        VkPolygonMode polygonMode = m_Wireframe.load(std::memory_order_acquire) ? VK_POLYGON_MODE_LINE : VK_POLYGON_MODE_FILL;
-        vkCmdSetPolygonModeEXT(commandBuffer, polygonMode);
-
-        SetDefaultViewportAndScissor();
-
         // Render world
-        {
-            m_WorldRenderer->Render(commandBuffer, *m_World, m_CameraController.GetViewProjection());
-        }
+        m_WorldRenderer->Render(commandBuffer, *m_World, m_CameraController.GetViewProjection());
 
         // Render ImGui
         // TODO: SetWindowLongW, called from ImGui_ImplGlfw_NewFrame,
@@ -82,8 +73,8 @@ namespace vc
         // RenderContext::BeginFrame() and RenderContext::EndFrame().
         if (Application::Get().IsRunning())
         {
-            if (polygonMode != VK_POLYGON_MODE_FILL)
-                vkCmdSetPolygonModeEXT(commandBuffer, VK_POLYGON_MODE_FILL);
+            ENG_GET_FUNC_VK_EXT(vkCmdSetPolygonModeEXT);
+            vkCmdSetPolygonModeEXT(commandBuffer, VK_POLYGON_MODE_FILL);
             m_ImGuiRenderContext.BeginFrame();
             OnImGuiRender();
             m_ImGuiRenderContext.EndFrame(commandBuffer);
@@ -104,14 +95,8 @@ namespace vc
         {
             switch (+event.GetKeycode())
             {
-                // Ctrl+R => reload shaders
-                case Keycode::F1:
-                    m_WorldRenderer->ReloadShaders();
-                    break;
-                // F1 => toggle wireframe
-                case Keycode::F2:
-                    m_Wireframe ^= 1;
-                    break;
+                case Keycode::F1: m_WorldRenderer->ReloadShaders(); break;
+                case Keycode::F2: m_WorldRenderer->ToggleWireframe(); break;
             }
         }
     }
@@ -138,66 +123,79 @@ namespace vc
         // For slightly more complicated subpass setups, use this for reference.
         // https://www.saschawillems.de/blog/2018/07/19/vulkan-input-attachments-and-sub-passes/
 
-        std::array<VkAttachmentDescription, 2> attachments{};
+        auto attachments = std::to_array<VkAttachmentDescription>
+        ({
+            // Color attachment
+            {
+                .format = context.GetSwapchainFormat(),
+                .samples = VK_SAMPLE_COUNT_1_BIT,
+                .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
+                .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
+                .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+                .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+                .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+                .finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+            },
+            // Depth attachment
+            {
+                .format = VK_FORMAT_D24_UNORM_S8_UINT,
+                .samples = VK_SAMPLE_COUNT_1_BIT,
+                .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
+                .storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+                .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+                .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+                .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+                .finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+            },
+        });
 
-        auto& colorAttachment = attachments[0];
-        colorAttachment.format = context.GetSwapchainFormat();
-        colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
-        colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-        colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-        colorAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-        colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-        colorAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-        colorAttachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+        VkAttachmentReference colorAttachmentReference
+        {
+            .attachment = 0, // Index into info.pAttachments; referring to colorAttachment
+            .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+        };
 
-        auto& depthAttachment = attachments[1];
-        depthAttachment.format = VK_FORMAT_D24_UNORM_S8_UINT;
-        depthAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
-        depthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-        depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-        depthAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-        depthAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-        depthAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-        depthAttachment.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+        VkAttachmentReference depthAttachmentReference
+        {
+            .attachment = 1, // Index into info.pAttachments; referring to depthAttachment
+            .layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+        };
 
-        VkAttachmentReference colorAttachmentReference{};
-        colorAttachmentReference.attachment = 0; // Index into info.pAttachments; referring to colorAttachment
-        colorAttachmentReference.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+        auto subpasses = std::to_array<VkSubpassDescription>
+        ({
+            {
+                .pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
+                .colorAttachmentCount = 1,
+                .pColorAttachments = &colorAttachmentReference,
+                .pDepthStencilAttachment = &depthAttachmentReference,
+            },
+        });
 
-        VkAttachmentReference depthAttachmentReference{};
-        depthAttachmentReference.attachment = 1; // Index into info.pAttachments; referring to depthAttachment
-        depthAttachmentReference.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+        auto dependencies = std::to_array<VkSubpassDependency>
+        ({
+            {
+                .srcSubpass = VK_SUBPASS_EXTERNAL,
+                .dstSubpass = 0,
+                .srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
+                .dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
+                .srcAccessMask = 0,
+                .dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
+            },
+        });
 
-        std::array<VkSubpassDescription, 1> subpasses{};
-
-        auto& subpass0 = subpasses[0];
-        subpass0.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-        subpass0.colorAttachmentCount = 1;
-        subpass0.pColorAttachments = &colorAttachmentReference;
-        subpass0.pDepthStencilAttachment = &depthAttachmentReference;
-
-        std::array<VkSubpassDependency, 1> dependencies{};
-
-        auto& dependency0 = dependencies[0];
-        dependency0.srcSubpass = VK_SUBPASS_EXTERNAL;
-        dependency0.dstSubpass = 0;
-        dependency0.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
-        dependency0.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
-        dependency0.srcAccessMask = 0;
-        dependency0.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-
-        RenderPassInfo info;
-        info.RenderContext = &context;
-        info.Attachments = attachments;
-        info.Subpasses = subpasses;
-        info.SubpassDependencies = dependencies;
+        RenderPassInfo info
+        {
+            .RenderContext = &context,
+            .Attachments = attachments,
+            .Subpasses = subpasses,
+            .SubpassDependencies = dependencies,
+        };
         return std::make_shared<RenderPass>(info);
     }
 
     void VulkanCraftLayer::CreateOrRecreateFramebuffers()
     {
         auto& context = Layer::GetWindow().GetRenderContext();
-        VkExtent2D swapchainExtent = context.GetSwapchainExtent();
         u32 swapchainImageCount = context.GetSwapchainImageCount();
 
         // Recreate the framebuffer depth attachments.
@@ -205,13 +203,15 @@ namespace vc
             m_FramebufferDepthAttachments.clear();
             m_FramebufferDepthAttachments.reserve(swapchainImageCount);
 
-            FramebufferAttachmentInfo info;
-            info.RenderContext = &context;
-            info.Extent = swapchainExtent;
-            info.Format = VK_FORMAT_D24_UNORM_S8_UINT;
-            info.Usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
-            info.Aspect = VK_IMAGE_ASPECT_DEPTH_BIT;
-            info.Layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+            FramebufferAttachmentInfo info
+            {
+                .RenderContext = &context,
+                .Extent = context.GetSwapchainExtent(),
+                .Format = VK_FORMAT_D24_UNORM_S8_UINT,
+                .Usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
+                .Aspect = VK_IMAGE_ASPECT_DEPTH_BIT,
+                .Layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+            };
 
             for (u32 i = 0; i < swapchainImageCount; i++)
                 m_FramebufferDepthAttachments.push_back(std::make_shared<FramebufferAttachment>(info));
@@ -222,9 +222,11 @@ namespace vc
             m_Framebuffers.clear();
             m_Framebuffers.reserve(swapchainImageCount);
 
-            FramebufferInfo info;
-            info.RenderContext = &context;
-            info.RenderPass = m_RenderPass->GetRenderPass();
+            FramebufferInfo info
+            {
+                .RenderContext = &context,
+                .RenderPass = m_RenderPass->GetRenderPass(),
+            };
 
             for (u32 i = 0; i < swapchainImageCount; i++)
             {
@@ -237,28 +239,5 @@ namespace vc
                 m_Framebuffers.push_back(std::make_shared<Framebuffer>(info));
             }
         }
-    }
-
-    void VulkanCraftLayer::SetDefaultViewportAndScissor()
-    {
-        auto& context = Layer::GetWindow().GetRenderContext();
-        VkExtent2D extent = context.GetSwapchainExtent();
-        VkCommandBuffer commandBuffer = context.GetActiveCommandBuffer();
-
-        // Vulkan's +y direction is down, this fixes that.
-        // https://stackoverflow.com/questions/45570326/flipping-the-viewport-in-vulkan
-        VkViewport viewport{};
-        viewport.x = 0.0f;
-        viewport.y = static_cast<f32>(extent.height);
-        viewport.width = static_cast<f32>(extent.width);
-        viewport.height = -static_cast<f32>(extent.height);
-        viewport.minDepth = 0.0f;
-        viewport.maxDepth = 1.0f;
-        vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
-
-        VkRect2D scissor{};
-        scissor.offset = {0, 0};
-        scissor.extent = extent;
-        vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
     }
 }

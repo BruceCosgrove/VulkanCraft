@@ -21,6 +21,7 @@ namespace vc
 
         void Render(VkCommandBuffer commandBuffer, World const& world, mat4 const& viewProjection);
         void ReloadShaders();
+        void ToggleWireframe();
     private:
         struct LocalUniformBuffer
         {
@@ -74,5 +75,9 @@ namespace vc
         std::vector<ChunkRegion> m_ChunkRegions;
         // Maps chunks to their submesh instance indices.
         std::unordered_multimap<Chunk*, ChunkSubmeshRegion> m_ChunkSubmeshRegions;
+
+        // Debug visualization
+
+        std::atomic<u8> m_Wireframe = 0;
     };
 }

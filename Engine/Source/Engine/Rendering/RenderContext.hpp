@@ -15,25 +15,10 @@ struct GLFWwindow;
 
 namespace eng
 {
-    class Framebuffer;
-    class Image;
-    class RenderPass;
-    class Shader;
-
     class RenderContext
     {
-    private:
-        struct FreeRAII
-        {
-            FreeRAII(std::function<void()>&& freeFunction) : m_FreeFunction(std::move(freeFunction)) {}
-            FreeRAII(FreeRAII&&) noexcept = default;
-            FreeRAII& operator=(FreeRAII&&) noexcept = default;
-            ~FreeRAII() { if (m_FreeFunction) m_FreeFunction(); }
-        private:
-            std::function<void()> m_FreeFunction;
-        };
-    public:
         ENG_IMMOVABLE_UNCOPYABLE_CLASS(RenderContext);
+    public:
 
         VkCommandBuffer BeginOneTimeCommandBuffer();
         void EndOneTimeCommandBuffer(VkCommandBuffer commandBuffer);
@@ -137,6 +122,16 @@ namespace eng
         std::unique_ptr<VkFence[]> m_FrameInFlightFences;
         std::unique_ptr<VkSemaphore[]> m_ImageAcquiredSemaphores;
         std::unique_ptr<VkSemaphore[]> m_RenderCompleteSemaphores;
+
+        struct FreeRAII
+        {
+            FreeRAII(std::function<void()>&& freeFunction) : m_FreeFunction(std::move(freeFunction)) {}
+            FreeRAII(FreeRAII&&) noexcept = default;
+            FreeRAII& operator=(FreeRAII&&) noexcept = default;
+            ~FreeRAII() { if (m_FreeFunction) m_FreeFunction(); }
+        private:
+            std::function<void()> m_FreeFunction;
+        };
         std::vector<std::vector<FreeRAII>> m_FrameFreeQueues;
     };
 }

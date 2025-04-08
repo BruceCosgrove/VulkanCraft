@@ -31,8 +31,6 @@ namespace vc
         std::shared_ptr<RenderPass> CreateRenderPass();
 
         void CreateOrRecreateFramebuffers();
-
-        void SetDefaultViewportAndScissor();
     private:
         // TODO: there really needs to be some kind of allocator/ref system so new isn't
         // called that frequently (also increases cache performance).
@@ -46,8 +44,6 @@ namespace vc
         std::unique_ptr<World> m_World;
         std::unique_ptr<WorldRenderer> m_WorldRenderer;
         CameraController m_CameraController;
-
-        std::atomic<u8> m_Wireframe = 0;
 
         ImGuiRenderContext m_ImGuiRenderContext;
         ImGuiHelper m_ImGuiHelper;

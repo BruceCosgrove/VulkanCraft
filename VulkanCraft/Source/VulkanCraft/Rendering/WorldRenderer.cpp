@@ -343,6 +343,38 @@ namespace vc
             shader.Current->Bind(commandBuffer);
         }
 
+        // Debug visualization.
+        {
+            ENG_GET_FUNC_VK_EXT(vkCmdSetPolygonModeEXT);
+            VkPolygonMode polygonMode = m_Wireframe.load(std::memory_order_acquire) ? VK_POLYGON_MODE_LINE : VK_POLYGON_MODE_FILL;
+            vkCmdSetPolygonModeEXT(commandBuffer, polygonMode);
+        }
+
+        // Set viewport and scissor.
+        {
+            VkExtent2D extent = m_Context.GetSwapchainExtent();
+
+            // Vulkan's +y direction is down, this fixes that.
+            // https://stackoverflow.com/questions/45570326/flipping-the-viewport-in-vulkan
+            VkViewport viewport
+            {
+                .x = 0.0f,
+                .y = f32(extent.height),
+                .width = f32(extent.width),
+                .height = -f32(extent.height),
+                .minDepth = 0.0f,
+                .maxDepth = 1.0f,
+            };
+            vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
+
+            VkRect2D scissor
+            {
+                .offset = {0, 0},
+                .extent = extent,
+            };
+            vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
+        }
+
         // Bind the vertex buffer.
         {
             VkDeviceSize offset = 0;
@@ -364,9 +396,14 @@ namespace vc
         }
     }
 
+    void WorldRenderer::ToggleWireframe()
+    {
+        m_Wireframe.fetch_xor(1, std::memory_order_release);
+    }
+
     void WorldRenderer::AddOrReplaceChunkMesh(Chunk* chunk)
     {
-        ChunkMeshData meshData = chunk->GetGenerationStageOutput<ChunkMeshData>();
+        ChunkMeshData meshData = *chunk->ConsumeGenerationStageOutput<ChunkMeshData>();
 
         struct Submesh
         {

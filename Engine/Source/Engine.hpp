@@ -38,6 +38,7 @@
 #include "Engine/Rendering/UniformBuffer.hpp"
 #include "Engine/Rendering/VertexBuffer.hpp"
 #include "Engine/Threading/DynamicResource.hpp"
+#include "Engine/Util/Timer.hpp"
 
 // Include glm
 

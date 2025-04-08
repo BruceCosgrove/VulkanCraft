@@ -30,6 +30,8 @@ namespace vc
             return;
         Application::Get().ExecuteAsync([this, c = shared_from_this()]
         {
+            Timer timer("Chunk::GenerateTerrain");
+
             BlockID air = m_BlockRegistry.GetBlock("minecraft:air");
             BlockID bedrock = m_BlockRegistry.GetBlock("minecraft:bedrock");
             BlockID stone = m_BlockRegistry.GetBlock("minecraft:stone");
@@ -44,12 +46,9 @@ namespace vc
                 {
                     for (u8 x = 0; x < Size; x++)
                     {
-                        // TODO: BlockPos, EntityPos
-                        ivec3 blockPos = m_Position;
-                        blockPos *= Size;
-                        blockPos += ivec3(x, y, z);
-
+                        //u8 xyz = x + y + z;
                         BlockID blockID = air;
+                        //if ((xyz & 1) == 0) blockID = BlockID(((xyz >> 1) & 3) + 2);
                         if (y == 0) blockID = bedrock;
                         else if (y < 7) blockID = stone;
                         else if (y < 10) blockID = dirt;
@@ -70,6 +69,8 @@ namespace vc
             return;
         Application::Get().ExecuteAsync([this, c = shared_from_this()]
         {
+            Timer timer("Chunk::GenerateMesh");
+
             // TODO: this seems potentially suited for gpu compute.
 
             Chunk* leftChunk   = m_World.GetChunk({m_Position.x - 1, m_Position.y, m_Position.z});
