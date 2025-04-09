@@ -28,8 +28,7 @@ namespace vc
 
         void OnImGuiRender();
 
-        std::shared_ptr<RenderPass> CreateRenderPass();
-
+        void CreateRenderPass();
         void CreateOrRecreateFramebuffers();
     private:
         // TODO: there really needs to be some kind of allocator/ref system so new isn't
@@ -41,13 +40,13 @@ namespace vc
         std::vector<std::shared_ptr<Image>> m_FramebufferDepthAttachments;
         std::vector<std::shared_ptr<Framebuffer>> m_Framebuffers;
 
+        std::unique_ptr<ImGuiRenderContext> m_ImGuiRenderContext;
+        std::unique_ptr<ImGuiHelper> m_ImGuiHelper;
+
         std::unique_ptr<WorldRenderer> m_WorldRenderer;
         std::unique_ptr<World> m_World;
         WorldRenderer::Statistics m_WorldRendererStatistics;
 
         CameraController m_CameraController;
-
-        ImGuiRenderContext m_ImGuiRenderContext;
-        ImGuiHelper m_ImGuiHelper;
     };
 }

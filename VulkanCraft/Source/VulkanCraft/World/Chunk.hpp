@@ -34,9 +34,16 @@ namespace vc
         void GenerateTerrain();
         void GenerateMesh();
 
-        ChunkGenerationStage GetGenerationStage() const;
+        // Queries if the chunk is generating any stage.
         bool IsGenerating() const;
 
+        // Call this after IsGenerating returns false for the first time since returning true
+        // to get the current generation stage AND synchronize the generation data from the
+        // worker thread that computed it with the current thread.
+        ChunkGenerationStage GetGenerationStage() const;
+
+        // Call this to get the generation data once it has been synchronized by GetGenerationStage.
+        // Returns std::nullopt if the stage had no output, or if it did but of a different type.
         template <typename T>
         std::optional<T> ConsumeGenerationStageOutput()
         {
@@ -54,7 +61,7 @@ namespace vc
         BlockStateRegistry m_BlockStateRegistry;
         ChunkPos m_Position;
 
-        ChunkGenerationStage m_GenerationStage;
+        std::atomic<ChunkGenerationStage> m_GenerationStage;
         std::atomic_bool m_Generating;
         std::any m_StageOutput;
     };

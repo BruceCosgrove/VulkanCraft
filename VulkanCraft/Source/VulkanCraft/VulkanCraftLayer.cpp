@@ -1,16 +1,17 @@
 #include "VulkanCraftLayer.hpp"
 #include "VulkanCraft/Rendering/BlockModel.hpp"
-#include <imgui.h>
 #include <array>
 
 namespace vc
 {
     VulkanCraftLayer::VulkanCraftLayer(Window& window)
         : Layer(window)
-        , m_RenderPass(CreateRenderPass())
-        , m_ImGuiRenderContext(window, m_RenderPass->GetRenderPass())
     {
+        CreateRenderPass();
         CreateOrRecreateFramebuffers();
+
+        m_ImGuiRenderContext = std::make_unique<ImGuiRenderContext>(window, m_RenderPass->GetRenderPass());
+        m_ImGuiHelper = std::make_unique<ImGuiHelper>();
 
         m_WorldRenderer = std::make_unique<WorldRenderer>(window.GetRenderContext(), m_RenderPass->GetRenderPass(), 512); // TODO: render distance
         m_World = std::make_unique<World>();
@@ -26,7 +27,7 @@ namespace vc
 
     void VulkanCraftLayer::OnEvent(Event& event)
     {
-        event.Dispatch(&m_ImGuiRenderContext, &ImGuiRenderContext::OnEvent);
+        event.Dispatch(m_ImGuiRenderContext.get(), &ImGuiRenderContext::OnEvent);
         event.Dispatch(this, &VulkanCraftLayer::OnWindowCloseEvent);
         event.Dispatch(this, &VulkanCraftLayer::OnKeyPressEvent);
         event.Dispatch(&m_CameraController, &CameraController::OnEvent);
@@ -75,9 +76,9 @@ namespace vc
         {
             ENG_GET_FUNC_VK_EXT(vkCmdSetPolygonModeEXT);
             vkCmdSetPolygonModeEXT(commandBuffer, VK_POLYGON_MODE_FILL);
-            m_ImGuiRenderContext.BeginFrame();
+            m_ImGuiRenderContext->BeginFrame();
             OnImGuiRender();
-            m_ImGuiRenderContext.EndFrame(commandBuffer);
+            m_ImGuiRenderContext->EndFrame(commandBuffer);
         }
 
         // End the render pass.
@@ -143,7 +144,7 @@ namespace vc
         ImGui::End();
     }
 
-    std::shared_ptr<RenderPass> VulkanCraftLayer::CreateRenderPass()
+    void VulkanCraftLayer::CreateRenderPass()
     {
         auto& context = Layer::GetWindow().GetRenderContext();
 
@@ -178,13 +179,13 @@ namespace vc
 
         VkAttachmentReference colorAttachmentReference
         {
-            .attachment = 0, // Index into info.pAttachments; referring to colorAttachment
+            .attachment = 0,
             .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
         };
 
         VkAttachmentReference depthAttachmentReference
         {
-            .attachment = 1, // Index into info.pAttachments; referring to depthAttachment
+            .attachment = 1,
             .layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
         };
 
@@ -217,7 +218,7 @@ namespace vc
             .Subpasses = subpasses,
             .SubpassDependencies = dependencies,
         };
-        return std::make_shared<RenderPass>(info);
+        m_RenderPass = std::make_shared<RenderPass>(info);
     }
 
     void VulkanCraftLayer::CreateOrRecreateFramebuffers()

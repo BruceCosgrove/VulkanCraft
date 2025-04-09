@@ -58,8 +58,8 @@ namespace vc
                 }
             }
 
-            m_GenerationStage = ChunkGenerationStage::Terrain;
-            m_Generating.store(false, std::memory_order_release);
+            m_GenerationStage.store(ChunkGenerationStage::Terrain, std::memory_order_release);
+            m_Generating.store(false, std::memory_order_relaxed);
         });
     }
 
@@ -283,18 +283,18 @@ namespace vc
             }
 
             m_StageOutput = meshData;
-            m_GenerationStage = ChunkGenerationStage::Mesh;
-            m_Generating.store(false, std::memory_order_release);
+            m_GenerationStage.store(ChunkGenerationStage::Mesh, std::memory_order_release);
+            m_Generating.store(false, std::memory_order_relaxed);
         });
     }
 
     ChunkGenerationStage Chunk::GetGenerationStage() const
     {
-        return m_GenerationStage;
+        return m_GenerationStage.load(std::memory_order_acquire);
     }
 
     bool Chunk::IsGenerating() const
     {
-        return m_Generating.load(std::memory_order_acquire);
+        return m_Generating.load(std::memory_order_relaxed);
     }
 }

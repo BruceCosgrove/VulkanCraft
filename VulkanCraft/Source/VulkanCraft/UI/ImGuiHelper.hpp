@@ -3,6 +3,8 @@
 #include <Engine.hpp>
 #include <imgui.h>
 
+using namespace eng;
+
 namespace vc
 {
     class ImGuiHelper

@@ -1,7 +1,5 @@
 #include "ImGuiHelper.hpp"
 
-using namespace eng;
-
 namespace vc
 {
     ImGuiHelper::ImGuiHelper()
