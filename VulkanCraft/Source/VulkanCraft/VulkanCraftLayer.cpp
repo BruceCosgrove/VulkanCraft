@@ -12,8 +12,8 @@ namespace vc
     {
         CreateOrRecreateFramebuffers();
 
-        m_World = std::make_unique<World>();
         m_WorldRenderer = std::make_unique<WorldRenderer>(window.GetRenderContext(), m_RenderPass->GetRenderPass(), 512); // TODO: render distance
+        m_World = std::make_unique<World>();
 
         m_CameraController.SetPosition({0.0f, 64.0f, 0.0f});
         m_CameraController.SetRotation({glm::radians(-90.0f), glm::radians(180.0f), 0.0f});

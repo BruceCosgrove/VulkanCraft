@@ -67,7 +67,7 @@ namespace vc
         void RemoveChunkMesh(Chunk* chunk);
         void RemoveChunkMesh(std::unordered_multimap<Chunk*, ChunkSubmeshRegion>::iterator& it);
 
-        std::shared_ptr<Shader> LoadShader();
+        std::shared_ptr<Shader> LoadShaders();
     private:
         RenderContext& m_Context; // non-owning
         VkRenderPass m_RenderPass; // non-owning

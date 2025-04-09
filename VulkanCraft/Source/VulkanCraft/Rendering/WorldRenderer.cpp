@@ -408,7 +408,8 @@ namespace vc
         {
             Application::Get().ExecuteAsync([this]
             {
-                m_Shader.Load([this] { return LoadShader(); });
+                Timer timer("WorldRenderer::ReloadShaders");
+                m_Shader.Load([this] { return LoadShaders(); });
             });
         }
     }
@@ -536,21 +537,20 @@ namespace vc
         });
     }
 
-    std::shared_ptr<Shader> WorldRenderer::LoadShader()
+    std::shared_ptr<Shader> WorldRenderer::LoadShaders()
     {
         auto bindings = std::to_array<ShaderVertexBufferBinding>
         ({
             {0, VK_VERTEX_INPUT_RATE_INSTANCE, {0}},
         });
-
-        ShaderInfo info;
-        info.RenderContext = &m_Context;
-        info.Filepath = "Assets/Shaders/Chunk";
-        info.VertexBufferBindings = bindings;
-        info.Topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
-        info.RenderPass = m_RenderPass;
-
-        ENG_LOG_INFO("Loading shader \"{}\"...", info.Filepath.string());
+        ShaderInfo info
+        {
+            .RenderContext = &m_Context,
+            .Filepath = "Assets/Shaders/Chunk",
+            .VertexBufferBindings = bindings,
+            .Topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
+            .RenderPass = m_RenderPass,
+        };
         return std::make_shared<Shader>(info);
     }
 }

@@ -41,8 +41,8 @@ namespace vc
         std::vector<std::shared_ptr<Image>> m_FramebufferDepthAttachments;
         std::vector<std::shared_ptr<Framebuffer>> m_Framebuffers;
 
-        std::unique_ptr<World> m_World;
         std::unique_ptr<WorldRenderer> m_WorldRenderer;
+        std::unique_ptr<World> m_World;
         WorldRenderer::Statistics m_WorldRendererStatistics;
 
         CameraController m_CameraController;
