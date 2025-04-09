@@ -31,7 +31,7 @@ namespace eng
         : m_Depth(1)
     {
         m_PixelSize = 4; // TODO
-        m_Pixels.reset(stbi_load(filepath.string().c_str(), (int*)&m_Width, (int*)&m_Height, nullptr, STBI_rgb_alpha));
+        m_Pixels.reset(stbi_load(filepath.string().c_str(), (i32*)&m_Width, (i32*)&m_Height, nullptr, STBI_rgb_alpha));
     }
 
     LocalTexture::LocalTexture(u32 width, u32 height)
@@ -76,7 +76,7 @@ namespace eng
 
     u64 LocalTexture::GetSize() const
     {
-        return static_cast<u64>(m_Depth) * m_Height * m_Width * m_PixelSize;
+        return u64(m_Depth) * m_Height * m_Width * m_PixelSize;
     }
 
     auto LocalTexture::GetPixels2D() -> pixels2

@@ -30,7 +30,7 @@ namespace eng
         BufferUtils::UnmapMemory(m_Context, stagingDeviceMemory);
 
         // Create the image.
-        VkExtent3D extent = {info.LocalTexture->GetWidth(), info.LocalTexture->GetHeight(), 1};
+        VkExtent3D extent{info.LocalTexture->GetWidth(), info.LocalTexture->GetHeight(), 1};
 
         ImageUtils::CreateImage(
             m_Context,

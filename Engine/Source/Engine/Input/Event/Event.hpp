@@ -3,7 +3,6 @@
 #include "Engine/Core/Enums.hpp"
 #include <spdlog/fmt/bundled/format.h>
 #include <concepts>
-#include <format>
 
 namespace eng
 {
@@ -68,9 +67,10 @@ namespace eng
 
         EventType GetType() const noexcept;
         EventCategory GetCategories() const noexcept;
+
         bool IsHandled() const noexcept;
         void Handle() noexcept;
-    public:
+
         template <typename... Args>
         void Dispatch(void(*callback)(Event&, Args...), Args&&... args)
         noexcept(noexcept(callback(*this, std::forward<Args>(args)...)))

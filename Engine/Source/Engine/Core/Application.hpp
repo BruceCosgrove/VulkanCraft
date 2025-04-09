@@ -37,6 +37,10 @@ namespace eng
         // May be called from any thread.
         void ExecuteAsync(std::function<void()>&& task);
     private:
+        void UpdateThread();
+        void RenderThread();
+        void EventThread();
+    private:
         std::atomic_bool m_Running = true;
         ThreadPool m_ThreadPool;
         Window m_Window;

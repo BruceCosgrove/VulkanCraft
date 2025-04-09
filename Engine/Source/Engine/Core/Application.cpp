@@ -2,23 +2,45 @@
 #include "Engine/Core/DataTypes.hpp"
 #include "Engine/Core/Log.hpp"
 #include "Engine/Input/Event/WindowEvents.hpp"
+#include "Engine/Threading/ThreadTracer.hpp"
 #include <glfw/glfw3.h>
 
 namespace eng
 {
     void Application::Terminate()
     {
-        m_Running.store(false, std::memory_order_release);
+        m_Running.store(false, std::memory_order_relaxed);
     }
 
     bool Application::IsRunning() const
     {
-        return m_Running.load(std::memory_order_acquire);
+        return m_Running.load(std::memory_order_relaxed);
     }
 
     void Application::ExecuteAsync(std::function<void()>&& task)
     {
         m_ThreadPool.SubmitTask(std::move(task));
+    }
+
+    void Application::UpdateThread()
+    {
+        ThreadTracer tracer("update");
+        while (m_Running.load(std::memory_order_relaxed))
+            m_Window.OnUpdate();
+    }
+
+    void Application::RenderThread()
+    {
+        ThreadTracer tracer("render");
+        while (m_Running.load(std::memory_order_relaxed))
+            m_Window.OnRender();
+    }
+
+    void Application::EventThread()
+    {
+        ThreadTracer tracer("event");
+        while (m_Running.load(std::memory_order_relaxed))
+            glfwWaitEvents();
     }
 
     Application::Application(ApplicationInfo const& info)
@@ -34,38 +56,11 @@ namespace eng
 
     void Application::Run()
     {
-        std::jthread updateThread([this]
-        {
-            u32 tid = std::this_thread::get_id()._Get_underlying_id();
-            ENG_LOG_TRACE("Starting update thread with tid={}.", tid);
-
-            while (m_Running.load(std::memory_order_acquire))
-            {
-                m_Window.OnUpdate();
-            }
-
-            ENG_LOG_TRACE("Exiting update thread with tid={}.", tid);
-        });
-
-        std::jthread renderThread([this]
-        {
-            u32 tid = std::this_thread::get_id()._Get_underlying_id();
-            ENG_LOG_TRACE("Starting render thread with tid={}.", tid);
-
-            while (m_Running.load(std::memory_order_acquire))
-            {
-                m_Window.OnRender();
-            }
-
-            ENG_LOG_TRACE("Exiting render thread with tid={}.", tid);
-        });
-
-        ENG_LOG_TRACE("Starting event handling on main thread.");
-
-        // Process all events on the main thread.
-        while (m_Running.load(std::memory_order_acquire))
-            glfwWaitEvents();
-
-        ENG_LOG_TRACE("Exiting event handling on main thread.");
+        // Run the update thread on its own thread.
+        std::jthread updateThread([this] { UpdateThread(); });
+        // Run the render thread on its own thread.
+        std::jthread renderThread([this] { RenderThread(); });
+        // Run the event thread on the main thread.
+        EventThread();
     }
 }

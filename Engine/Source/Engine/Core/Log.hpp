@@ -4,7 +4,6 @@
 #include "Engine/Core/DataTypes.hpp"
 #include <spdlog/spdlog.h>
 #include <memory>
-#include <string>
 
 namespace eng
 {
@@ -12,14 +11,13 @@ namespace eng
     {
         spdlog::level::level_enum EngineLoggingLevel = spdlog::level::trace;
         spdlog::level::level_enum ClientLoggingLevel = spdlog::level::trace;
-        string LogFileName = "Engine.log";
+        small_string LogFileName = "Engine.log";
     };
 
     class Log
     {
-    public:
         ENG_STATIC_CLASS(Log);
-
+    public:
         static spdlog::logger& GetEngineLogger();
         static spdlog::logger& GetClientLogger();
     private:

@@ -43,6 +43,8 @@ namespace vc
 
         std::unique_ptr<World> m_World;
         std::unique_ptr<WorldRenderer> m_WorldRenderer;
+        WorldRenderer::Statistics m_WorldRendererStatistics;
+
         CameraController m_CameraController;
 
         ImGuiRenderContext m_ImGuiRenderContext;

@@ -19,8 +19,22 @@ namespace vc
         WorldRenderer(RenderContext& context, VkRenderPass renderPass, u16 maxChunkCount);
         ~WorldRenderer();
 
-        void Render(VkCommandBuffer commandBuffer, World const& world, mat4 const& viewProjection);
+        struct Statistics
+        {
+            u32 IndirectDrawCallCount = 0;
+            u32 InstanceCount = 0;
+            u32 ChunkCount = 0;
+            u64 UsedVertexBufferSize = 0;
+            u64 UsedUniformBufferSize = 0;
+            u64 UsedStorageBufferSize = 0;
+            u64 UsedIndirectBufferSize = 0;
+        };
+
+        Statistics Render(VkCommandBuffer commandBuffer, World const& world, mat4 const& viewProjection);
+
+        // Can be called from any thread.
         void ReloadShaders();
+        // Can be called from any thread.
         void ToggleWireframe();
     private:
         struct LocalUniformBuffer
@@ -49,7 +63,7 @@ namespace vc
             MeshType Type;
         };
     private:
-        void AddOrReplaceChunkMesh(Chunk* chunk);
+        void AddOrReplaceChunkMesh(VkCommandBuffer commandBuffer, Chunk* chunk);
         void RemoveChunkMesh(Chunk* chunk);
         void RemoveChunkMesh(std::unordered_multimap<Chunk*, ChunkSubmeshRegion>::iterator& it);
 
@@ -57,15 +71,15 @@ namespace vc
     private:
         RenderContext& m_Context; // non-owning
         VkRenderPass m_RenderPass; // non-owning
-        VkBuffer m_VertexBuffer = VK_NULL_HANDLE;
+        VkBuffer m_VertexBuffer = nullptr;
         std::vector<VkBuffer> m_UniformBuffers;
         std::vector<VkBuffer> m_StorageBuffers;
         std::vector<VkBuffer> m_IndirectBuffers;
         std::vector<VkDeviceSize> m_UniformOffsets;
         std::vector<VkDeviceSize> m_StorageOffsets;
         std::vector<VkDeviceSize> m_IndirectOffsets;
-        VkDeviceMemory m_DeviceLocalMemory = VK_NULL_HANDLE;
-        VkDeviceMemory m_HostVisibleMemory = VK_NULL_HANDLE;
+        VkDeviceMemory m_DeviceLocalMemory = nullptr;
+        VkDeviceMemory m_HostVisibleMemory = nullptr;
         std::span<u8> m_MappedMemory;
 
         DynamicResource<std::shared_ptr<Shader>> m_Shader;
@@ -75,6 +89,11 @@ namespace vc
         std::vector<ChunkRegion> m_ChunkRegions;
         // Maps chunks to their submesh instance indices.
         std::unordered_multimap<Chunk*, ChunkSubmeshRegion> m_ChunkSubmeshRegions;
+
+        // Statistics
+
+        u32 m_TotalInstanceCount = 0;
+        u64 m_UsedVertexBufferSize = 0;
 
         // Debug visualization
 

@@ -75,7 +75,7 @@ namespace eng
     void Window::OnUpdate()
     {
         f64 currentTime = glfwGetTime();
-        Timestep timestep = static_cast<f32>(currentTime - m_LastUpdateTime);
+        Timestep timestep = f32(currentTime - m_LastUpdateTime);
         m_LastUpdateTime = currentTime;
 
         m_LayerStack.OnUpdate(timestep);
@@ -89,7 +89,7 @@ namespace eng
         if (m_RenderContext.BeginFrame())
         {
             f64 currentTime = glfwGetTime();
-            Timestep timestep = static_cast<f32>(currentTime - m_LastRenderTime);
+            Timestep timestep = f32(currentTime - m_LastRenderTime);
             m_LastRenderTime = currentTime;
 
             m_LayerStack.OnRender(timestep);
@@ -137,7 +137,7 @@ namespace eng
         glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API); // Vulkan
         glfwWindowHint(GLFW_VISIBLE, false); // Make the window invisible while still initializing it.
 
-        Handle = glfwCreateWindow(static_cast<i32>(info.Width), static_cast<i32>(info.Height), info.Title.c_str(), nullptr, nullptr);
+        Handle = glfwCreateWindow(i32(info.Width), i32(info.Height), info.Title.c_str(), nullptr, nullptr);
         ENG_ASSERT(Handle != nullptr, "Failed to create window.");
 
         // Set the user pointer to this window to use in event callbacks.
@@ -149,7 +149,7 @@ namespace eng
         {
             Window& window = *static_cast<Window*>(glfwGetWindowUserPointer(handle));
 
-            WindowMoveEvent event(static_cast<i32>(xpos), static_cast<i32>(ypos));
+            WindowMoveEvent event{i32(xpos), i32(ypos)};
             window.m_LayerStack.OnEvent(event);
         });
 
@@ -157,7 +157,7 @@ namespace eng
         {
             Window& window = *static_cast<Window*>(glfwGetWindowUserPointer(handle));
 
-            WindowResizeEvent event(static_cast<u32>(width), static_cast<u32>(height));
+            WindowResizeEvent event{u32(width), u32(height)};
             window.m_LayerStack.OnEvent(event);
         });
 
@@ -181,7 +181,7 @@ namespace eng
         {
             Window& window = *static_cast<Window*>(glfwGetWindowUserPointer(handle));
 
-            WindowFocusEvent event(static_cast<bool>(focused));
+            WindowFocusEvent event{bool(focused)};
             window.m_LayerStack.OnEvent(event);
         });
 
@@ -189,7 +189,7 @@ namespace eng
         {
             Window& window = *static_cast<Window*>(glfwGetWindowUserPointer(handle));
 
-            WindowMinimizeEvent event(static_cast<bool>(iconified));
+            WindowMinimizeEvent event{bool(iconified)};
             window.OnWindowMinimizeEvent(event);
             window.m_LayerStack.OnEvent(event);
         });
@@ -198,7 +198,7 @@ namespace eng
         {
             Window& window = *static_cast<Window*>(glfwGetWindowUserPointer(handle));
 
-            WindowMaximizeEvent event(static_cast<bool>(maximized));
+            WindowMaximizeEvent event{bool(maximized)};
             window.m_LayerStack.OnEvent(event);
         });
 
@@ -206,7 +206,7 @@ namespace eng
         {
             Window& window = *static_cast<Window*>(glfwGetWindowUserPointer(handle));
 
-            WindowFramebufferResizeEvent event(static_cast<u32>(width), static_cast<u32>(height));
+            WindowFramebufferResizeEvent event{u32(width), u32(height)};
             window.OnWindowFramebufferResizeEvent(event);
             window.m_LayerStack.OnEvent(event);
         });
@@ -215,7 +215,7 @@ namespace eng
         {
             Window& window = *static_cast<Window*>(glfwGetWindowUserPointer(handle));
 
-            WindowContentScaleEvent event(xscale, yscale);
+            WindowContentScaleEvent event{xscale, yscale};
             window.m_LayerStack.OnEvent(event);
         });
 
@@ -228,7 +228,7 @@ namespace eng
                 case GLFW_PRESS:
                 case GLFW_RELEASE:
                 {
-                    MouseButtonPressEvent event(static_cast<MouseButton>(button + 1), static_cast<Modifiers>(mods), action == GLFW_PRESS);
+                    MouseButtonPressEvent event{MouseButton(button + 1), Modifiers(mods), action == GLFW_PRESS};
                     window.m_LayerStack.OnEvent(event);
                     break;
                 }
@@ -239,7 +239,7 @@ namespace eng
         {
             Window& window = *static_cast<Window*>(glfwGetWindowUserPointer(handle));
 
-            MouseMoveEvent event(static_cast<f32>(xpos), static_cast<f32>(ypos));
+            MouseMoveEvent event{f32(xpos), static_cast<f32>(ypos)};
             window.m_LayerStack.OnEvent(event);
         });
 
@@ -247,7 +247,7 @@ namespace eng
         {
             Window& window = *static_cast<Window*>(glfwGetWindowUserPointer(handle));
 
-            MouseEnterEvent event(static_cast<bool>(entered));
+            MouseEnterEvent event{bool(entered)};
             window.m_LayerStack.OnEvent(event);
         });
 
@@ -255,7 +255,7 @@ namespace eng
         {
             Window& window = *static_cast<Window*>(glfwGetWindowUserPointer(handle));
 
-            MouseScrollEvent event(static_cast<f32>(xoffset), static_cast<f32>(yoffset));
+            MouseScrollEvent event{f32(xoffset), f32(yoffset)};
             window.m_LayerStack.OnEvent(event);
         });
 
@@ -428,7 +428,7 @@ namespace eng
                 case GLFW_PRESS:
                 case GLFW_RELEASE:
                 {
-                    KeyPressEvent event(s_KeyConversions.at(key), static_cast<Modifiers>(mods), action == GLFW_PRESS);
+                    KeyPressEvent event{s_KeyConversions.at(key), Modifiers(mods), action == GLFW_PRESS};
                     window.m_LayerStack.OnEvent(event);
                     break;
                 }
@@ -441,7 +441,7 @@ namespace eng
         {
             Window& window = *static_cast<Window*>(glfwGetWindowUserPointer(handle));
 
-            KeyTypeEvent event(static_cast<u32>(codepoint));
+            KeyTypeEvent event{u32(codepoint)};
             window.m_LayerStack.OnEvent(event);
         });
     }

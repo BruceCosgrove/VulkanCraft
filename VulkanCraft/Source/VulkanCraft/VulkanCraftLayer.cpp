@@ -15,7 +15,7 @@ namespace vc
         m_World = std::make_unique<World>();
         m_WorldRenderer = std::make_unique<WorldRenderer>(window.GetRenderContext(), m_RenderPass->GetRenderPass(), 512); // TODO: render distance
 
-        m_CameraController.SetPosition({0.0f, 64.0f, -1.0f});
+        m_CameraController.SetPosition({0.0f, 64.0f, 0.0f});
         m_CameraController.SetRotation({glm::radians(-90.0f), glm::radians(180.0f), 0.0f});
         m_CameraController.SetFOV(glm::radians(90.0f));
         m_CameraController.SetNearPlane(0.001f);
@@ -65,7 +65,7 @@ namespace vc
         vkCmdBeginRenderPass(commandBuffer, &info, VK_SUBPASS_CONTENTS_INLINE);
 
         // Render world
-        m_WorldRenderer->Render(commandBuffer, *m_World, m_CameraController.GetViewProjection());
+        m_WorldRendererStatistics = m_WorldRenderer->Render(commandBuffer, *m_World, m_CameraController.GetViewProjection());
 
         // Render ImGui
         // TODO: SetWindowLongW, called from ImGui_ImplGlfw_NewFrame,
@@ -111,8 +111,35 @@ namespace vc
 
         //ImGui::ShowDemoWindow();
 
-        ImGui::Begin("test window");
-        ImGui::Button("test button");
+        if (ImGui::Begin("World Renderer Statistics"))
+        {
+            constexpr ImGuiTableFlags tableFlags = ImGuiTableFlags_Borders | ImGuiTableFlags_SizingStretchProp;
+            if (ImGui::BeginTable("world renderer statistics table", 2, tableFlags))
+            {
+                auto tableEntry = [](small_string_view name, small_string_view value)
+                {
+                    ImGui::TableNextColumn();
+                    ImGui::Text(name.data());
+                    ImGui::TableNextColumn();
+                    ImGui::Text(value.data());
+                };
+                small_string indirectDrawCallCount = std::to_string(m_WorldRendererStatistics.IndirectDrawCallCount);
+                small_string instanceCount = std::to_string(m_WorldRendererStatistics.InstanceCount);
+                small_string chunkCount = std::to_string(m_WorldRendererStatistics.ChunkCount);
+                small_string usedVertexBufferSize = std::to_string(m_WorldRendererStatistics.UsedVertexBufferSize);
+                small_string usedUniformBufferSize = std::to_string(m_WorldRendererStatistics.UsedUniformBufferSize);
+                small_string usedStorageBufferSize = std::to_string(m_WorldRendererStatistics.UsedStorageBufferSize);
+                small_string usedIndirectBufferSize = std::to_string(m_WorldRendererStatistics.UsedIndirectBufferSize);
+                tableEntry("Indirect Draw Call Count", indirectDrawCallCount);
+                tableEntry("Instance Count", instanceCount);
+                tableEntry("Chunk Count", chunkCount);
+                tableEntry("Used Vertex Buffer Size", usedVertexBufferSize);
+                tableEntry("Used Uniform Buffer Size", usedUniformBufferSize);
+                tableEntry("Used Storage Buffer Size", usedStorageBufferSize);
+                tableEntry("Used Indirect Buffer Size", usedIndirectBufferSize);
+            }
+            ImGui::EndTable();
+        }
         ImGui::End();
     }
 
@@ -198,9 +225,17 @@ namespace vc
         auto& context = Layer::GetWindow().GetRenderContext();
         u32 swapchainImageCount = context.GetSwapchainImageCount();
 
+        // Delete the old framebuffer.
+        if (not m_Framebuffers.empty())
+        {
+            context.DeferFree([
+                oldFramebufferDepthAttachments = std::move(m_FramebufferDepthAttachments),
+                oldFramebuffers = std::move(m_Framebuffers)
+            ] {});
+        }
+
         // Recreate the framebuffer depth attachments.
         {
-            m_FramebufferDepthAttachments.clear();
             m_FramebufferDepthAttachments.reserve(swapchainImageCount);
 
             FramebufferAttachmentInfo info
@@ -219,7 +254,6 @@ namespace vc
 
         // Recreate the framebuffers.
         {
-            m_Framebuffers.clear();
             m_Framebuffers.reserve(swapchainImageCount);
 
             FramebufferInfo info

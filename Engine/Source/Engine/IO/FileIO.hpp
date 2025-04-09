@@ -1,8 +1,6 @@
 #pragma once
 
 #include "Engine/Core/DataTypes.hpp"
-#include <filesystem>
-#include <string>
 #include <vector>
 
 namespace eng

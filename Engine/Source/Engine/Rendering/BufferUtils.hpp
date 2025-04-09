@@ -12,9 +12,8 @@ namespace eng
     // Helper class for common buffer functionality.
     class BufferUtils
     {
-    public:
         ENG_STATIC_CLASS(BufferUtils);
-
+    public:
         static void CreateBuffer(
             RenderContext& context,
             VkDeviceSize size,
@@ -49,14 +48,13 @@ namespace eng
     template <typename Container> \
     void setDataFunc(Container const& container) \
     { \
-        if constexpr (::std::ranges::range<Container>) \
+        if constexpr (::std::is_convertible_v<Container, ::std::span<::std::add_const_t<typename Container::value_type>>>) \
         { \
-            static_assert(::std::is_convertible_v<Container, ::std::span<::std::add_const_t<typename Container::value_type>>>); \
             ::std::span<::std::add_const_t<typename Container::value_type>> data = container; \
             setDataFunc({(::eng::u8 const*)data.data(), data.size_bytes()}); \
         } \
         else \
-            setDataFunc({(::eng::u8 const*)::std::addressof(container), sizeof(container)}); \
+            setDataFunc({(::eng::u8 const*)::std::addressof(container), sizeof(Container)}); \
     } \
     void setDataFunc(::std::span<u8 const> data)
 

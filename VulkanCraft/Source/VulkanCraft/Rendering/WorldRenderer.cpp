@@ -6,14 +6,15 @@ namespace vc
     WorldRenderer::WorldRenderer(RenderContext& context, VkRenderPass renderPass, u16 maxChunkCount)
         : m_Context(context)
         , m_RenderPass(renderPass)
-        , m_Shader(LoadShader())
     {
+        ReloadShaders();
+
         // TODO: where to actually put this loading?
         // TODO: dynamic loading via block model files
         {
 #define VC_TEXTURE(x) R"(D:\Dorkspace\Programming\Archive\VanillaDefault-Resource-Pack-16x-1.21\assets\minecraft\textures\)" x
             std::vector<LocalTexture> textures;
-            textures.reserve(4);
+            textures.reserve(5);
             textures.emplace_back(VC_TEXTURE("block/bedrock.png"));
             textures.emplace_back(VC_TEXTURE("block/stone.png"));
             textures.emplace_back(VC_TEXTURE("block/dirt.png"));
@@ -64,10 +65,9 @@ namespace vc
                 .size = uniformBufferSize,
                 .usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
             };
-            m_UniformBuffers.resize(swapchainImageCount);
-            for (u32 i = 0; i < swapchainImageCount; i++)
+            for (auto& uniformBuffer : m_UniformBuffers)
             {
-                VkResult result = vkCreateBuffer(device, &info, nullptr, &m_UniformBuffers[i]);
+                VkResult result = vkCreateBuffer(device, &info, nullptr, &uniformBuffer);
                 ENG_ASSERT(result == VK_SUCCESS, "Failed to create uniform buffer.");
             }
             // NOTE: Assumes all uniform buffer memory requirements are the same.
@@ -83,9 +83,9 @@ namespace vc
                 .size = storageBufferSize,
                 .usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
             };
-            for (u32 i = 0; i < swapchainImageCount; i++)
+            for (auto& storageBuffer : m_StorageBuffers)
             {
-                VkResult result = vkCreateBuffer(device, &info, nullptr, &m_StorageBuffers[i]);
+                VkResult result = vkCreateBuffer(device, &info, nullptr, &storageBuffer);
                 ENG_ASSERT(result == VK_SUCCESS, "Failed to create storage buffer.");
             }
             // NOTE: Assumes all uniform buffer memory requirements are the same.
@@ -101,9 +101,9 @@ namespace vc
                 .size = indirectBufferSize,
                 .usage = VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT,
             };
-            for (u32 i = 0; i < swapchainImageCount; i++)
+            for (auto& indirectBuffer : m_IndirectBuffers)
             {
-                VkResult result = vkCreateBuffer(device, &info, nullptr, &m_IndirectBuffers[i]);
+                VkResult result = vkCreateBuffer(device, &info, nullptr, &indirectBuffer);
                 ENG_ASSERT(result == VK_SUCCESS, "Failed to create indirect buffer.");
             }
             // NOTE: Assumes all uniform buffer memory requirements are the same.
@@ -122,19 +122,19 @@ namespace vc
             deviceLocalAllocationSize = BufferUtils::Align(offset, maxAlignment);
 
             offset = 0;
-            for (u32 i = 0; i < swapchainImageCount; i++)
+            for (auto& uniformOffset : m_UniformOffsets)
             {
-                m_UniformOffsets[i] = BufferUtils::Align(offset, uniformMemoryRequirements.alignment);
+                uniformOffset = BufferUtils::Align(offset, uniformMemoryRequirements.alignment);
                 offset += uniformMemoryRequirements.size;
             }
-            for (u32 i = 0; i < swapchainImageCount; i++)
+            for (auto& storageOffset : m_StorageOffsets)
             {
-                m_StorageOffsets[i] = BufferUtils::Align(offset, storageMemoryRequirements.alignment);
+                storageOffset = BufferUtils::Align(offset, storageMemoryRequirements.alignment);
                 offset += storageMemoryRequirements.size;
             }
-            for (u32 i = 0; i < swapchainImageCount; i++)
+            for (auto& indirectOffset : m_IndirectOffsets)
             {
-                m_IndirectOffsets[i] = BufferUtils::Align(offset, indirectMemoryRequirements.alignment);
+                indirectOffset = BufferUtils::Align(offset, indirectMemoryRequirements.alignment);
                 offset += indirectMemoryRequirements.size;
             }
 
@@ -151,11 +151,12 @@ namespace vc
             u32 memoryTypeBits = vertexMemoryRequirements.memoryTypeBits;
             VkMemoryPropertyFlags properties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
 
-            VkMemoryAllocateInfo info{};
-            info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-            info.allocationSize = deviceLocalAllocationSize;
-            info.memoryTypeIndex = BufferUtils::SelectMemoryType(memoryTypeBits, properties);
-
+            VkMemoryAllocateInfo info
+            {
+                .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
+                .allocationSize = deviceLocalAllocationSize,
+                .memoryTypeIndex = BufferUtils::SelectMemoryType(memoryTypeBits, properties),
+            };
             VkResult result = vkAllocateMemory(device, &info, nullptr, &m_DeviceLocalMemory);
             ENG_ASSERT(result == VK_SUCCESS, "Failed to allocate device local memory.");
         }
@@ -169,11 +170,12 @@ namespace vc
             u32 memoryTypeBits = uniformMemoryRequirements.memoryTypeBits;
             VkMemoryPropertyFlags properties = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
 
-            VkMemoryAllocateInfo info{};
-            info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-            info.allocationSize = hostVisibleAllocationSize;
-            info.memoryTypeIndex = BufferUtils::SelectMemoryType(memoryTypeBits, properties);
-
+            VkMemoryAllocateInfo info
+            {
+                .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
+                .allocationSize = hostVisibleAllocationSize,
+                .memoryTypeIndex = BufferUtils::SelectMemoryType(memoryTypeBits, properties),
+            };
             VkResult result = vkAllocateMemory(device, &info, nullptr, &m_HostVisibleMemory);
             ENG_ASSERT(result == VK_SUCCESS, "Failed to allocate host visible memory.");
         }
@@ -205,17 +207,17 @@ namespace vc
 
         BufferUtils::UnmapMemory(m_Context, m_HostVisibleMemory);
         vkDestroyBuffer(device, m_VertexBuffer, nullptr);
-        for (u32 i = 0; i < swapchainImageCount; i++)
-        {
-            vkDestroyBuffer(device, m_UniformBuffers[i], nullptr);
-            vkDestroyBuffer(device, m_StorageBuffers[i], nullptr);
-            vkDestroyBuffer(device, m_IndirectBuffers[i], nullptr);
-        }
+        for (auto& uniformBuffer : m_UniformBuffers)
+            vkDestroyBuffer(device, uniformBuffer, nullptr);
+        for (auto& storageBuffer : m_StorageBuffers)
+            vkDestroyBuffer(device, storageBuffer, nullptr);
+        for (auto& indirectBuffer : m_IndirectBuffers)
+            vkDestroyBuffer(device, indirectBuffer, nullptr);
         vkFreeMemory(device, m_DeviceLocalMemory, nullptr);
         vkFreeMemory(device, m_HostVisibleMemory, nullptr);
     }
 
-    void WorldRenderer::Render(VkCommandBuffer commandBuffer, World const& world, mat4 const& viewProjection)
+    auto WorldRenderer::Render(VkCommandBuffer commandBuffer, World const& world, mat4 const& viewProjection) -> Statistics
     {
         // TODO: use compute shader to decide which chunks get rendered rather than cpu-side decisions.
 
@@ -239,6 +241,7 @@ namespace vc
 
         // Add regions for all chunks that have not yet been added from the world.
         {
+            VkCommandBuffer commandBuffer = m_Context.BeginOneTimeCommandBuffer();
             for (auto& [position, chunk] : world.m_Chunks)
             {
                 if (not m_ChunkSubmeshRegions.contains(chunk.get()) and not chunk->IsGenerating())
@@ -250,20 +253,24 @@ namespace vc
                             chunk->GenerateMesh();
                             break;
                         case ChunkGenerationStage::Mesh:
-                            AddOrReplaceChunkMesh(chunk.get());
+                            AddOrReplaceChunkMesh(commandBuffer, chunk.get());
                             break;
                     }
                 }
             }
+            m_Context.EndOneTimeCommandBuffer(commandBuffer);
         }
 
         // TODO: cull chunks
         auto& renderingRegions = m_ChunkSubmeshRegions;
         u32 drawCount = u32(renderingRegions.size());
 
-        // No point in doing anything.
-        if (drawCount == 0)
-            return;
+        auto shader = m_Shader.Get();
+
+        // No point in doing anything if nothing will be rendered.
+
+        if (drawCount == 0 or not shader.Current)
+            return {};
 
         // Set uniform buffer data.
         VkDeviceSize uniformSize = sizeof(LocalUniformBuffer);
@@ -322,9 +329,8 @@ namespace vc
 
         // Update shader descriptors and bind shader.
         {
-            auto shader = m_Shader.Get();
-            if (shader.Old) // Defer old shader deletion until all previous frames have finished using it.
-                m_Context.DeferFree([shader = std::move(shader.Old)] {});
+            if (shader.Old)
+                m_Context.DeferFree([oldShader = std::move(shader.Old)] {});
 
             auto uniformBuffers = std::to_array<ShaderUniformBufferBinding>
             ({
@@ -346,7 +352,7 @@ namespace vc
         // Debug visualization.
         {
             ENG_GET_FUNC_VK_EXT(vkCmdSetPolygonModeEXT);
-            VkPolygonMode polygonMode = m_Wireframe.load(std::memory_order_acquire) ? VK_POLYGON_MODE_LINE : VK_POLYGON_MODE_FILL;
+            VkPolygonMode polygonMode = m_Wireframe.load(std::memory_order_relaxed) ? VK_POLYGON_MODE_LINE : VK_POLYGON_MODE_FILL;
             vkCmdSetPolygonModeEXT(commandBuffer, polygonMode);
         }
 
@@ -369,7 +375,7 @@ namespace vc
 
             VkRect2D scissor
             {
-                .offset = {0, 0},
+                .offset{0, 0},
                 .extent = extent,
             };
             vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
@@ -383,6 +389,17 @@ namespace vc
 
         // Draw everything.
         vkCmdDrawIndirect(commandBuffer, indirectBuffer, 0, drawCount, sizeof(VkDrawIndirectCommand));
+
+        return Statistics
+        {
+            .IndirectDrawCallCount = drawCount,
+            .InstanceCount = m_TotalInstanceCount,
+            .ChunkCount = u32(m_ChunkRegions.size()),
+            .UsedVertexBufferSize = m_UsedVertexBufferSize,
+            .UsedUniformBufferSize = uniformSize,
+            .UsedStorageBufferSize = storageSize,
+            .UsedIndirectBufferSize = indirectSize,
+        };
     }
 
     void WorldRenderer::ReloadShaders()
@@ -398,10 +415,10 @@ namespace vc
 
     void WorldRenderer::ToggleWireframe()
     {
-        m_Wireframe.fetch_xor(1, std::memory_order_release);
+        m_Wireframe.fetch_xor(1, std::memory_order_relaxed);
     }
 
-    void WorldRenderer::AddOrReplaceChunkMesh(Chunk* chunk)
+    void WorldRenderer::AddOrReplaceChunkMesh(VkCommandBuffer commandBuffer, Chunk* chunk)
     {
         ChunkMeshData meshData = *chunk->ConsumeGenerationStageOutput<ChunkMeshData>();
 
@@ -475,10 +492,11 @@ namespace vc
 
         // Add the region.
         m_ChunkRegions.emplace_back(vertexOffset, meshVertexSize);
+        m_TotalInstanceCount += meshInstanceCount;
+        m_UsedVertexBufferSize += meshVertexSize;
 
         // Copy the staging buffer to the vertex buffer.
         {
-            VkCommandBuffer commandBuffer = m_Context.BeginOneTimeCommandBuffer();
             VkBufferCopy region
             {
                 .srcOffset = 0,
@@ -486,7 +504,6 @@ namespace vc
                 .size = meshVertexSize,
             };
             vkCmdCopyBuffer(commandBuffer, stagingBuffer, m_VertexBuffer, 1, &region);
-            m_Context.EndOneTimeCommandBuffer(commandBuffer);
         }
     }
 
@@ -500,12 +517,17 @@ namespace vc
     void WorldRenderer::RemoveChunkMesh(std::unordered_multimap<Chunk*, ChunkSubmeshRegion>::iterator& it)
     {
         ENG_ASSERT(it != m_ChunkSubmeshRegions.end());
+        auto endEraseIt = std::next(it, m_ChunkSubmeshRegions.count(it->first));
         // Get the index into the "allocations" so it can be "deallocated".
         u32 index = it->second.RegionIndex;
 
+        for (decltype(auto) it2 = it; it2 != endEraseIt; ++it2)
+            m_TotalInstanceCount -= it->second.InstanceCount;
+        m_UsedVertexBufferSize -= m_ChunkRegions[index].VertexSize;
+
         // Remove all submeshes this chunk has.
         // NOTE: This can be removed immediately because it has already been copied to the indirect buffer.
-        it = m_ChunkSubmeshRegions.erase(it, std::next(it, m_ChunkSubmeshRegions.count(it->first)));
+        it = m_ChunkSubmeshRegions.erase(it, endEraseIt);
         // Wait until all previous frames have stopped using the old chunk data to remove the "allocation".
         m_Context.DeferFree([this, index]
         {

@@ -5,7 +5,6 @@
 #include "Engine/Core/DataTypes.hpp"
 #include <vulkan/vulkan.h>
 #include <functional>
-#include <memory>
 #include <vector>
 
 #define ENG_GET_FUNC_VK_EXT(name) \
@@ -19,7 +18,6 @@ namespace eng
     {
         ENG_IMMOVABLE_UNCOPYABLE_CLASS(RenderContext);
     public:
-
         VkCommandBuffer BeginOneTimeCommandBuffer();
         void EndOneTimeCommandBuffer(VkCommandBuffer commandBuffer);
 
@@ -84,44 +82,44 @@ namespace eng
     private:
         // Per-application context.
 
-        inline static u32 s_RenderContextCount = 0;
-        inline static VkInstance s_Instance = VK_NULL_HANDLE;
+        inline static u16 s_RenderContextCount = 0;
+        inline static VkInstance s_Instance = nullptr;
         inline static std::unordered_map<small_string_view, PFN_vkVoidFunction> s_ExtensionFunctions;
 #if ENG_CONFIG_DEBUG
-        inline static VkDebugUtilsMessengerEXT s_DebugUtilsMessenger = VK_NULL_HANDLE;
+        inline static VkDebugUtilsMessengerEXT s_DebugUtilsMessenger = nullptr;
 #endif
-        inline static VkPhysicalDevice s_PhysicalDevice = VK_NULL_HANDLE;
+        inline static VkPhysicalDevice s_PhysicalDevice = nullptr;
         inline static VkPhysicalDeviceProperties s_PhysicalDeviceProperties{};
 
         // TODO: Per-window context
 
         GLFWwindow* m_Window = nullptr; // Non-owning
 
-        VkSurfaceKHR m_Surface = VK_NULL_HANDLE;
-        VkDevice m_Device = VK_NULL_HANDLE;
+        VkSurfaceKHR m_Surface = nullptr;
+        VkDevice m_Device = nullptr;
         u32 m_GraphicsFamily = VK_QUEUE_FAMILY_IGNORED;
         u32 m_PresentFamily = VK_QUEUE_FAMILY_IGNORED;
-        VkQueue m_GraphicsQueue = VK_NULL_HANDLE;
-        VkQueue m_PresentQueue = VK_NULL_HANDLE;
+        VkQueue m_GraphicsQueue = nullptr;
+        VkQueue m_PresentQueue = nullptr;
 
         // Swapchain
 
-        VkSwapchainKHR m_Swapchain = VK_NULL_HANDLE;
-        std::unique_ptr<VkImage[]> m_SwapchainImages;
-        std::unique_ptr<VkImageView[]> m_SwapchainImageViews;
+        VkSwapchainKHR m_Swapchain = nullptr;
+        std::vector<VkImage> m_SwapchainImages;
+        std::vector<VkImageView> m_SwapchainImageViews;
         u32 m_SwapchainImageCount = 0;
         VkExtent2D m_SwapchainExtent{0, 0};
         VkSurfaceFormatKHR m_SwapchainSurfaceFormat{};
         bool m_RecreateSwapchain = false;
         bool m_WasSwapchainRecreated = false;
 
-        VkCommandPool m_CommandPool = VK_NULL_HANDLE;
+        VkCommandPool m_CommandPool = nullptr;
         u32 m_FrameIndex = 0;
         u32 m_SemaphoreIndex = 0;
-        std::unique_ptr<VkCommandBuffer[]> m_FrameCommandBuffers;
-        std::unique_ptr<VkFence[]> m_FrameInFlightFences;
-        std::unique_ptr<VkSemaphore[]> m_ImageAcquiredSemaphores;
-        std::unique_ptr<VkSemaphore[]> m_RenderCompleteSemaphores;
+        std::vector<VkCommandBuffer> m_FrameCommandBuffers;
+        std::vector<VkFence> m_FrameInFlightFences;
+        std::vector<VkSemaphore> m_ImageAcquiredSemaphores;
+        std::vector<VkSemaphore> m_RenderCompleteSemaphores;
 
         struct FreeRAII
         {

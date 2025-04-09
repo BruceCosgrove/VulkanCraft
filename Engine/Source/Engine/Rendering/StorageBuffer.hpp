@@ -16,9 +16,8 @@ namespace eng
     // NOTE: allocates enough memory for each frame in flight in the same buffer object.
     class StorageBuffer
     {
-    public:
         ENG_IMMOVABLE_UNCOPYABLE_CLASS(StorageBuffer);
-
+    public:
         StorageBuffer(StorageBufferInfo const& info);
         ~StorageBuffer();
 
@@ -30,8 +29,8 @@ namespace eng
     private:
         RenderContext& m_Context; // non-owning
         VkDeviceSize m_Size = 0;
-        VkBuffer m_Buffer = VK_NULL_HANDLE;
-        VkDeviceMemory m_DeviceMemory = VK_NULL_HANDLE;
+        VkBuffer m_Buffer = nullptr;
+        VkDeviceMemory m_DeviceMemory = nullptr;
         std::span<u8> m_MappedMemory;
     };
 }

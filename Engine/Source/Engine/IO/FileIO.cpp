@@ -42,7 +42,7 @@ namespace eng
             if (!file.is_open())
                 return false;
             // Write the contents to the file.
-            return static_cast<bool>(file.write((char const*)contents.data(), std::ssize(contents)));
+            return bool(file.write((char const*)contents.data(), std::ssize(contents)));
         }
         catch (...)
         {
@@ -68,7 +68,7 @@ namespace eng
             // Allocate enough space and set contents' size.
             contents.resize(static_cast<u64>(fileSize));
             // Read the entire file into contents.
-            return static_cast<bool>(file.read((char*)contents.data(), fileSize));
+            return bool(file.read((char*)contents.data(), fileSize));
         }
         catch (...)
         {
@@ -85,7 +85,7 @@ namespace eng
             if (!file.is_open())
                 return false;
             // Read the entire file into the stream.
-            return static_cast<bool>(file.write((char const*)contents.data(), std::ssize(contents)));
+            return bool(file.write((char const*)contents.data(), std::ssize(contents)));
         }
         catch (...)
         {

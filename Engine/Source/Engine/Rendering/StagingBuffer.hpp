@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Engine/Core/ClassTypes.hpp"
+#include "Engine/Core/DataTypes.hpp"
 #include <vulkan/vulkan.h>
 
 namespace eng
@@ -10,11 +11,11 @@ namespace eng
     struct StagingBufferInfo
     {
         RenderContext* RenderContext = nullptr;
-        VkDeviceSize Size = 0;
+        u64 Size = 0;
         VkBufferUsageFlags Usage = 0;
     };
 
-    // A temporary buffer whose destruction is deferred until after N frames in flight have completed.
+    // A temporary buffer to transfer data to long-lived buffers.
     class StagingBuffer
     {
         ENG_IMMOVABLE_UNCOPYABLE_CLASS(StagingBuffer);
@@ -26,8 +27,8 @@ namespace eng
         VkBuffer GetBuffer() const;
     private:
         RenderContext& m_Context; // non-owning
-        VkBuffer m_Buffer = VK_NULL_HANDLE;
-        VkDeviceMemory m_DeviceMemory = VK_NULL_HANDLE;
+        VkBuffer m_Buffer = nullptr;
+        VkDeviceMemory m_DeviceMemory = nullptr;
         void* m_MappedMemory;
     };
 }

@@ -1,5 +1,6 @@
 #include "ThreadPool.hpp"
 #include "Engine/Core/Log.hpp"
+#include "Engine/Threading/ThreadTracer.hpp"
 
 namespace eng
 {
@@ -16,7 +17,7 @@ namespace eng
     {
         ENG_LOG_TRACE("Exiting thread pool with {} threads.", m_Threads.size());
 
-        m_Running.store(false, std::memory_order_release);
+        m_Running.store(false, std::memory_order_relaxed);
         m_TaskAvailable.notify_all();
     }
 
@@ -25,16 +26,15 @@ namespace eng
         ENG_LOG_TRACE("Submiting task to thread pool.");
 
         {
-            std::scoped_lock lock(m_TaskMutex);
+            std::unique_lock lock(m_TaskMutex);
             m_Tasks.push_back(std::move(task));
         }
-        m_TaskAvailable.notify_all();
+        m_TaskAvailable.notify_one();
     }
 
     void ThreadPool::ThreadFunction()
     {
-        u32 tid = std::this_thread::get_id()._Get_underlying_id();
-        ENG_LOG_TRACE("Starting pooled thread with tid={}.", tid);
+        ThreadTracer tracer("pooled");
 
         while (true)
         {
@@ -44,7 +44,7 @@ namespace eng
                 std::unique_lock lock(m_TaskMutex);
 
                 bool running = true, tasksRemaining = true;
-                while ((running = m_Running.load(std::memory_order_acquire)) and not (tasksRemaining = not m_Tasks.empty()))
+                while (not (tasksRemaining = not m_Tasks.empty()) and (running = m_Running.load(std::memory_order_relaxed)))
                     m_TaskAvailable.wait(lock);
 
                 if (not tasksRemaining)
@@ -54,11 +54,9 @@ namespace eng
             }
 
             // Perform the task.
-            ENG_LOG_TRACE("Starting task on pooled thread with tid={}.", tid);
+            ENG_LOG_TRACE("Starting task on pooled thread with tid={}.", tracer.GetTID()._Get_underlying_id());
             task();
-            ENG_LOG_TRACE("Finishing task on pooled thread with tid={}.", tid);
+            ENG_LOG_TRACE("Finishing task on pooled thread with tid={}.", tracer.GetTID()._Get_underlying_id());
         }
-
-        ENG_LOG_TRACE("Exiting pooled thread with tid={}.", tid);
     }
 }

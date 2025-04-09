@@ -14,7 +14,7 @@ namespace vc
         ENG_IMMOVABLE_UNCOPYABLE_CLASS(World);
     public:
         World();
-    public:
+
         Chunk* GetChunk(ChunkPos chunkPos);
     private:
         friend class WorldRenderer;

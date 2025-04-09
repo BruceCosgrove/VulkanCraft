@@ -9,7 +9,7 @@
 #include "Engine/Core/DataTypes.hpp"
 #include "Engine/Core/DebugBreak.hpp"
 #include "Engine/Core/Enums.hpp"
-#include "Engine/Core/FunctionBindings.hpp"
+#include "Engine/Core/ForEach.hpp"
 #include "Engine/Core/Log.hpp"
 #include "Engine/Core/Timestep.hpp"
 #include "Engine/Input/Keycode.hpp"
@@ -27,6 +27,7 @@
 #include "Engine/Rendering/FramebufferAttachment.hpp"
 #include "Engine/Rendering/Image.hpp"
 #include "Engine/Rendering/ImageUtils.hpp"
+#include "Engine/Rendering/IndirectBuffer.hpp"
 #include "Engine/Rendering/LocalTexture.hpp"
 #include "Engine/Rendering/RenderContext.hpp"
 #include "Engine/Rendering/RenderPass.hpp"
@@ -38,6 +39,8 @@
 #include "Engine/Rendering/UniformBuffer.hpp"
 #include "Engine/Rendering/VertexBuffer.hpp"
 #include "Engine/Threading/DynamicResource.hpp"
+#include "Engine/Threading/ThreadPool.hpp"
+#include "Engine/Threading/ThreadTracer.hpp"
 #include "Engine/Util/Timer.hpp"
 
 // Include glm

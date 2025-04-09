@@ -16,12 +16,13 @@ namespace eng
         VkDevice device = context.GetDevice();
 
         // Create the buffer.
-        VkBufferCreateInfo bufferInfo{};
-        bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-        bufferInfo.size = size;
-        bufferInfo.usage = usage;
-        bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-
+        VkBufferCreateInfo bufferInfo
+        {
+            .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
+            .size = size,
+            .usage = usage,
+            .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
+        };
         VkResult result = vkCreateBuffer(device, &bufferInfo, nullptr, &buffer);
         ENG_ASSERT(result == VK_SUCCESS, "Failed to create buffer.");
 
@@ -29,13 +30,14 @@ namespace eng
         VkMemoryRequirements memoryRequirements;
         vkGetBufferMemoryRequirements(device, buffer, &memoryRequirements);
 
-        VkMemoryAllocateInfo memoryAllocateInfo{};
-        memoryAllocateInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-        memoryAllocateInfo.allocationSize = memoryRequirements.size;
-        memoryAllocateInfo.memoryTypeIndex = SelectMemoryType(memoryRequirements.memoryTypeBits, properties);
-
         // Allocate the memory.
         // TODO: use https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator
+        VkMemoryAllocateInfo memoryAllocateInfo
+        {
+            .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
+            .allocationSize = memoryRequirements.size,
+            .memoryTypeIndex = SelectMemoryType(memoryRequirements.memoryTypeBits, properties),
+        };
         result = vkAllocateMemory(device, &memoryAllocateInfo, nullptr, &deviceMemory);
         ENG_ASSERT(result == VK_SUCCESS, "Failed to allocate buffer memory.");
 
@@ -65,11 +67,11 @@ namespace eng
     {
         VkPhysicalDevice physicalDevice = RenderContext::GetPhysicalDevice();
 
-        VkPhysicalDeviceMemoryProperties deviceProperties;
-        vkGetPhysicalDeviceMemoryProperties(physicalDevice, &deviceProperties);
+        VkPhysicalDeviceMemoryProperties memoryProperties;
+        vkGetPhysicalDeviceMemoryProperties(physicalDevice, &memoryProperties);
 
-        for (u32 i = 0; i < deviceProperties.memoryTypeCount; i++)
-            if ((memoryType & (1 << i)) and (deviceProperties.memoryTypes[i].propertyFlags & properties) == properties)
+        for (u32 i = 0; i < memoryProperties.memoryTypeCount; i++)
+            if ((memoryType & (1 << i)) and (memoryProperties.memoryTypes[i].propertyFlags & properties) == properties)
                 return i;
 
         ENG_ASSERT(false, "Failed to find memory type.");

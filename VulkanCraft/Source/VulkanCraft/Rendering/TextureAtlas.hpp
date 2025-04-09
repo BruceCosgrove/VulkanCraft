@@ -8,9 +8,8 @@ namespace vc
 {
     class TextureAtlas
     {
-    public:
         ENG_IMMOVABLE_UNCOPYABLE_CLASS(TextureAtlas);
-
+    public:
         TextureAtlas(
             RenderContext& context,
             u32 textureSize,
@@ -23,14 +22,13 @@ namespace vc
         uvec3 GetTextureCount() const;
         vec2 GetTextureScale() const;
         u32 GetTexturesPerLayer() const;
-
     private:
         void Stitch(std::span<LocalTexture> textures);
         void CreateSampler();
     private:
         RenderContext& m_Context; // non-owning
 
-        VkSampler m_Sampler = VK_NULL_HANDLE;
+        VkSampler m_Sampler = nullptr;
         std::shared_ptr<Texture2DArray> m_TextureAtlas;
 
         u32 m_TextureSize;

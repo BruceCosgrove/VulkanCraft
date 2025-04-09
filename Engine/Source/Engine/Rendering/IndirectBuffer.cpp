@@ -19,9 +19,9 @@ namespace eng
             m_DeviceMemory
         );
 
-        u8* mappedMemory = nullptr;
-        BufferUtils::MapMemory(m_Context, m_DeviceMemory, 0, totalSize, (void*&)mappedMemory);
-        m_MappedMemory = std::span(mappedMemory, totalSize);
+        void* mappedMemory = nullptr;
+        BufferUtils::MapMemory(m_Context, m_DeviceMemory, 0, totalSize, mappedMemory);
+        m_MappedMemory = std::span((u8*)mappedMemory, totalSize);
     }
 
     IndirectBuffer::~IndirectBuffer()

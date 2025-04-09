@@ -9,9 +9,8 @@ namespace eng
 
     class Image
     {
-    public:
         ENG_IMMOVABLE_UNCOPYABLE_CLASS(Image);
-
+    public:
         Image(RenderContext* context);
         ~Image();
 
@@ -19,8 +18,8 @@ namespace eng
         VkImageView GetImageView() const;
     protected:
         RenderContext& m_Context; // non-owning
-        VkImage m_Image = VK_NULL_HANDLE;
-        VkDeviceMemory m_DeviceMemory = VK_NULL_HANDLE;
-        VkImageView m_ImageView = VK_NULL_HANDLE;
+        VkImage m_Image = nullptr;
+        VkDeviceMemory m_DeviceMemory = nullptr;
+        VkImageView m_ImageView = nullptr;
     };
 }

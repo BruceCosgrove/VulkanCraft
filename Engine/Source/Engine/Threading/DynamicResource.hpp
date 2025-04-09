@@ -44,7 +44,7 @@ namespace eng
             {
                 old = std::move(m_Current);
                 m_Current = std::move(m_Next);
-                m_Loading.store(false, std::memory_order_release);
+                m_Loading.store(false, std::memory_order_relaxed);
             }
             return {m_Current, std::move(old)};
         }
@@ -54,7 +54,7 @@ namespace eng
         requires(requires(LoadFunction&& loadFunction) { { loadFunction() } -> std::same_as<Resource>; })
         void Load(LoadFunction&& loadFunction)
         {
-            if (not m_Loading.exchange(true, std::memory_order_acquire))
+            if (not m_Loading.exchange(true, std::memory_order_relaxed))
             {
                 m_Next = loadFunction();
                 m_Loaded.store(true, std::memory_order_release);
@@ -64,7 +64,7 @@ namespace eng
         // Returns if the next version of the resource is currently loading.
         bool Loading() const
         {
-            return m_Loading.load(std::memory_order_acquire);
+            return m_Loading.load(std::memory_order_relaxed);
         }
     private:
         Resource m_Current;

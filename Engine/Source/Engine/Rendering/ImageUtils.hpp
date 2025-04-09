@@ -11,9 +11,8 @@ namespace eng
     // Helper class for common image functionality.
     class ImageUtils
     {
-    public:
         ENG_STATIC_CLASS(ImageUtils);
-
+    public:
         static void CreateImage(
             RenderContext& context,
             VkImageType type,
@@ -22,7 +21,7 @@ namespace eng
             VkExtent3D extent,
             u32 layerCount,
             VkImageUsageFlags usage,
-            VkMemoryPropertyFlags flags,
+            VkMemoryPropertyFlags properties,
             VkImageAspectFlags aspect,
             VkImage& image,
             VkImageView& imageView,

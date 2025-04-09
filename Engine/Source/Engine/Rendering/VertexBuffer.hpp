@@ -16,9 +16,8 @@ namespace eng
     // NOTE: this assumes it will be updated every frame, and thus does not bother with a staging buffer.
     class VertexBuffer
     {
-    public:
         ENG_IMMOVABLE_UNCOPYABLE_CLASS(VertexBuffer);
-
+    public:
         VertexBuffer(VertexBufferInfo const& info);
         ~VertexBuffer();
 
@@ -28,8 +27,8 @@ namespace eng
     private:
         RenderContext& m_Context; // non-owning
         VkDeviceSize m_Size = 0;
-        VkBuffer m_Buffer = VK_NULL_HANDLE;
-        VkDeviceMemory m_DeviceMemory = VK_NULL_HANDLE;
+        VkBuffer m_Buffer = nullptr;
+        VkDeviceMemory m_DeviceMemory = nullptr;
         void* m_MappedMemory = nullptr;
     };
 }

@@ -4,7 +4,6 @@
 #include "Engine/Core/DataTypes.hpp"
 #include "Engine/Input/LayerStack.hpp"
 #include "Engine/Rendering/RenderContext.hpp"
-#include <string>
 
 struct GLFWwindow;
 
@@ -34,7 +33,7 @@ namespace eng
 
     struct WindowInfo
     {
-        string Title = "TODO: Window Title";
+        small_string Title = "TODO: Window Title";
         u32 Width = 1280;
         u32 Height = 720;
         bool Resizable = true;

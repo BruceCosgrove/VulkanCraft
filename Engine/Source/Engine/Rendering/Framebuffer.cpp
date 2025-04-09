@@ -9,18 +9,18 @@ namespace eng
         : m_Context(*info.RenderContext)
     {
         VkExtent2D extent = m_Context.GetSwapchainExtent();
-        VkDevice device = m_Context.GetDevice();
 
-        VkFramebufferCreateInfo framebufferInfo{};
-        framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-        framebufferInfo.renderPass = info.RenderPass;
-        framebufferInfo.attachmentCount = static_cast<u32>(info.Attachments.size());
-        framebufferInfo.pAttachments = info.Attachments.data();
-        framebufferInfo.width = extent.width;
-        framebufferInfo.height = extent.height;
-        framebufferInfo.layers = 1; // TODO
-
-        VkResult result = vkCreateFramebuffer(device, &framebufferInfo, nullptr, &m_Framebuffer);
+        VkFramebufferCreateInfo framebufferInfo
+        {
+            .sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
+            .renderPass = info.RenderPass,
+            .attachmentCount = static_cast<u32>(info.Attachments.size()),
+            .pAttachments = info.Attachments.data(),
+            .width = extent.width,
+            .height = extent.height,
+            .layers = 1, // TODO
+        };
+        VkResult result = vkCreateFramebuffer(m_Context.GetDevice(), &framebufferInfo, nullptr, &m_Framebuffer);
         ENG_ASSERT(result == VK_SUCCESS, "Failed to create framebuffer.");
     }
 

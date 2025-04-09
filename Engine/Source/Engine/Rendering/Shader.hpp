@@ -3,15 +3,12 @@
 #include "Engine/Core/ClassTypes.hpp"
 #include "Engine/Core/DataTypes.hpp"
 #include <vulkan/vulkan.h>
-#include <memory>
 #include <span>
 #include <vector>
 
 namespace eng
 {
     class RenderContext;
-    class UniformBuffer;
-    class StorageBuffer;
 
     struct ShaderVertexBufferBinding
     {
@@ -23,7 +20,7 @@ namespace eng
     struct ShaderUniformBufferBinding
     {
         u32 Binding = 0;
-        VkBuffer Buffer = VK_NULL_HANDLE;
+        VkBuffer Buffer = nullptr;
         u64 Offset = 0;
         u64 Size = 0;
     };
@@ -31,7 +28,7 @@ namespace eng
     struct ShaderStorageBufferBinding
     {
         u32 Binding = 0;
-        VkBuffer Buffer = VK_NULL_HANDLE;
+        VkBuffer Buffer = nullptr;
         u64 Offset = 0;
         u64 Size = 0;
     };
@@ -39,8 +36,8 @@ namespace eng
     struct ShaderSamplerBinding
     {
         u32 Binding = 0;
-        VkSampler Sampler = VK_NULL_HANDLE;
-        VkImageView ImageView = VK_NULL_HANDLE;
+        VkSampler Sampler = nullptr;
+        VkImageView ImageView = nullptr;
     };
 
     struct ShaderDescriptorSetData
@@ -56,16 +53,15 @@ namespace eng
         path Filepath;
         std::span<ShaderVertexBufferBinding> VertexBufferBindings;
         VkPrimitiveTopology Topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
-        VkRenderPass RenderPass = VK_NULL_HANDLE;
+        VkRenderPass RenderPass = nullptr;
     };
 
     // TODO: separate shader from pipeline.
     // The pipeline can be recreated without recreating the shader.
     class Shader
     {
-    public:
         ENG_IMMOVABLE_UNCOPYABLE_CLASS(Shader);
-
+    public:
         Shader(ShaderInfo const& info);
         ~Shader();
 
@@ -104,14 +100,14 @@ namespace eng
     private:
         RenderContext& m_Context; // non-owning
 
-        VkDescriptorSetLayout m_DescriptorSetLayout = VK_NULL_HANDLE;
-        VkDescriptorPool m_DescriptorPool = VK_NULL_HANDLE;
+        VkDescriptorSetLayout m_DescriptorSetLayout = nullptr;
+        VkDescriptorPool m_DescriptorPool = nullptr;
         // NOTE: Assuming one descriptor set per frame.
         // Realistically, there can/should be up to four,
         // but this is the simplest option right now.
         std::vector<VkDescriptorSet> m_DescriptorSets;
 
-        VkPipelineLayout m_PipelineLayout = VK_NULL_HANDLE;
-        VkPipeline m_Pipeline = VK_NULL_HANDLE;
+        VkPipelineLayout m_PipelineLayout = nullptr;
+        VkPipeline m_Pipeline = nullptr;
     };
 }

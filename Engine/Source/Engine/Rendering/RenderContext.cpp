@@ -1,16 +1,9 @@
 #include "RenderContext.hpp"
-#include "Engine/Core/Attributes.hpp"
 #include "Engine/Core/Log.hpp"
-#include "Engine/Rendering/Framebuffer.hpp"
-#include "Engine/Rendering/Image.hpp"
-#include "Engine/Rendering/ImageUtils.hpp"
-#include "Engine/Rendering/RenderPass.hpp"
-#include "Engine/Rendering/Shader.hpp"
 #include <glfw/glfw3.h>
 #include <array>
 #include <optional>
 #include <span>
-#include <vector>
 
 namespace eng
 {
@@ -43,42 +36,62 @@ namespace eng
 
     VkCommandBuffer RenderContext::BeginOneTimeCommandBuffer()
     {
-        VkCommandBufferAllocateInfo allocateInfo{};
-        allocateInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-        allocateInfo.commandPool = m_CommandPool;
-        allocateInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-        allocateInfo.commandBufferCount = 1;
-
         VkCommandBuffer commandBuffer;
-        VkResult result = vkAllocateCommandBuffers(m_Device, &allocateInfo, &commandBuffer);
-        ENG_ASSERT(result == VK_SUCCESS, "Failed to allocate one-time command buffer.");
 
-        VkCommandBufferBeginInfo beginInfo{};
-        beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-        beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+        // Allocate the command buffer.
+        {
+            VkCommandBufferAllocateInfo info
+            {
+                .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
+                .commandPool = m_CommandPool,
+                .level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
+                .commandBufferCount = 1,
+            };
+            VkResult result = vkAllocateCommandBuffers(m_Device, &info, &commandBuffer);
+            ENG_ASSERT(result == VK_SUCCESS, "Failed to allocate one-time command buffer.");
+        }
 
-        result = vkBeginCommandBuffer(commandBuffer, &beginInfo);
-        ENG_ASSERT(result == VK_SUCCESS, "Failed to begin one-time command buffer.");
+        // Begin the command buffer.
+        {
+            VkCommandBufferBeginInfo info
+            {
+                .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+                .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
+            };
+            VkResult result = vkBeginCommandBuffer(commandBuffer, &info);
+            ENG_ASSERT(result == VK_SUCCESS, "Failed to begin one-time command buffer.");
+        }
 
         return commandBuffer;
     }
 
     void RenderContext::EndOneTimeCommandBuffer(VkCommandBuffer commandBuffer)
     {
-        VkResult result = vkEndCommandBuffer(commandBuffer);
-        ENG_ASSERT(result == VK_SUCCESS, "Failed to end one-time command buffer.");
+        // End the command buffer.
+        {
+            VkResult result = vkEndCommandBuffer(commandBuffer);
+            ENG_ASSERT(result == VK_SUCCESS, "Failed to end one-time command buffer.");
+        }
 
-        VkSubmitInfo info{};
-        info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-        info.commandBufferCount = 1;
-        info.pCommandBuffers = &commandBuffer;
+        // Submit the command buffer to the queue.
+        {
+            VkSubmitInfo info
+            {
+                .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+                .commandBufferCount = 1,
+                .pCommandBuffers = &commandBuffer,
+            };
+            VkResult result = vkQueueSubmit(m_GraphicsQueue, 1, &info, nullptr);
+            ENG_ASSERT(result == VK_SUCCESS, "Failed to submit queue for one-time command buffer.");
+        }
 
-        result = vkQueueSubmit(m_GraphicsQueue, 1, &info, VK_NULL_HANDLE);
-        ENG_ASSERT(result == VK_SUCCESS, "Failed to submit queue for one-time command buffer.");
+        // Wait for the commands to finish.
+        {
+            VkResult result = vkQueueWaitIdle(m_GraphicsQueue);
+            ENG_ASSERT(result == VK_SUCCESS, "Failed to wait for queue for one-time command buffer.");
+        }
 
-        result = vkQueueWaitIdle(m_GraphicsQueue);
-        ENG_ASSERT(result == VK_SUCCESS, "Failed to wait for queue for one-time command buffer.");
-
+        // Free the command buffer.
         vkFreeCommandBuffers(m_Device, m_CommandPool, 1, &commandBuffer);
     }
 
@@ -258,10 +271,11 @@ namespace eng
 
         // Begin the frame's command buffer.
         {
-            VkCommandBufferBeginInfo info{};
-            info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-            info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-
+            VkCommandBufferBeginInfo info
+            {
+                .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+                .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
+            };
             result = vkBeginCommandBuffer(frameCommandBuffer, &info);
             ENG_ASSERT(result == VK_SUCCESS, "Failed to begin command buffer.");
         }
@@ -273,26 +287,26 @@ namespace eng
     {
         ENG_ASSERT(not m_RecreateSwapchain);
 
-        VkResult result = VK_SUCCESS;
         VkSemaphore imageAcquiredSemaphore = m_ImageAcquiredSemaphores[m_SemaphoreIndex];
         VkSemaphore renderCompleteSemaphore = m_RenderCompleteSemaphores[m_SemaphoreIndex];
         VkFence frameInFlightFence = m_FrameInFlightFences[m_FrameIndex];
         VkCommandBuffer frameCommandBuffer = m_FrameCommandBuffers[m_FrameIndex];
 
-        // End the frame's command buffer and submit
+        // End the frame's command buffer and submit it to the graphics queue.
         {
             VkPipelineStageFlags waitMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-            VkSubmitInfo info{};
-            info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-            info.waitSemaphoreCount = 1;
-            info.pWaitSemaphores = &imageAcquiredSemaphore;
-            info.pWaitDstStageMask = &waitMask;
-            info.commandBufferCount = 1;
-            info.pCommandBuffers = &frameCommandBuffer;
-            info.signalSemaphoreCount = 1;
-            info.pSignalSemaphores = &renderCompleteSemaphore;
-
-            result = vkEndCommandBuffer(frameCommandBuffer);
+            VkSubmitInfo info
+            {
+                .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+                .waitSemaphoreCount = 1,
+                .pWaitSemaphores = &imageAcquiredSemaphore,
+                .pWaitDstStageMask = &waitMask,
+                .commandBufferCount = 1,
+                .pCommandBuffers = &frameCommandBuffer,
+                .signalSemaphoreCount = 1,
+                .pSignalSemaphores = &renderCompleteSemaphore,
+            };
+            VkResult result = vkEndCommandBuffer(frameCommandBuffer);
             ENG_ASSERT(result == VK_SUCCESS, "Failed to end command buffer.");
             result = vkQueueSubmit(m_GraphicsQueue, 1, &info, frameInFlightFence);
             ENG_ASSERT(result == VK_SUCCESS, "Failed to submit render queue.");
@@ -304,15 +318,16 @@ namespace eng
             // to present them all at once with one call to vkQueuePresentKHR,
             // giving info all their swapchains and frame indices, then checking
             // all their results via info.pResults.
-            VkPresentInfoKHR info{};
-            info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
-            info.waitSemaphoreCount = 1;
-            info.pWaitSemaphores = &renderCompleteSemaphore;
-            info.swapchainCount = 1;
-            info.pSwapchains = &m_Swapchain;
-            info.pImageIndices = &m_FrameIndex;
-
-            result = vkQueuePresentKHR(m_PresentQueue, &info);
+            VkPresentInfoKHR info
+            {
+                .sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
+                .waitSemaphoreCount = 1,
+                .pWaitSemaphores = &renderCompleteSemaphore,
+                .swapchainCount = 1,
+                .pSwapchains = &m_Swapchain,
+                .pImageIndices = &m_FrameIndex,
+            };
+            VkResult result = vkQueuePresentKHR(m_PresentQueue, &info);
             if (result == VK_ERROR_OUT_OF_DATE_KHR or result == VK_SUBOPTIMAL_KHR)
             {
                 m_RecreateSwapchain = true;
@@ -345,18 +360,21 @@ namespace eng
         char const** glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
         extensions.append_range(std::span<char const*>(glfwExtensions, glfwExtensionCount));
 
-        VkApplicationInfo applicationInfo{};
-        applicationInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
-        applicationInfo.apiVersion = VK_API_VERSION_1_3;
+        VkApplicationInfo applicationInfo
+        {
+            .sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
+            .apiVersion = VK_API_VERSION_1_3,
+        };
 
-        VkInstanceCreateInfo info{};
-        info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
-        info.pApplicationInfo = &applicationInfo;
-        info.enabledLayerCount = static_cast<u32>(layers.size());
-        info.ppEnabledLayerNames = layers.data();
-        info.enabledExtensionCount = static_cast<u32>(extensions.size());
-        info.ppEnabledExtensionNames = extensions.data();
-
+        VkInstanceCreateInfo info
+        {
+            .sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
+            .pApplicationInfo = &applicationInfo,
+            .enabledLayerCount = u32(layers.size()),
+            .ppEnabledLayerNames = layers.data(),
+            .enabledExtensionCount = u32(extensions.size()),
+            .ppEnabledExtensionNames = extensions.data(),
+        };
         VkResult result = vkCreateInstance(&info, nullptr, &s_Instance);
         ENG_ASSERT(result == VK_SUCCESS, "Failed to create Vulkan instance.");
     }
@@ -364,19 +382,21 @@ namespace eng
 #if ENG_CONFIG_DEBUG
     void RenderContext::CreateDebugUtilsMessenger()
     {
-        VkDebugUtilsMessengerCreateInfoEXT info{};
-        info.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
-        info.messageSeverity =
-            VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT |
-            VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT |
-            VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT |
-            VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
-        info.messageType =
-            VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT |
-            VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT |
-            VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT |
-            VK_DEBUG_UTILS_MESSAGE_TYPE_DEVICE_ADDRESS_BINDING_BIT_EXT;
-        info.pfnUserCallback = &DebugUtilsMessengerCallback;
+        VkDebugUtilsMessengerCreateInfoEXT info
+        {
+            .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT,
+            .messageSeverity =
+                VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT |
+                VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT |
+                VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT |
+                VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT,
+            .messageType =
+                VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT |
+                VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT |
+                VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT |
+                VK_DEBUG_UTILS_MESSAGE_TYPE_DEVICE_ADDRESS_BINDING_BIT_EXT,
+            .pfnUserCallback = &DebugUtilsMessengerCallback,
+        };
 
         ENG_GET_FUNC_VK_EXT(vkCreateDebugUtilsMessengerEXT);
         VkResult result = vkCreateDebugUtilsMessengerEXT(s_Instance, &info, nullptr, &s_DebugUtilsMessenger);
@@ -437,12 +457,12 @@ namespace eng
         vkGetPhysicalDeviceQueueFamilyProperties(s_PhysicalDevice, &count, queueFamilyProperties.data());
 
         std::optional<u32> graphicsFamily, presentFamily;
-        for (u32 i = 0; i < count and !(graphicsFamily and presentFamily); i++)
+        for (u32 i = 0; i < count and not(graphicsFamily and presentFamily); i++)
         {
-            if (!graphicsFamily and queueFamilyProperties[i].queueFlags & VK_QUEUE_GRAPHICS_BIT)
+            if (not graphicsFamily and queueFamilyProperties[i].queueFlags & VK_QUEUE_GRAPHICS_BIT)
                 graphicsFamily = i;
 
-            if (!presentFamily)
+            if (not presentFamily)
             {
                 VkBool32 presentSupported;
                 VkResult result = vkGetPhysicalDeviceSurfaceSupportKHR(s_PhysicalDevice, i, m_Surface, &presentSupported);
@@ -459,17 +479,18 @@ namespace eng
 
     void RenderContext::CreateLogicalDevice()
     {
+        // TODO: figure out where these extensions should be gotten from.
         auto extensions = std::to_array<char const*>
         ({
             VK_KHR_SWAPCHAIN_EXTENSION_NAME,
-            VK_EXT_EXTENDED_DYNAMIC_STATE_3_EXTENSION_NAME, // TODO
-            VK_KHR_SHADER_DRAW_PARAMETERS_EXTENSION_NAME, // TODO
+            VK_EXT_EXTENDED_DYNAMIC_STATE_3_EXTENSION_NAME,
+            VK_KHR_SHADER_DRAW_PARAMETERS_EXTENSION_NAME,
         });
 
         f32 priority = 1.0f;
 
-        VkDeviceQueueCreateInfo deviceQueueCreateInfos[2]{};
         u32 queueCount = 1;
+        VkDeviceQueueCreateInfo deviceQueueCreateInfos[2]{};
         deviceQueueCreateInfos[0].sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
         deviceQueueCreateInfos[0].queueFamilyIndex = m_GraphicsFamily;
         deviceQueueCreateInfos[0].queueCount = 1;
@@ -484,30 +505,35 @@ namespace eng
             deviceQueueCreateInfos[1].pQueuePriorities = &priority;
         }
 
-        VkPhysicalDeviceExtendedDynamicState3FeaturesEXT dynamicState3Features{};
-        dynamicState3Features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_EXTENDED_DYNAMIC_STATE_3_FEATURES_EXT;
-        dynamicState3Features.extendedDynamicState3PolygonMode = VK_TRUE; // TODO
+        // TODO: figure out where these extensions should be gotten from.
+        VkPhysicalDeviceExtendedDynamicState3FeaturesEXT dynamicState3Features
+        {
+            .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_EXTENDED_DYNAMIC_STATE_3_FEATURES_EXT,
+            .extendedDynamicState3PolygonMode = VK_TRUE,
+        };
+        VkPhysicalDeviceShaderDrawParametersFeatures shaderDrawParametersFeatures
+        {
+            .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_DRAW_PARAMETERS_FEATURES,
+            .pNext = &dynamicState3Features,
+            .shaderDrawParameters = VK_TRUE,
+        };
+        VkPhysicalDeviceFeatures features
+        {
+            .multiDrawIndirect = VK_TRUE,
+            .fillModeNonSolid = VK_TRUE,
+        };
 
-        VkPhysicalDeviceShaderDrawParametersFeatures shaderDrawParametersFeatures{};
-        shaderDrawParametersFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_DRAW_PARAMETERS_FEATURES;
-        shaderDrawParametersFeatures.pNext = &dynamicState3Features;
-        shaderDrawParametersFeatures.shaderDrawParameters = VK_TRUE; // TODO
-
-        VkPhysicalDeviceFeatures features{};
-        features.multiDrawIndirect = VK_TRUE; // TODO
-        features.drawIndirectFirstInstance = VK_TRUE; // TODO
-        features.fillModeNonSolid = VK_TRUE; // TODO
-
-        VkDeviceCreateInfo deviceCreateInfo{};
-        deviceCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
-        deviceCreateInfo.pNext = &shaderDrawParametersFeatures;
-        deviceCreateInfo.queueCreateInfoCount = queueCount;
-        deviceCreateInfo.pQueueCreateInfos = deviceQueueCreateInfos;
-        deviceCreateInfo.enabledExtensionCount = static_cast<u32>(extensions.size());
-        deviceCreateInfo.ppEnabledExtensionNames = extensions.data();
-        deviceCreateInfo.pEnabledFeatures = &features;
-
-        VkResult result = vkCreateDevice(s_PhysicalDevice, &deviceCreateInfo, nullptr, &m_Device);
+        VkDeviceCreateInfo info
+        {
+            .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
+            .pNext = &shaderDrawParametersFeatures,
+            .queueCreateInfoCount = queueCount,
+            .pQueueCreateInfos = deviceQueueCreateInfos,
+            .enabledExtensionCount = u32(extensions.size()),
+            .ppEnabledExtensionNames = extensions.data(),
+            .pEnabledFeatures = &features,
+        };
+        VkResult result = vkCreateDevice(s_PhysicalDevice, &info, nullptr, &m_Device);
         ENG_ASSERT(result == VK_SUCCESS, "Failed to create logical device.");
 
         vkGetDeviceQueue(m_Device, m_GraphicsFamily, 0, &m_GraphicsQueue);
@@ -522,7 +548,6 @@ namespace eng
 
         // Create or recreate the swapchain.
         {
-            std::unique_ptr<VkImageView[]> oldSwapchainImageViews = std::move(m_SwapchainImageViews);
             VkSwapchainKHR oldSwapchain = m_Swapchain;
 
             // Choose swapchain properties.
@@ -531,15 +556,23 @@ namespace eng
             VkSurfaceFormatKHR surfaceFormat = SelectSurfaceFormat();
             VkPresentModeKHR presentMode = SelectPresentMode();
 
-            VkSwapchainCreateInfoKHR info{};
-            info.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
-            info.surface = m_Surface;
-            info.minImageCount = imageCount;
-            info.imageFormat = surfaceFormat.format;
-            info.imageColorSpace = surfaceFormat.colorSpace;
-            info.imageExtent = extent;
-            info.imageArrayLayers = 1; // NOTE: Set to 2 for VR (one per eye).
-            info.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+            VkSwapchainCreateInfoKHR info
+            {
+                .sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
+                .surface = m_Surface,
+                .minImageCount = imageCount,
+                .imageFormat = surfaceFormat.format,
+                .imageColorSpace = surfaceFormat.colorSpace,
+                .imageExtent = extent,
+                .imageArrayLayers = 1, // NOTE: Set to 2 for VR (one per eye).
+                .imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+
+                .preTransform = surfaceCapabilities.currentTransform,
+                .compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR,
+                .presentMode = presentMode,
+                .clipped = VK_TRUE,
+                .oldSwapchain = oldSwapchain,
+            };
 
             if (m_GraphicsFamily != m_PresentFamily)
             {
@@ -548,12 +581,6 @@ namespace eng
             }
             auto queueFamilyIndices = std::to_array({m_GraphicsFamily, m_PresentFamily});
             info.pQueueFamilyIndices = queueFamilyIndices.data();
-
-            info.preTransform = surfaceCapabilities.currentTransform;
-            info.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
-            info.presentMode = presentMode;
-            info.clipped = VK_TRUE;
-            info.oldSwapchain = oldSwapchain;
 
             // Create swapchain.
             result = vkCreateSwapchainKHR(m_Device, &info, nullptr, &m_Swapchain);
@@ -564,20 +591,18 @@ namespace eng
             ENG_ASSERT(result == VK_SUCCESS, "Failed to get swapchain image count.");
 
             // Get swapchain image count.
-            m_SwapchainImages.reset(new VkImage[imageCount]);
-            result = vkGetSwapchainImagesKHR(m_Device, m_Swapchain, &imageCount, m_SwapchainImages.get());
+            m_SwapchainImages.resize(imageCount);
+            result = vkGetSwapchainImagesKHR(m_Device, m_Swapchain, &imageCount, m_SwapchainImages.data());
             ENG_ASSERT(result == VK_SUCCESS, "Failed to get swapchain images.");
 
             if (oldSwapchain)
             {
-                // Wait for the old swapchain to be done being used before deleting it.
-                // TODO: not a great solution. Would be ideal to wait for a fence.
-                result = vkQueueWaitIdle(m_GraphicsQueue);
-                ENG_ASSERT(result == VK_SUCCESS, "Failed to wait for queue to finish.");
-
-                for (u32 i = 0; i < m_SwapchainImageCount; i++)
-                    vkDestroyImageView(m_Device, oldSwapchainImageViews[i], nullptr);
-                vkDestroySwapchainKHR(m_Device, oldSwapchain, nullptr);
+                DeferFree([device = m_Device, oldSwapchain, oldSwapchainImageViews = std::move(m_SwapchainImageViews)]
+                {
+                    for (auto& oldSwapchainImageView : oldSwapchainImageViews)
+                        vkDestroyImageView(device, oldSwapchainImageView, nullptr);
+                    vkDestroySwapchainKHR(device, oldSwapchain, nullptr);
+                });
             }
 
             // TODO: This should always be the case, right?
@@ -591,21 +616,22 @@ namespace eng
 
         // Create swapchain image views.
         {
-            m_SwapchainImageViews.reset(new VkImageView[m_SwapchainImageCount]);
+            m_SwapchainImageViews.resize(m_SwapchainImageCount);
 
-            VkImageViewCreateInfo info{};
-            info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-            info.viewType = VK_IMAGE_VIEW_TYPE_2D;
-            info.format = m_SwapchainSurfaceFormat.format;
-            info.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
-            info.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
-            info.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
-            info.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
-            info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-            info.subresourceRange.baseMipLevel = 0;
-            info.subresourceRange.levelCount = 1;
-            info.subresourceRange.baseArrayLayer = 0;
-            info.subresourceRange.layerCount = 1;
+            VkImageViewCreateInfo info
+            {
+                .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+                .viewType = VK_IMAGE_VIEW_TYPE_2D,
+                .format = m_SwapchainSurfaceFormat.format,
+                .subresourceRange
+                {
+                    .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+                    .baseMipLevel = 0,
+                    .levelCount = 1,
+                    .baseArrayLayer = 0,
+                    .layerCount = 1,
+                },
+            };
 
             for (u32 i = 0; i < m_SwapchainImageCount; i++)
             {
@@ -620,26 +646,28 @@ namespace eng
 
     void RenderContext::CreateCommandPool()
     {
-        VkCommandPoolCreateInfo info{};
-        info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-        info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
-        info.queueFamilyIndex = m_GraphicsFamily;
-
+        VkCommandPoolCreateInfo info
+        {
+            .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
+            .flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
+            .queueFamilyIndex = m_GraphicsFamily,
+        };
         VkResult result = vkCreateCommandPool(m_Device, &info, nullptr, &m_CommandPool);
         ENG_ASSERT(result == VK_SUCCESS, "Failed to create command pool.");
     }
 
     void RenderContext::CreateCommandBuffers()
     {
-        m_FrameCommandBuffers.reset(new VkCommandBuffer[m_SwapchainImageCount]);
+        m_FrameCommandBuffers.resize(m_SwapchainImageCount);
 
-        VkCommandBufferAllocateInfo info{};
-        info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-        info.commandPool = m_CommandPool;
-        info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-        info.commandBufferCount = m_SwapchainImageCount;
-
-        VkResult result = vkAllocateCommandBuffers(m_Device, &info, m_FrameCommandBuffers.get());
+        VkCommandBufferAllocateInfo info
+        {
+            .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
+            .commandPool = m_CommandPool,
+            .level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
+            .commandBufferCount = m_SwapchainImageCount,
+        };
+        VkResult result = vkAllocateCommandBuffers(m_Device, &info, m_FrameCommandBuffers.data());
         ENG_ASSERT(result == VK_SUCCESS, "Failed to allocate command buffers.");
     }
 
@@ -649,11 +677,13 @@ namespace eng
 
         // Create fences.
         {
-            m_FrameInFlightFences.reset(new VkFence[m_SwapchainImageCount]);
+            m_FrameInFlightFences.resize(m_SwapchainImageCount);
 
-            VkFenceCreateInfo info{};
-            info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-            info.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+            VkFenceCreateInfo info
+            {
+                .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
+                .flags = VK_FENCE_CREATE_SIGNALED_BIT,
+            };
 
             for (u32 i = 0; i < m_SwapchainImageCount; i++)
             {
@@ -664,11 +694,13 @@ namespace eng
 
         // Create semaphores.
         {
-            m_ImageAcquiredSemaphores.reset(new VkSemaphore[m_SwapchainImageCount]);
-            m_RenderCompleteSemaphores.reset(new VkSemaphore[m_SwapchainImageCount]);
+            m_ImageAcquiredSemaphores.resize(m_SwapchainImageCount);
+            m_RenderCompleteSemaphores.resize(m_SwapchainImageCount);
 
-            VkSemaphoreCreateInfo info{};
-            info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+            VkSemaphoreCreateInfo info
+            {
+                .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
+            };
 
             for (u32 i = 0; i < m_SwapchainImageCount; i++)
             {
@@ -686,15 +718,14 @@ namespace eng
             return surfaceCapabilities.currentExtent;
 
         // TODO: figure out how to get framebuffer size without glfw.
-        // I guess the swapchain has to be recreated every window resize?
-        u32 width, height;
-        glfwGetFramebufferSize(m_Window, (i32*)&width, (i32*)&height);
+        i32 width, height;
+        glfwGetFramebufferSize(m_Window, &width, &height);
 
         return
         {
             // Clamp the extent to the min and max extents.
-            std::clamp(width, surfaceCapabilities.minImageExtent.width, surfaceCapabilities.maxImageExtent.width),
-            std::clamp(height, surfaceCapabilities.minImageExtent.height, surfaceCapabilities.maxImageExtent.height)
+            std::clamp(u32(width), surfaceCapabilities.minImageExtent.width, surfaceCapabilities.maxImageExtent.width),
+            std::clamp(u32(height), surfaceCapabilities.minImageExtent.height, surfaceCapabilities.maxImageExtent.height)
         };
     }
 

@@ -10,7 +10,7 @@ namespace eng
     {
         // Account for alignment.
         VkDeviceSize minAlignment = m_Context.GetPhysicalDeviceProperties().limits.minStorageBufferOffsetAlignment;
-        m_Size = (m_Size + minAlignment - 1) & ~(minAlignment - 1);
+        m_Size = BufferUtils::Align(m_Size, minAlignment);
 
         VkDeviceSize totalSize = m_Size * m_Context.GetSwapchainImageCount();
 
@@ -23,9 +23,9 @@ namespace eng
             m_DeviceMemory
         );
 
-        u8* mappedMemory = nullptr;
-        BufferUtils::MapMemory(m_Context, m_DeviceMemory, 0, totalSize, (void*&)mappedMemory);
-        m_MappedMemory = std::span(mappedMemory, totalSize);
+        void* mappedMemory = nullptr;
+        BufferUtils::MapMemory(m_Context, m_DeviceMemory, 0, totalSize, mappedMemory);
+        m_MappedMemory = std::span((u8*)mappedMemory, totalSize);
     }
 
     StorageBuffer::~StorageBuffer()

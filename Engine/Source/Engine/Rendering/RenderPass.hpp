@@ -18,15 +18,14 @@ namespace eng
 
     class RenderPass
     {
-    public:
         ENG_IMMOVABLE_UNCOPYABLE_CLASS(RenderPass);
-
+    public:
         RenderPass(RenderPassInfo const& info);
         ~RenderPass();
 
         VkRenderPass GetRenderPass() const;
     private:
         RenderContext& m_Context; // non-owning
-        VkRenderPass m_RenderPass = VK_NULL_HANDLE;
+        VkRenderPass m_RenderPass = nullptr;
     };
 }

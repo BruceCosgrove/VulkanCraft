@@ -171,7 +171,7 @@ namespace vc
 
     void CameraController::RecalculateProjection()
     {
-        f32 aspectRatio = static_cast<f32>(m_LastViewportSizeInverse.y) / m_LastViewportSizeInverse.x;
+        f32 aspectRatio = f32(m_LastViewportSizeInverse.y) / m_LastViewportSizeInverse.x;
         m_Projection = glm::perspective(m_FOV, aspectRatio, m_NearPlane, m_FarPlane);
         m_RecalculateProjection = false;
     }
