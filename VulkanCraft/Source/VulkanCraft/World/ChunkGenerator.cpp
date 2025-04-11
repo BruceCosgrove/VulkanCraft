@@ -108,7 +108,7 @@ namespace vc
         while (true)
         {
             // Wait for chunks to be queued or finish generating.
-            std::deque<QueuedChunk> queuedChunks;
+            std::vector<QueuedChunk> queuedChunks;
             {
                 std::unique_lock lock(m_QueuedChunkMutex);
                 m_QueuedChunkCondition.wait(lock);
@@ -118,14 +118,14 @@ namespace vc
             }
 
             // Check if all currently pending chunks can now be generated.
-            std::erase_if(m_PendingChunks, [this](PendingChunk pendingChunk)
+            std::erase_if(m_PendingChunks, [this](ChunkStageKey key)
             {
                 // Make sure all required prerequisites are satisfied first.
-                for (auto& prerequisite : s_StagePrerequisites[pendingChunk.Stage.Index()])
+                for (auto& prerequisite : s_StagePrerequisites[key.Stage.Index()])
                 {
                     if (prerequisite.Required)
                     {
-                        ChunkStageKey prerequisiteKey{pendingChunk.ChunkPos + prerequisite.RelativeChunkPosition, prerequisite.Stage};
+                        ChunkStageKey prerequisiteKey{key.ChunkPos + prerequisite.RelativeChunkPosition, prerequisite.Stage};
                         bool prerequisiteExists;
                         {
                             std::unique_lock lock(m_ChunkStageCacheMutex);
@@ -137,9 +137,9 @@ namespace vc
                     }
                 }
 
-                auto prerequisiteBlockStates = GetPrerequisiteBlockStates(pendingChunk);
+                auto prerequisiteBlockStates = GetPrerequisiteBlockStates(key);
                 std::unique_lock lock(m_GeneratableChunkMutex);
-                m_GeneratableChunks[pendingChunk].Prerequisites = std::move(prerequisiteBlockStates);
+                m_GeneratableChunks[key].Prerequisites = std::move(prerequisiteBlockStates);
                 return true;
             });
 
@@ -167,9 +167,9 @@ namespace vc
             if (not m_UnloadingChunks.empty())
             {
                 std::unique_lock lock(m_ChunkStageCacheMutex);
-                std::erase_if(m_UnloadingChunks, [this](UnloadingChunk unloadingChunk)
+                std::erase_if(m_UnloadingChunks, [this](ChunkStageKey key)
                 {
-                    auto it = m_ChunkStageCache.find(unloadingChunk);
+                    auto it = m_ChunkStageCache.find(key);
                     // If the chunk stage to unload doesn't exist in our cache, remove it from the list but not the cache.
                     if (it == m_ChunkStageCache.end()) ENG_UNLIKELY
                     {

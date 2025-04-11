@@ -9,8 +9,6 @@ using namespace eng;
 
 namespace vc
 {
-    class WorldRenderer;
-
     class Chunk : public std::enable_shared_from_this<Chunk>
     {
         ENG_IMMOVABLE_UNCOPYABLE_CLASS(Chunk);

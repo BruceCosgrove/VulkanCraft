@@ -8,7 +8,6 @@
 #include <Engine.hpp>
 #include <array>
 #include <atomic>
-#include <deque>
 #include <functional>
 #include <limits>
 #include <mutex>
@@ -65,10 +64,6 @@ namespace vc
 
         // Data
 
-        using UnloadingChunk = ChunkStageKey;
-
-        using PendingChunk = ChunkStageKey;
-
         struct GeneratableChunk
         {
             std::vector<BlockStateRegistry const*> Prerequisites;
@@ -117,15 +112,15 @@ namespace vc
         BlockRegistry const& m_Blocks; // non-owning
 
         // Input chunks to load/unload.
-        std::deque<QueuedChunk> m_QueuedChunks;
+        std::vector<QueuedChunk> m_QueuedChunks;
         std::mutex m_QueuedChunkMutex;
         std::condition_variable m_QueuedChunkCondition;
 
         // Chunks to unload.
         std::vector<ChunkStageKey> m_UnloadingChunks;
 
-        // Chunks to load, and their prerequisites, ordered with prerequisites first.
-        std::unordered_set<UnloadingChunk, ChunkStageHashEq, ChunkStageHashEq> m_PendingChunks;
+        // Chunks to load, and their prerequisites.
+        std::unordered_set<ChunkStageKey, ChunkStageHashEq, ChunkStageHashEq> m_PendingChunks;
 
         // Chunks to load whose prerequisites are satisfied.
         std::unordered_map<ChunkStageKey, GeneratableChunk, ChunkStageHashEq, ChunkStageHashEq> m_GeneratableChunks;
@@ -140,10 +135,14 @@ namespace vc
         std::vector<ChunkMeshData> m_GeneratedChunkMeshes;
         std::mutex m_GeneratedChunkMeshMutex;
 
-        std::atomic_bool m_Running = true;
+        // Thread that figures out what chunks stages should be generated and in what order.
         std::jthread m_DelegatorThread;
+        // Threads that generate chunk stages.
         std::vector<std::jthread> m_WorkerThreads;
+        // Flag for if the threads should continue running.
+        std::atomic_bool m_Running = true;
 
+        // Cache of intermediate chunk generation block states.
         ChunkStageCache m_ChunkStageCache;
         std::mutex m_ChunkStageCacheMutex;
     };
