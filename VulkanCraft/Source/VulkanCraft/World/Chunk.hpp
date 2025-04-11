@@ -1,17 +1,14 @@
 #pragma once
 
+#include "VulkanCraft/World/BlockRegistry.hpp"
 #include "VulkanCraft/World/BlockStateRegistry.hpp"
 #include "VulkanCraft/World/ChunkPos.hpp"
-#include "VulkanCraft/World/ChunkGenerationStage.hpp"
 #include <Engine.hpp>
-#include <any>
-#include <optional>
 
 using namespace eng;
 
 namespace vc
 {
-    class World;
     class WorldRenderer;
 
     class Chunk : public std::enable_shared_from_this<Chunk>
@@ -23,46 +20,13 @@ namespace vc
         inline static constexpr u32 Size2 = Size * Size;
         inline static constexpr u32 Size3 = Size * Size * Size;
     public:
-        Chunk(World& world, BlockRegistry& blockRegistry, ChunkPos position);
+        Chunk(BlockRegistry const& blocks, BlockStateRegistry&& blockStates, ChunkPos position);
         ~Chunk();
 
         ChunkPos GetPosition() const;
     private:
-        friend class World;
-        friend class WorldRenderer;
-
-        void GenerateTerrain();
-        void GenerateMesh();
-
-        // Queries if the chunk is generating any stage.
-        bool IsGenerating() const;
-
-        // Call this after IsGenerating returns false for the first time since returning true
-        // to get the current generation stage AND synchronize the generation data from the
-        // worker thread that computed it with the current thread.
-        ChunkGenerationStage GetGenerationStage() const;
-
-        // Call this to get the generation data once it has been synchronized by GetGenerationStage.
-        // Returns std::nullopt if the stage had no output, or if it did but of a different type.
-        template <typename T>
-        std::optional<T> ConsumeGenerationStageOutput()
-        {
-            if (T* casted = (T*)std::any_cast<T>(&m_StageOutput))
-            {
-                T output = std::move(*casted);
-                m_StageOutput.reset();
-                return output;
-            }
-            return std::nullopt;
-        }
-    private:
-        World& m_World; // non-owning
-        BlockRegistry& m_BlockRegistry; // non-owning
-        BlockStateRegistry m_BlockStateRegistry;
+        BlockRegistry const& m_Blocks; // non-owning
+        BlockStateRegistry m_BlockStates;
         ChunkPos m_Position;
-
-        std::atomic<ChunkGenerationStage> m_GenerationStage;
-        std::atomic_bool m_Generating;
-        std::any m_StageOutput;
     };
 }

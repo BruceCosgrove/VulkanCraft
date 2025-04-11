@@ -16,9 +16,9 @@ namespace eng
     {
         ENG_IMMOVABLE_UNCOPYABLE_CLASS(ThreadPool);
     public:
-        // Create count number of threads and start them.
+        // Create threadCount number of threads and start them.
         // They will all immediately become idle and wait for tasks.
-        ThreadPool(u8 count);
+        ThreadPool(u8 threadCount, bool finishAllTasksOnDestroy);
 
         // Signal to all threads in this pool that they should terminate as
         // soon as all tasks are completed and waits for them all to terminate.
@@ -36,6 +36,7 @@ namespace eng
     private:
         std::vector<std::jthread> m_Threads;
         std::atomic_bool m_Running = true;
+        bool m_FinishAllTasksOnDestroy;
 
         std::mutex m_TaskMutex;
         std::condition_variable m_TaskAvailable;

@@ -13,8 +13,71 @@ namespace vc
         m_ImGuiRenderContext = std::make_unique<ImGuiRenderContext>(window, m_RenderPass->GetRenderPass());
         m_ImGuiHelper = std::make_unique<ImGuiHelper>();
 
+        m_Blocks = std::make_unique<BlockRegistry>();
+        {
+            // TODO: block model files using yaml-cpp
+
+            // air
+            {
+                m_Blocks->CreateBlock("minecraft:air");
+            }
+
+            // bedrock
+            {
+                BlockID block = m_Blocks->CreateBlock("minecraft:bedrock");
+                BlockModel& model = m_Blocks->EmplaceComponent<BlockModel>(block);
+                model.SolidBits = 0b111111;
+                model.Left = TextureID(0);
+                model.Right = TextureID(0);
+                model.Bottom = TextureID(0);
+                model.Top = TextureID(0);
+                model.Back = TextureID(0);
+                model.Front = TextureID(0);
+            }
+
+            // stone
+            {
+                BlockID block = m_Blocks->CreateBlock("minecraft:stone");
+                BlockModel& model = m_Blocks->EmplaceComponent<BlockModel>(block);
+                model.SolidBits = 0b111111;
+                model.Left = TextureID(1);
+                model.Right = TextureID(1);
+                model.Bottom = TextureID(1);
+                model.Top = TextureID(1);
+                model.Back = TextureID(1);
+                model.Front = TextureID(1);
+            }
+
+            // dirt
+            {
+                BlockID block = m_Blocks->CreateBlock("minecraft:dirt");
+                BlockModel& model = m_Blocks->EmplaceComponent<BlockModel>(block);
+                model.SolidBits = 0b111111;
+                model.Left = TextureID(2);
+                model.Right = TextureID(2);
+                model.Bottom = TextureID(2);
+                model.Top = TextureID(2);
+                model.Back = TextureID(2);
+                model.Front = TextureID(2);
+            }
+
+            // grass
+            {
+                BlockID block = m_Blocks->CreateBlock("minecraft:grass");
+                BlockModel& model = m_Blocks->EmplaceComponent<BlockModel>(block);
+                model.SolidBits = 0b111111;
+                model.Left = TextureID(3);
+                model.Right = TextureID(3);
+                model.Bottom = TextureID(2);
+                model.Top = TextureID(4);
+                model.Back = TextureID(3);
+                model.Front = TextureID(3);
+            }
+        }
+
+        m_World = std::make_unique<World>(*m_Blocks);
         m_WorldRenderer = std::make_unique<WorldRenderer>(window.GetRenderContext(), m_RenderPass->GetRenderPass(), 512); // TODO: render distance
-        m_World = std::make_unique<World>();
+        m_ChunkGenerator = std::make_unique<ChunkGenerator>(*m_Blocks, 8); // TODO: determine how many worker threads there should be (dynamically?)
 
         m_CameraController.SetPosition({0.0f, 64.0f, 0.0f});
         m_CameraController.SetRotation({glm::radians(-90.0f), glm::radians(180.0f), 0.0f});
@@ -36,6 +99,7 @@ namespace vc
     void VulkanCraftLayer::OnUpdate(Timestep timestep)
     {
         m_CameraController.OnUpdate(timestep);
+        m_World->OnUpdate(timestep, *m_ChunkGenerator);
     }
 
     void VulkanCraftLayer::OnRender(Timestep timestep)
@@ -66,7 +130,7 @@ namespace vc
         vkCmdBeginRenderPass(commandBuffer, &info, VK_SUBPASS_CONTENTS_INLINE);
 
         // Render world
-        m_WorldRendererStatistics = m_WorldRenderer->Render(commandBuffer, *m_World, m_CameraController.GetViewProjection());
+        m_WorldRendererStatistics = m_WorldRenderer->Render(commandBuffer, m_CameraController.GetViewProjection(), *m_World, *m_ChunkGenerator);
 
         // Render ImGui
         // TODO: SetWindowLongW, called from ImGui_ImplGlfw_NewFrame,

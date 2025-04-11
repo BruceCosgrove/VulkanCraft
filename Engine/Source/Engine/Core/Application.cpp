@@ -1,6 +1,5 @@
 #include "Application.hpp"
 #include "Engine/Core/DataTypes.hpp"
-#include "Engine/Core/Log.hpp"
 #include "Engine/Input/Event/WindowEvents.hpp"
 #include "Engine/Threading/ThreadTracer.hpp"
 #include <glfw/glfw3.h>
@@ -15,11 +14,6 @@ namespace eng
     bool Application::IsRunning() const
     {
         return m_Running.load(std::memory_order_relaxed);
-    }
-
-    void Application::ExecuteAsync(std::function<void()>&& task)
-    {
-        m_ThreadPool.SubmitTask(std::move(task));
     }
 
     void Application::UpdateThread()
@@ -44,8 +38,7 @@ namespace eng
     }
 
     Application::Application(ApplicationInfo const& info)
-        : m_ThreadPool(info.ThreadPoolSize)
-        , m_Window(info.WindowInfo)
+        : m_Window(info.WindowInfo)
     {
         // Send initial framebuffer resize event to initialize all Client systems.
         u32 width, height;

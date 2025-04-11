@@ -1,28 +1,20 @@
 #pragma once
 
-#include <Engine.hpp>
+#include "VulkanCraft/World/Block.hpp"
 #include <entt/entt.hpp>
 
 using namespace eng;
 
 namespace vc
 {
-    enum class BlockID : u32 {};
-
-    struct Block
-    {
-        small_string ID;
-        // TODO: variants
-    };
-
     class BlockRegistry
     {
         ENG_IMMOVABLE_UNCOPYABLE_CLASS(BlockRegistry);
     public:
         BlockRegistry();
-    public:
+
         BlockID CreateBlock(small_string_view id);
-        BlockID GetBlock(small_string_view id);
+        BlockID GetBlock(small_string_view id) const;
 
         template <class T, typename... Args>
         T& EmplaceComponent(BlockID id, Args&&... args)
@@ -32,7 +24,7 @@ namespace vc
         }
 
         template <class T>
-        bool HasComponent(BlockID id)
+        bool HasComponent(BlockID id) const
         {
             auto e = static_cast<entt::entity>(id);
             return m_Registry.all_of<T>(e);
@@ -46,7 +38,21 @@ namespace vc
         }
 
         template <class T>
+        T const& GetComponent(BlockID id) const
+        {
+            auto e = static_cast<entt::entity>(id);
+            return m_Registry.get<T>(e);
+        }
+
+        template <class T>
         T* TryGetComponent(BlockID id)
+        {
+            auto e = static_cast<entt::entity>(id);
+            return m_Registry.try_get<T>(e);
+        }
+
+        template <class T>
+        T const* TryGetComponent(BlockID id) const
         {
             auto e = static_cast<entt::entity>(id);
             return m_Registry.try_get<T>(e);
@@ -54,6 +60,12 @@ namespace vc
 
         template <class... T>
         auto GetView()
+        {
+            return m_Registry.view<T...>();
+        }
+
+        template <class... T>
+        auto GetView() const
         {
             return m_Registry.view<T...>();
         }

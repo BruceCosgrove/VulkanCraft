@@ -8,4 +8,14 @@ namespace vc
         m_Registry.emplace<BlockState>(e, id);
         return static_cast<BlockStateID>(e);
     }
+
+    entt::registry& BlockStateRegistry::Get()
+    {
+        return m_Registry;
+    }
+
+    entt::registry const& BlockStateRegistry::Get() const
+    {
+        return m_Registry;
+    }
 }

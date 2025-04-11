@@ -18,10 +18,11 @@ namespace vc
         return blockID;
     }
 
-    BlockID BlockRegistry::GetBlock(small_string_view id)
+    BlockID BlockRegistry::GetBlock(small_string_view id) const
     {
         if (auto it = m_IDs.find(id); it != m_IDs.end())
             return it->second;
-        return BlockID(0); // minecraft:void
+        else ENG_UNLIKELY
+            return BlockID(0); // minecraft:void
     }
 }

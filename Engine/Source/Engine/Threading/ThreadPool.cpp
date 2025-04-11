@@ -4,12 +4,13 @@
 
 namespace eng
 {
-    ThreadPool::ThreadPool(u8 count)
+    ThreadPool::ThreadPool(u8 threadCount, bool finishAllTasksOnDestroy)
+        : m_FinishAllTasksOnDestroy(finishAllTasksOnDestroy)
     {
-        ENG_LOG_TRACE("Starting thread pool with {} threads.", count);
+        ENG_LOG_TRACE("Starting thread pool with {} threads.", threadCount);
 
-        m_Threads.reserve(count);
-        for (u8 i = 0; i < count; i++)
+        m_Threads.reserve(threadCount);
+        for (u8 i = 0; i < threadCount; i++)
             m_Threads.emplace_back([this] { ThreadFunction(); });
     }
 
@@ -41,13 +42,12 @@ namespace eng
             // Acquire a task to perform.
             std::function<void()> task;
             {
-                std::unique_lock lock(m_TaskMutex);
-
                 bool running = true, tasksRemaining = true;
+                std::unique_lock lock(m_TaskMutex);
                 while (not (tasksRemaining = not m_Tasks.empty()) and (running = m_Running.load(std::memory_order_relaxed)))
                     m_TaskAvailable.wait(lock);
 
-                if (not tasksRemaining)
+                if (not tasksRemaining or not (running or m_FinishAllTasksOnDestroy))
                     break;
                 task = std::move(m_Tasks.front());
                 m_Tasks.pop_front();

@@ -1,9 +1,8 @@
 #pragma once
 
 #include "Engine/Core/ClassTypes.hpp"
-#include "Engine/Core/DataTypes.hpp"
 #include "Engine/Input/Window.hpp"
-#include "Engine/Threading/ThreadPool.hpp"
+#include <atomic>
 
 namespace eng
 {
@@ -13,8 +12,6 @@ namespace eng
         // both multiple window support and headless mode, e.g. for server hosting.
         // This should include a separate headless build.
         WindowInfo WindowInfo;
-        // Set to 0 to disable.
-        u8 ThreadPoolSize = 4;
     };
 
     class Application
@@ -32,17 +29,12 @@ namespace eng
         // Returns if the application is still running.
         // May be called from any thread.
         bool IsRunning() const;
-
-        // Execute a task in the global thread pool.
-        // May be called from any thread.
-        void ExecuteAsync(std::function<void()>&& task);
     private:
         void UpdateThread();
         void RenderThread();
         void EventThread();
     private:
         std::atomic_bool m_Running = true;
-        ThreadPool m_ThreadPool;
         Window m_Window;
     private:
         friend int Main(int argc, char** argv);

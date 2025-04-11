@@ -1,6 +1,7 @@
 #pragma once
 
-#include <Engine.hpp>
+#include "VulkanCraft/World/ChunkPos.hpp"
+#include <vector>
 
 using namespace eng;
 
@@ -8,6 +9,7 @@ namespace vc
 {
     struct ChunkMeshData
     {
+        ChunkPos ChunkPos;
         std::vector<uvec2> Left;
         std::vector<uvec2> Right;
         std::vector<uvec2> Bottom;

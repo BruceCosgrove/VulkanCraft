@@ -4,10 +4,12 @@
 #include "VulkanCraft/UI/ImGuiRenderContext.hpp"
 #include "VulkanCraft/UI/ImGuiHelper.hpp"
 #include "VulkanCraft/World/World.hpp"
+#include "VulkanCraft/World/BlockRegistry.hpp"
+#include "VulkanCraft/World/ChunkGenerator.hpp"
 #include "VulkanCraft/Rendering/WorldRenderer.hpp"
 #include <Engine.hpp>
-#include <atomic>
 #include <memory>
+#include <vector>
 
 using namespace eng;
 
@@ -43,8 +45,10 @@ namespace vc
         std::unique_ptr<ImGuiRenderContext> m_ImGuiRenderContext;
         std::unique_ptr<ImGuiHelper> m_ImGuiHelper;
 
-        std::unique_ptr<WorldRenderer> m_WorldRenderer;
+        std::unique_ptr<BlockRegistry> m_Blocks;
         std::unique_ptr<World> m_World;
+        std::unique_ptr<WorldRenderer> m_WorldRenderer;
+        std::unique_ptr<ChunkGenerator> m_ChunkGenerator;
         WorldRenderer::Statistics m_WorldRendererStatistics;
 
         CameraController m_CameraController;

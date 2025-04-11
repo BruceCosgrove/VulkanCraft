@@ -11,6 +11,7 @@ namespace vc
 {
     class Chunk;
     class World;
+    class ChunkGenerator;
 
     class WorldRenderer
     {
@@ -30,7 +31,12 @@ namespace vc
             u64 UsedIndirectBufferSize = 0;
         };
 
-        Statistics Render(VkCommandBuffer commandBuffer, World const& world, mat4 const& viewProjection);
+        Statistics Render(
+            VkCommandBuffer commandBuffer,
+            mat4 const& viewProjection,
+            World const& world,
+            ChunkGenerator& chunkGenerator
+        );
 
         // Can be called from any thread.
         void ReloadShaders();
@@ -63,9 +69,9 @@ namespace vc
             MeshType Type;
         };
     private:
-        void AddOrReplaceChunkMesh(VkCommandBuffer commandBuffer, Chunk* chunk);
-        void RemoveChunkMesh(Chunk* chunk);
-        void RemoveChunkMesh(std::unordered_multimap<Chunk*, ChunkSubmeshRegion>::iterator& it);
+        void AddOrReplaceChunkMesh(VkCommandBuffer commandBuffer, ChunkMeshData const& meshData);
+        void RemoveChunkMesh(ChunkPos chunkPos);
+        void RemoveChunkMesh(std::unordered_multimap<ChunkPos, ChunkSubmeshRegion>::iterator& it);
 
         std::shared_ptr<Shader> LoadShaders();
     private:
@@ -88,12 +94,12 @@ namespace vc
         // List of used regions in the associated buffers.
         std::vector<ChunkRegion> m_ChunkRegions;
         // Maps chunks to their submesh instance indices.
-        std::unordered_multimap<Chunk*, ChunkSubmeshRegion> m_ChunkSubmeshRegions;
+        std::unordered_multimap<ChunkPos, ChunkSubmeshRegion, ChunkPosHash> m_ChunkSubmeshRegions;
 
         // Statistics
 
-        u32 m_TotalInstanceCount = 0;
         u64 m_UsedVertexBufferSize = 0;
+        u32 m_TotalInstanceCount = 0;
 
         // Debug visualization
 

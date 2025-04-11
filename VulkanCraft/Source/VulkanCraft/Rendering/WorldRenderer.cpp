@@ -1,5 +1,6 @@
 #include "WorldRenderer.hpp"
 #include "VulkanCraft/World/World.hpp"
+#include "VulkanCraft/World/ChunkGenerator.hpp"
 
 namespace vc
 {
@@ -217,7 +218,12 @@ namespace vc
         vkFreeMemory(device, m_HostVisibleMemory, nullptr);
     }
 
-    auto WorldRenderer::Render(VkCommandBuffer commandBuffer, World const& world, mat4 const& viewProjection) -> Statistics
+    auto WorldRenderer::Render(
+        VkCommandBuffer commandBuffer,
+        mat4 const& viewProjection,
+        World const& world,
+        ChunkGenerator& chunkGenerator
+    ) -> Statistics
     {
         // TODO: use compute shader to decide which chunks get rendered rather than cpu-side decisions.
 
@@ -230,10 +236,14 @@ namespace vc
         auto& storageOffset = m_StorageOffsets[swapchainImageIndex];
         auto& indirectOffset = m_IndirectOffsets[swapchainImageIndex];
 
+        // TODO: replace this with an explicit call to remove chunk mesh or something.
+        // There's currently a race condition where the world has to call
+        // ConsumeGeneratedChunks before ConsumeGeneratedChunkMeshes.
+        //
         // Remove regions for all chunks that have been removed from the world.
         for (auto it = m_ChunkSubmeshRegions.begin(); it != m_ChunkSubmeshRegions.end(); )
         {
-            if (not world.m_Chunks.contains(it->first->GetPosition()))
+            if (not world.m_Chunks.contains(it->first))
                 RemoveChunkMesh(it);
             else
                 std::advance(it, m_ChunkSubmeshRegions.count(it->first));
@@ -241,23 +251,12 @@ namespace vc
 
         // Add regions for all chunks that have not yet been added from the world.
         {
+            // TODO: Don't create command buffer if there are no new chunk meshes.
             VkCommandBuffer commandBuffer = m_Context.BeginOneTimeCommandBuffer();
-            for (auto& [position, chunk] : world.m_Chunks)
+            chunkGenerator.ConsumeGeneratedChunkMeshes([this, commandBuffer](ChunkMeshData&& chunkMeshData)
             {
-                if (not m_ChunkSubmeshRegions.contains(chunk.get()) and not chunk->IsGenerating())
-                {
-                    ChunkGenerationStage stage = chunk->GetGenerationStage();
-                    switch (+stage)
-                    {
-                        case ChunkGenerationStage::Mesh - 1:
-                            chunk->GenerateMesh();
-                            break;
-                        case ChunkGenerationStage::Mesh:
-                            AddOrReplaceChunkMesh(commandBuffer, chunk.get());
-                            break;
-                    }
-                }
-            }
+                AddOrReplaceChunkMesh(commandBuffer, chunkMeshData);
+            });
             m_Context.EndOneTimeCommandBuffer(commandBuffer);
         }
 
@@ -299,18 +298,17 @@ namespace vc
             // 64  60  56  52  48  44  40  36  32   28  24  20  16  12   8   4   0
             //   -------------fffzzzzzzzzzzzzzzzz yyyyyyyyyyyyyyyyxxxxxxxxxxxxxxxx
             // x = chunk x, y = chunk y, z = chunk z, f = face
-            auto packStorageData = [](Chunk* chunk, MeshType type) -> uvec2
+            auto packStorageData = [](ChunkPos chunkPos, MeshType type) -> uvec2
             {
-                ChunkPos position = chunk->GetPosition() & 0xFFFF;
                 return
                 {
-                    position.y << 16 | position.x,
-                    /* extra 13 bits */ (+type - MeshType::_Begin) << 16 | position.z,
+                    (chunkPos.y & 0xFFFF) << 16 | (chunkPos.x & 0xFFFF),
+                    /* extra 13 bits */ u32(type.Index()) << 16 | (chunkPos.z & 0xFFFF),
                 };
             };
 
-            for (auto& [chunk, region] : renderingRegions)
-                storageData.emplace_back(packStorageData(chunk, region.Type));
+            for (auto& [chunkPos, region] : renderingRegions)
+                storageData.emplace_back(packStorageData(chunkPos, region.Type));
 
             std::memcpy(m_MappedMemory.data() + storageOffset, storageData.data(), storageSize);
         }
@@ -406,11 +404,12 @@ namespace vc
     {
         if (not m_Shader.Loading())
         {
-            Application::Get().ExecuteAsync([this]
+            // TODO: Add a centralized place for shader loading.
+            std::thread([this]
             {
                 Timer timer("WorldRenderer::ReloadShaders");
                 m_Shader.Load([this] { return LoadShaders(); });
-            });
+            }).detach();
         }
     }
 
@@ -419,10 +418,8 @@ namespace vc
         m_Wireframe.fetch_xor(1, std::memory_order_relaxed);
     }
 
-    void WorldRenderer::AddOrReplaceChunkMesh(VkCommandBuffer commandBuffer, Chunk* chunk)
+    void WorldRenderer::AddOrReplaceChunkMesh(VkCommandBuffer commandBuffer, ChunkMeshData const& chunkMeshData)
     {
-        ChunkMeshData meshData = *chunk->ConsumeGenerationStageOutput<ChunkMeshData>();
-
         struct Submesh
         {
             VkDeviceSize VertexOffset; // offset in bytes from the start of the staging buffer
@@ -448,7 +445,7 @@ namespace vc
         };
 
         for (u8 i = 0; i < MeshType::_Count; i++)
-            calculateSubmeshBounds((&meshData.Left)[i], submeshes[i]);
+            calculateSubmeshBounds((&chunkMeshData.Left)[i], submeshes[i]);
 
         // Copy the data to the staging buffer.
         VkBuffer stagingBuffer;
@@ -458,13 +455,13 @@ namespace vc
 
             u8* stagingMappedMemory = (u8*)buffer.GetMappedMemory();
             for (u8 i = 0; i < MeshType::_Count; i++)
-                std::memcpy(stagingMappedMemory + submeshes[i].VertexOffset, (&meshData.Left)[i].data(), submeshes[i].VertexSize);
+                std::memcpy(stagingMappedMemory + submeshes[i].VertexOffset, (&chunkMeshData.Left)[i].data(), submeshes[i].VertexSize);
 
             stagingBuffer = buffer.GetBuffer();
         }
 
         // If replacing this chunk mesh, first remove the old data.
-        if (auto it = m_ChunkSubmeshRegions.find(chunk); it != m_ChunkSubmeshRegions.end())
+        if (auto it = m_ChunkSubmeshRegions.find(chunkMeshData.ChunkPos); it != m_ChunkSubmeshRegions.end())
             RemoveChunkMesh(it);
 
         // Find the smallest region large enough to fit the mesh.
@@ -481,7 +478,7 @@ namespace vc
         {
             if (submeshes[i].InstanceCount)
             {
-                m_ChunkSubmeshRegions.insert({chunk,
+                m_ChunkSubmeshRegions.insert({chunkMeshData.ChunkPos,
                 {
                     u32(m_ChunkRegions.size()),
                     submeshes[i].FirstInstance + u32(vertexOffset / sizeof(uvec2)),
@@ -508,14 +505,14 @@ namespace vc
         }
     }
 
-    void WorldRenderer::RemoveChunkMesh(Chunk* chunk)
+    void WorldRenderer::RemoveChunkMesh(ChunkPos chunkPos)
     {
         // Get an iterator to the first submesh this chunk has.
-        auto it = m_ChunkSubmeshRegions.find(chunk);
+        auto it = m_ChunkSubmeshRegions.find(chunkPos);
         RemoveChunkMesh(it);
     }
 
-    void WorldRenderer::RemoveChunkMesh(std::unordered_multimap<Chunk*, ChunkSubmeshRegion>::iterator& it)
+    void WorldRenderer::RemoveChunkMesh(std::unordered_multimap<ChunkPos, ChunkSubmeshRegion>::iterator& it)
     {
         ENG_ASSERT(it != m_ChunkSubmeshRegions.end());
         auto endEraseIt = std::next(it, m_ChunkSubmeshRegions.count(it->first));

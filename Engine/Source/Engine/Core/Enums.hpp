@@ -63,8 +63,10 @@ namespace eng::detail
     _##e##Bit,
 #define _ENG_ENUM_VALUE_IMPL(e) \
     e = 1 << _##e##Bit,
-#define _ENG_ENUM_MAX_NAME_LENGTH_IMPL(enumName, e) \
+#define _ENG_ENUM_MAX_NAME_LENGTH_IMPL(e) \
     sizeof(#e) +
+#define _ENG_ENUM_VALUES_IMPL(enumName, e) \
+    enumName::e,
 }
 
 // Use this to define a bounded enum.
@@ -78,13 +80,15 @@ namespace eng::detail
             _Count = _End - _Begin, \
             _BitCount = ::std::bit_width(_Count) \
         }; \
-        static constexpr ::eng::string_view Name = #enumName; \
+        static constexpr ::eng::string_view EnumName = #enumName; \
         static constexpr auto Names = ::std::to_array<::eng::string_view const>({ \
             ENG_FOR_EACH(_ENG_ENUM_TO_STRING_IMPL, __VA_ARGS__) \
         }); \
-        constexpr string_view ToString() const noexcept { return Names.at(m_Value - _Begin); } \
+        constexpr ::eng::string_view ToString() const noexcept { return Names.at(m_Value - _Begin); } \
         constexpr enumName() noexcept = default; \
         constexpr enumName(underlyingType value) noexcept : m_Value(value) {} \
+        constexpr underlyingType Index() const noexcept { return m_Value - _Begin; } \
+        constexpr ::eng::string_view Name() const noexcept { return Names[Index()]; } \
         constexpr underlyingType operator+() const noexcept { return m_Value; } \
         constexpr explicit operator bool() const noexcept { return m_Value; } \
         constexpr bool operator!() const noexcept { return !m_Value; } \
@@ -93,6 +97,9 @@ namespace eng::detail
     private: \
         underlyingType m_Value = enumName::None; \
     }; \
+    static constexpr auto enumName##s = ::std::to_array<enumName>({ \
+        ENG_FOR_EACH_ZIP1(_ENG_ENUM_VALUES_IMPL, enumName, __VA_ARGS__) \
+    }); \
     static_assert(::eng::detail::BoundedEnumI<enumName>, #enumName " does not satisfy BoundedEnumI's constraints.")
 
 // Use this to define a masked enum.
@@ -108,7 +115,7 @@ namespace eng::detail
             _Mask = (_End << 1) - 3, \
             _BitCount = _Count \
         }; \
-        static constexpr ::eng::string_view Name = #enumName; \
+        static constexpr ::eng::string_view EnumName = #enumName; \
         static constexpr auto Names = ::std::to_array<::eng::string_view const>({ \
             ENG_FOR_EACH(_ENG_ENUM_TO_STRING_IMPL, __VA_ARGS__) \
         }); \
@@ -128,7 +135,7 @@ namespace eng::detail
                 (mask += '|') += Names.at(index); \
             return mask; \
         } \
-        static constexpr ::eng::u64 MaxNameLength = ENG_FOR_EACH_ZIP1(_ENG_ENUM_MAX_NAME_LENGTH_IMPL, enumName, __VA_ARGS__) -1; \
+        static constexpr ::eng::u64 MaxNameLength = ENG_FOR_EACH(_ENG_ENUM_MAX_NAME_LENGTH_IMPL, __VA_ARGS__) -1; \
         constexpr enumName() noexcept = default; \
         constexpr enumName(underlyingType value) noexcept : m_Value(value & _Mask) {} \
         constexpr underlyingType operator+() const noexcept { return m_Value; } \
@@ -149,6 +156,9 @@ namespace eng::detail
     private: \
         underlyingType m_Value = None; \
     }; \
+    static constexpr auto enumName##s = ::std::to_array<enumName>({ \
+        ENG_FOR_EACH_ZIP1(_ENG_ENUM_VALUES_IMPL, enumName, __VA_ARGS__) \
+    }); \
     static_assert(::eng::detail::MaskedEnumI<enumName>, #enumName " does not satisfy MaskedEnumI's constraints.")
 
 // Validity checks
