@@ -80,7 +80,7 @@ namespace vc
         m_ChunkGenerator = std::make_unique<ChunkGenerator>(*m_Blocks, 8); // TODO: determine how many worker threads there should be (dynamically?)
 
         m_CameraController.SetPosition({0.0f, 64.0f, 0.0f});
-        m_CameraController.SetRotation({glm::radians(-90.0f), glm::radians(180.0f), 0.0f});
+        m_CameraController.SetRotation({glm::radians(-90.0f), 0.0f, 0.0f});
         m_CameraController.SetFOV(glm::radians(90.0f));
         m_CameraController.SetNearPlane(0.001f);
         m_CameraController.SetFarPlane(1000.0f);

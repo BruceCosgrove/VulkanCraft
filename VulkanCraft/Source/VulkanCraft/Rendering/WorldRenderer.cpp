@@ -241,15 +241,11 @@ namespace vc
         // ConsumeGeneratedChunks before ConsumeGeneratedChunkMeshes.
         //
         // Remove regions for all chunks that have been removed from the world.
-        for (auto it = m_ChunkSubmeshRegions.begin(); it != m_ChunkSubmeshRegions.end(); )
-        {
-            if (not world.m_Chunks.contains(it->first))
-                RemoveChunkMesh(it);
-            else
-                std::advance(it, m_ChunkSubmeshRegions.count(it->first));
-        }
+        for (auto& region : m_ChunkSubmeshRegions)
+            if (not world.m_Chunks.contains(region.ChunkPos))
+                RemoveChunkMesh(region.ChunkPos);
 
-        // Add regions for all chunks that have not yet been added from the world.
+        // Add regions for all chunks that have meshes.
         {
             // TODO: Don't create command buffer if there are no new chunk meshes.
             VkCommandBuffer commandBuffer = m_Context.BeginOneTimeCommandBuffer();
@@ -307,8 +303,8 @@ namespace vc
                 };
             };
 
-            for (auto& [chunkPos, region] : renderingRegions)
-                storageData.emplace_back(packStorageData(chunkPos, region.Type));
+            for (auto& region : renderingRegions)
+                storageData.emplace_back(packStorageData(region.ChunkPos, region.Type));
 
             std::memcpy(m_MappedMemory.data() + storageOffset, storageData.data(), storageSize);
         }
@@ -319,7 +315,7 @@ namespace vc
             std::vector<VkDrawIndirectCommand> indirectData;
             indirectData.reserve(drawCount);
 
-            for (auto& [chunk, region] : renderingRegions)
+            for (auto& region : renderingRegions)
                 indirectData.emplace_back(6, region.InstanceCount, 0, region.FirstInstance);
 
             std::memcpy(m_MappedMemory.data() + indirectOffset, indirectData.data(), indirectSize);
@@ -392,7 +388,7 @@ namespace vc
         {
             .IndirectDrawCallCount = drawCount,
             .InstanceCount = m_TotalInstanceCount,
-            .ChunkCount = u32(m_ChunkRegions.size()),
+            .ChunkCount = m_TotalChunkCount,
             .UsedVertexBufferSize = m_UsedVertexBufferSize,
             .UsedUniformBufferSize = uniformSize,
             .UsedStorageBufferSize = storageSize,
@@ -461,16 +457,27 @@ namespace vc
         }
 
         // If replacing this chunk mesh, first remove the old data.
-        if (auto it = m_ChunkSubmeshRegions.find(chunkMeshData.ChunkPos); it != m_ChunkSubmeshRegions.end())
-            RemoveChunkMesh(it);
+        RemoveChunkMesh(chunkMeshData.ChunkPos);
 
         // Find the smallest region large enough to fit the mesh.
-        VkDeviceSize vertexOffset = 0;
-        for (auto& region : m_ChunkRegions)
+        // NOTE: This is the main reason m_ChunkSubmeshRegions needs to be ordered.
+        VkDeviceSize minRegionOffset = m_UsedVertexBufferSize;
         {
-            if (region.VertexOffset - vertexOffset >= meshVertexSize)
-                break;
-            vertexOffset += region.VertexSize;
+            VkDeviceSize minRegionSize = m_UsedVertexBufferSize;
+            VkDeviceSize offset = 0;
+            for (auto& region : m_ChunkSubmeshRegions)
+            {
+                VkDeviceSize regionOffset = region.FirstInstance * sizeof(uvec2); // sizeof vertex
+                VkDeviceSize regionSize = region.InstanceCount * sizeof(uvec2); // sizeof vertex
+
+                VkDeviceSize betweenRegionSize = regionOffset - offset;
+                if (meshVertexSize <= betweenRegionSize and betweenRegionSize < minRegionSize)
+                {
+                    minRegionOffset = offset;
+                    minRegionSize = betweenRegionSize;
+                }
+                offset += regionSize;
+            }
         }
 
         // Add the submesh regions.
@@ -478,27 +485,26 @@ namespace vc
         {
             if (submeshes[i].InstanceCount)
             {
-                m_ChunkSubmeshRegions.insert({chunkMeshData.ChunkPos,
-                {
-                    u32(m_ChunkRegions.size()),
-                    submeshes[i].FirstInstance + u32(vertexOffset / sizeof(uvec2)),
+                m_ChunkSubmeshRegions.emplace_back(
+                    chunkMeshData.ChunkPos,
+                    submeshes[i].FirstInstance + u32(minRegionOffset / sizeof(uvec2)),
                     submeshes[i].InstanceCount,
-                    MeshType(MeshType::_Begin + i),
-                }});
+                    MeshType(MeshType::_Begin + i)
+                );
             }
         }
 
         // Add the region.
-        m_ChunkRegions.emplace_back(vertexOffset, meshVertexSize);
-        m_TotalInstanceCount += meshInstanceCount;
         m_UsedVertexBufferSize += meshVertexSize;
+        m_TotalInstanceCount += meshInstanceCount;
+        m_TotalChunkCount++;
 
         // Copy the staging buffer to the vertex buffer.
         {
             VkBufferCopy region
             {
                 .srcOffset = 0,
-                .dstOffset = vertexOffset,
+                .dstOffset = minRegionOffset,
                 .size = meshVertexSize,
             };
             vkCmdCopyBuffer(commandBuffer, stagingBuffer, m_VertexBuffer, 1, &region);
@@ -507,30 +513,39 @@ namespace vc
 
     void WorldRenderer::RemoveChunkMesh(ChunkPos chunkPos)
     {
-        // Get an iterator to the first submesh this chunk has.
-        auto it = m_ChunkSubmeshRegions.find(chunkPos);
-        RemoveChunkMesh(it);
-    }
-
-    void WorldRenderer::RemoveChunkMesh(std::unordered_multimap<ChunkPos, ChunkSubmeshRegion>::iterator& it)
-    {
-        ENG_ASSERT(it != m_ChunkSubmeshRegions.end());
-        auto endEraseIt = std::next(it, m_ChunkSubmeshRegions.count(it->first));
-        // Get the index into the "allocations" so it can be "deallocated".
-        u32 index = it->second.RegionIndex;
-
-        for (decltype(auto) it2 = it; it2 != endEraseIt; ++it2)
-            m_TotalInstanceCount -= it->second.InstanceCount;
-        m_UsedVertexBufferSize -= m_ChunkRegions[index].VertexSize;
-
-        // Remove all submeshes this chunk has.
-        // NOTE: This can be removed immediately because it has already been copied to the indirect buffer.
-        it = m_ChunkSubmeshRegions.erase(it, endEraseIt);
-        // Wait until all previous frames have stopped using the old chunk data to remove the "allocation".
-        m_Context.DeferFree([this, index]
+        auto predicate = [chunkPos](ChunkSubmeshRegion const& region)
         {
-            // Let other other chunks use the vertex and storage buffer in this region again.
-            m_ChunkRegions.erase(m_ChunkRegions.begin() + index);
+            return chunkPos == region.ChunkPos and not region.Removing;
+        };
+        auto beginIt = std::find_if(m_ChunkSubmeshRegions.begin(), m_ChunkSubmeshRegions.end(), predicate);
+        auto endIt = std::find_if_not(beginIt, m_ChunkSubmeshRegions.end(), predicate);
+
+        if (beginIt == m_ChunkSubmeshRegions.end())
+            return;
+
+        for (auto it = beginIt; it != endIt; ++it)
+        {
+            u32 instanceCount = it->InstanceCount;
+            m_TotalInstanceCount -= instanceCount;
+            m_UsedVertexBufferSize -= instanceCount * sizeof(uvec2); // sizeof vertex
+            it->Removing = true;
+        }
+        m_TotalChunkCount--;
+
+        // Wait until all previous frames have stopped using the old chunk data to remove its regions.
+        m_Context.DeferFree([this, chunkPos]
+        {
+            auto predicate = [chunkPos](ChunkSubmeshRegion const& region)
+            {
+                bool remove = chunkPos == region.ChunkPos;
+                if (remove)
+                    ENG_ASSERT(region.Removing);
+                return remove;
+            };
+            auto beginIt = std::find_if(m_ChunkSubmeshRegions.begin(), m_ChunkSubmeshRegions.end(), predicate);
+            auto endIt = std::find_if_not(beginIt, m_ChunkSubmeshRegions.end(), predicate);
+            // Remove all submesh regions this chunk has.
+            m_ChunkSubmeshRegions.erase(beginIt, endIt);
         });
     }
 

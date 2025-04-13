@@ -43,18 +43,12 @@ namespace vc
             m_Chunks[chunk->GetPosition()] = std::move(chunk);
         });
 
-        // TODO DEBUG TESTING:
-        // removes a chunk every second.
-        static float s_TotalTime = 0.0f;
-        s_TotalTime += timestep;
-        if (s_TotalTime >= 1.0f)
+        if (static bool loaded = false; not loaded)
         {
-            s_TotalTime -= 1.0f;
             if (not m_Chunks.empty())
             {
-                auto it = m_Chunks.begin();
-                ChunkPos chunkPos = it->second->GetPosition();
-                m_Chunks.erase(it);
+                loaded = true;
+                ChunkPos chunkPos = m_Chunks.begin()->second->GetPosition();
                 chunkGenerator.QueueChunkUnloads(std::span{&chunkPos, 1});
             }
         }

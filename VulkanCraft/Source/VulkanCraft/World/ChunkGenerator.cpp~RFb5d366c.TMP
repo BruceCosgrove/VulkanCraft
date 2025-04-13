@@ -11,11 +11,10 @@ namespace vc
     //
     //  m_DelegatorThread => LoadChunk or UnloadChunk or RemeshChunk
     //      m_PendingChunks => m_GeneratableChunks
-    //      m_UnloadingChunks => /dev/null
     //
     //  LoadChunk => m_PendingChunks or m_GeneratableChunks
-    //  UnloadChunk => m_UnloadingChunks => m_DelegatorThread
-    //  RemeshChunk => TODO
+    //  UnloadChunk => m_UnloadingChunks
+    //  RemeshChunk =>
     //
     //  m_GeneratableChunks => m_WorkerThreadPool => m_GeneratedChunks and m_GeneratedChunkMeshes and m_ChunkStageCache
     //      m_GeneratedChunks => ConsumeGeneratedChunks
@@ -219,7 +218,10 @@ namespace vc
                         if (auto it = m_ChunkStageCache.find({chunkPos, stage}); it != m_ChunkStageCache.end())
                         {
                             if (it->second.UsageCount != 0)
+                            {
+                                lock.unlock();
                                 inUse = true;
+                            }
                             else
                                 m_ChunkStageCache.erase(it);
                         }

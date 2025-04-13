@@ -124,8 +124,12 @@ namespace vc
         std::mutex m_QueuedChunkMutex;
         std::condition_variable m_QueuedChunkCondition;
 
-        // Chunks to unload when they are no longer used.
         std::vector<ChunkPos> m_UnloadingChunks;
+
+        // Map from chunk stages to other chunk stages that depend on them.
+        // If this map has no entries for a chunk stage, then that chunk stage
+        // is currently not being used, and may be removed from the cache.
+        //std::unordered_multimap<ChunkStageKey, ChunkStageKey, ChunkStageHashEq, ChunkStageHashEq> m_StagePrerequisites;
 
         // Chunks to load, and their prerequisites.
         std::unordered_set<ChunkStageKey, ChunkStageHashEq, ChunkStageHashEq> m_PendingChunks;

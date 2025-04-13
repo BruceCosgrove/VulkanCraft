@@ -55,23 +55,18 @@ namespace vc
             } BlockTextureAtlas;
         };
 
-        struct ChunkRegion
-        {
-            VkDeviceSize VertexOffset;
-            VkDeviceSize VertexSize;
-        };
-
         struct ChunkSubmeshRegion
         {
-            u32 RegionIndex; // Index into m_ChunkRegions that this submesh corresponds to.
+            ChunkPos ChunkPos;
             u32 FirstInstance;
             u16 InstanceCount; // NOTE: max is 4096 = 2^12 < 2^16-1, so using u16 is fine.
             MeshType Type;
+            bool Removing = false;
         };
     private:
         void AddOrReplaceChunkMesh(VkCommandBuffer commandBuffer, ChunkMeshData const& meshData);
+        // Removes a chunk mesh if one at the given position exists.
         void RemoveChunkMesh(ChunkPos chunkPos);
-        void RemoveChunkMesh(std::unordered_multimap<ChunkPos, ChunkSubmeshRegion>::iterator& it);
 
         std::shared_ptr<Shader> LoadShaders();
     private:
@@ -91,15 +86,14 @@ namespace vc
         DynamicResource<std::shared_ptr<Shader>> m_Shader;
         std::unique_ptr<TextureAtlas> m_BlockTextureAtlas;
 
-        // List of used regions in the associated buffers.
-        std::vector<ChunkRegion> m_ChunkRegions;
-        // Maps chunks to their submesh instance indices.
-        std::unordered_multimap<ChunkPos, ChunkSubmeshRegion, ChunkPosHash> m_ChunkSubmeshRegions;
+        // Maps of chunk positions to their regions.
+        std::vector<ChunkSubmeshRegion> m_ChunkSubmeshRegions;
 
         // Statistics
 
         u64 m_UsedVertexBufferSize = 0;
         u32 m_TotalInstanceCount = 0;
+        u32 m_TotalChunkCount = 0;
 
         // Debug visualization
 

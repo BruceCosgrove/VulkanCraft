@@ -7,10 +7,11 @@ namespace vc
 {
     class BlockStateRegistry
     {
-        ENG_UNCOPYABLE_CLASS(BlockStateRegistry);
     public:
         BlockStateRegistry() = default;
+        BlockStateRegistry(BlockStateRegistry const& blockStateRegistry);
         BlockStateRegistry(BlockStateRegistry&&) noexcept = default;
+        BlockStateRegistry& operator=(BlockStateRegistry const& blockStateRegistry);
         BlockStateRegistry& operator=(BlockStateRegistry&&) noexcept = default;
 
         BlockStateID CreateBlockState(BlockID id);
