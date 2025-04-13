@@ -15,9 +15,9 @@ namespace vc
         {
             loaded = true;
             std::vector<ChunkPos> chunksToLoad;
-            chunksToLoad.reserve(16 * 4 * 16);
+            chunksToLoad.reserve(16 * 16 * 16);
             for (i32 z = -8; z < 8; z++)
-                for (i32 y = -2; y < 2; y++)
+                for (i32 y = -8; y < 8; y++)
                     for (i32 x = -8; x < 8; x++)
                         chunksToLoad.emplace_back(x, y, z);
             chunkGenerator.QueueChunkLoads(chunksToLoad);
