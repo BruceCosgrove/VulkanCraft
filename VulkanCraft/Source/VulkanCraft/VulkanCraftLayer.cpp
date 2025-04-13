@@ -76,7 +76,7 @@ namespace vc
         }
 
         m_World = std::make_unique<World>(*m_Blocks);
-        m_WorldRenderer = std::make_unique<WorldRenderer>(window.GetRenderContext(), m_RenderPass->GetRenderPass(), 512); // TODO: render distance
+        m_WorldRenderer = std::make_unique<WorldRenderer>(window.GetRenderContext(), m_RenderPass->GetRenderPass(), 1024); // TODO: render distance
         m_ChunkGenerator = std::make_unique<ChunkGenerator>(*m_Blocks, 8); // TODO: determine how many worker threads there should be (dynamically?)
 
         m_CameraController.SetPosition({0.0f, 64.0f, 0.0f});

@@ -244,7 +244,7 @@ namespace vc
                 {
                     bool running = true, chunkAvailable = false;
                     std::unique_lock lock(m_GeneratableChunkMutex);
-                    while (not (chunkAvailable = not m_GeneratableChunks.empty()) and (running = m_Running.load(std::memory_order_relaxed)))
+                    while ((running = m_Running.load(std::memory_order_relaxed)) and not (chunkAvailable = not m_GeneratableChunks.empty()))
                         m_GeneratableChunkCondition.wait(lock);
 
                     if (not running)

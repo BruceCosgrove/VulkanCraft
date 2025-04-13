@@ -143,15 +143,15 @@ namespace vc
         std::vector<ChunkMeshData> m_GeneratedChunkMeshes;
         std::mutex m_GeneratedChunkMeshMutex;
 
-        // Thread that figures out what chunks stages should be generated and in what order.
-        std::jthread m_DelegatorThread;
-        // Threads that generate chunk stages.
-        std::vector<std::jthread> m_WorkerThreads;
-        // Flag for if the threads should continue running.
-        std::atomic_bool m_Running = true;
-
         // Cache of intermediate chunk generation block states.
         ChunkStageCache m_ChunkStageCache;
         std::mutex m_ChunkStageCacheMutex;
+
+        // Flag for if the threads should continue running.
+        std::atomic_bool m_Running = true;
+        // Threads that generate chunk stages.
+        std::vector<std::jthread> m_WorkerThreads;
+        // Thread that figures out what chunks stages should be generated and in what order.
+        std::jthread m_DelegatorThread;
     };
 }

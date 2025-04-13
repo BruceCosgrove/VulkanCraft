@@ -14,27 +14,12 @@ namespace vc
         if (static bool loaded = false; not loaded)
         {
             loaded = true;
-            auto chunksToLoad = std::to_array<ChunkPos>({
-                {-2, 0, -2},
-                {-1, 0, -2},
-                {0, 0, -2},
-                {1, 0, -2},
-
-                {-2, 0, -1},
-                {-1, 0, -1},
-                {0, 0, -1},
-                {1, 0, -1},
-
-                {-2, 0, 0},
-                {-1, 0, 0},
-                {0, 0, 0},
-                {1, 0, 0},
-
-                {-2, 0, 1},
-                {-1, 0, 1},
-                {0, 0, 1},
-                {1, 0, 1},
-            });
+            std::vector<ChunkPos> chunksToLoad;
+            chunksToLoad.reserve(16 * 4 * 16);
+            for (i32 z = -8; z < 8; z++)
+                for (i32 y = -2; y < 2; y++)
+                    for (i32 x = -8; x < 8; x++)
+                        chunksToLoad.emplace_back(x, y, z);
             chunkGenerator.QueueChunkLoads(chunksToLoad);
         }
 
